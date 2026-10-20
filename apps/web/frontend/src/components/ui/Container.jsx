@@ -1,7 +1,10 @@
-export default function Container({ children, className = "" }) {
+
+function Container() {
   return (
-    <div className={`cw-container ${className}`}>
-      {children}
+    <div>
+      
     </div>
-  );
+  )
 }
+
+export default Container
