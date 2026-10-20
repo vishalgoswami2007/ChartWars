@@ -5,6 +5,8 @@ import PracticeMode from "./sections/PracticeModes";
 import HowItWorks from "./sections/HowItWorks";
 import PerformanceAnalytics from "./sections/PerformanceAnalytics";
 import LearnInsights from "./sections/LearnInsights";
+import GrowthEngine from "./sections/GrowthEngine";
+import Footer from "./footer/Footer";
 
 export default function LandingPage() {
   return (
@@ -60,6 +62,8 @@ export default function LandingPage() {
            <HowItWorks />
            <PerformanceAnalytics />
            <LearnInsights/>
+           <GrowthEngine/>
+           <Footer/>
          </div>
       
     </main>
