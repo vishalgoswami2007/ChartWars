@@ -1,6 +1,5 @@
 
 import { useState } from "react";
-
 import {
   ArrowDownRight,
   ArrowRight,
@@ -71,19 +70,19 @@ const navigation = [
       {
         title: "Market Insights",
         description: "Explore market-related content",
-        href: "#market-pulse",
+        href: "/marketInsight",
         icon: TrendingUp,
       },
       {
         title: "Knowledge Vault",
         description: "Explore notes and resources",
-        href: "#knowledge-vault",
+        href: "/knowledgeVault",
         icon: BookOpen,
       },
       {
         title: "Learning Roadmap",
         description: "Build your knowledge step by step",
-        href: "#learn",
+        href: "/roadmap",
         icon: ArrowDownRight,
       },
     ],

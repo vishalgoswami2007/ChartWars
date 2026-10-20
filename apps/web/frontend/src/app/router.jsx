@@ -5,6 +5,9 @@ import NotFoundPage from "./NotFoundPage";
 import PracticeModesPage from "../pages/practice/PracticeModesPage";
 import PerformanceAnalyticsPage from "../pages/analytics/PerformanceAnalyticsPage";
 import HowItWorksPage from "../pages/work/HowItsWork";
+import MarketInsight from "../pages/Market/MarketInsight";
+import KnowledgeVault from "../pages/Knowledge/KnowledgeVault";
+import Roadmap from "../pages/roadmap/Roadmap";
 
 export const router = createBrowserRouter([
   {
@@ -34,5 +37,17 @@ export const router = createBrowserRouter([
 {
   path: "/howItsWorkPage",
   element: <HowItWorksPage/>
+},
+{
+  path: "/marketInsight",
+  element: <MarketInsight/>
+},
+{
+  path: "/knowledgeVault",
+  element: <KnowledgeVault/>
+},
+{
+  path: "/roadmap",
+  element:<Roadmap/>
 }
 ]);
