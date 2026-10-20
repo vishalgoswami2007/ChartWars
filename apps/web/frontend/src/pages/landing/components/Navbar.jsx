@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+
 import {
   ArrowDownRight,
   ArrowRight,
@@ -37,19 +38,19 @@ const navigation = [
       {
         title: "Practice Modes",
         description: "Explore different ways to practice",
-        href: "#practice-modes",
+        href: "/practice-modes",
         icon: Target,
       },
       {
         title: "Performance Analytics",
         description: "Review your progress",
-        href: "#performance-analytics",
+        href: "/performance-analytics",
         icon: BarChart3,
       },
       {
         title: "How It Works",
         description: "Get to know the platform",
-        href: "#how-it-works",
+        href: "/howItsWorkPage",
         icon: Sparkles,
       },
     ],
@@ -183,8 +184,8 @@ function MegaMenu({ item, onNavigate }) {
                 {item.featured.description}
               </p>
 
-              <a
-                href={item.featured.href}
+              <Link
+                to={item.featured.href}
                 onClick={onNavigate}
                 className="group mt-6 inline-flex items-center gap-2 text-sm font-semibold text-yellow-400 transition hover:text-yellow-300"
               >
@@ -193,7 +194,7 @@ function MegaMenu({ item, onNavigate }) {
                   size={16}
                   className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
                 />
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -249,7 +250,7 @@ function MegaMenu({ item, onNavigate }) {
           <a
             href="#growth-engine"
             onClick={onNavigate}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-300 transition hover:text-yellow-400"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-300 transition hover:text-orange-600"
           >
             Early access <ArrowRight size={13} />
           </a>
@@ -368,7 +369,7 @@ export default function Navbar() {
 
           <Link
             to="/signup"
-            className="group inline-flex items-center gap-2 rounded-full bg-yellow-400 px-5 py-3 text-sm font-bold text-black transition duration-200 hover:bg-yellow-300 hover:shadow-[0_0_24px_rgba(250,204,21,0.15)]"
+            className="group inline-flex items-center gap-2 rounded-full bg-orange-600 px-5 py-3 text-sm font-bold text-black transition duration-200 hover:bg-orange-300 hover:shadow-[0_0_24px_rgba(250,204,21,0.15)]"
           >
             Get Early Access
             <ArrowUpRight

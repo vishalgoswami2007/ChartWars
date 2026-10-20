@@ -2,6 +2,9 @@ import { createBrowserRouter } from "react-router-dom";
 import LandingPage from "../pages/landing/LandingPage";
 import PlaceholderPage from "./PlaceholderPage";
 import NotFoundPage from "./NotFoundPage";
+import PracticeModesPage from "../pages/practice/PracticeModesPage";
+import PerformanceAnalyticsPage from "../pages/analytics/PerformanceAnalyticsPage";
+import HowItWorksPage from "../pages/work/HowItsWork";
 
 export const router = createBrowserRouter([
   {
@@ -20,4 +23,16 @@ export const router = createBrowserRouter([
     path: "*",
     element: <NotFoundPage />,
   },
+  {
+  path: "/practice-modes",
+  element: <PracticeModesPage />,
+},
+{
+  path: "/performance-Analytics",
+  element: <PerformanceAnalyticsPage/>
+},
+{
+  path: "/howItsWorkPage",
+  element: <HowItWorksPage/>
+}
 ]);
