@@ -8,6 +8,7 @@ import HowItWorksPage from "../pages/work/HowItsWork";
 import MarketInsight from "../pages/Market/MarketInsight";
 import KnowledgeVault from "../pages/Knowledge/KnowledgeVault";
 import Roadmap from "../pages/roadmap/Roadmap";
+import DeveloperSandbox from "../pages/developer/DeveloperSandbox";
 
 export const router = createBrowserRouter([
   {
@@ -49,5 +50,9 @@ export const router = createBrowserRouter([
 {
   path: "/roadmap",
   element:<Roadmap/>
+},
+{
+  path: "/developerSandbox",
+  element:<DeveloperSandbox/>
 }
 ]);
