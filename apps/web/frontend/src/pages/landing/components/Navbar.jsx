@@ -109,13 +109,13 @@ const navigation = [
       {
         title: "Technical Collaboration",
         description: "Explore a project together",
-        href: "#growth-engine",
+        href: "/technicalCollaboration",
         icon: Sparkles,
       },
       {
         title: "Business Inquiry",
         description: "Talk to us about your use case",
-        href: "#growth-engine",
+        href: "/businessEnquiry",
         icon: ArrowUpRight,
       },
     ],

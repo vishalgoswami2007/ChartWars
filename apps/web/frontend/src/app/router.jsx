@@ -9,6 +9,8 @@ import MarketInsight from "../pages/Market/MarketInsight";
 import KnowledgeVault from "../pages/Knowledge/KnowledgeVault";
 import Roadmap from "../pages/roadmap/Roadmap";
 import DeveloperSandbox from "../pages/developer/DeveloperSandbox";
+import TechnicalCollaboration from "../pages/developer/TechnicalCollaboration";
+import BusinessEnquiry from "../pages/developer/BusinessEnquiry";
 
 export const router = createBrowserRouter([
   {
@@ -54,5 +56,13 @@ export const router = createBrowserRouter([
 {
   path: "/developerSandbox",
   element:<DeveloperSandbox/>
+},
+{
+  path: "/technicalCollaboration",
+  element:<TechnicalCollaboration/>
+},
+{
+  path: "/businessEnquiry",
+  element:<BusinessEnquiry/>
 }
 ]);
