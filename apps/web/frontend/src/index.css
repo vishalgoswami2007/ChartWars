@@ -79,3 +79,16 @@ svg {
 #root {
   min-height: 100vh;
 }
+
+/* Landing page layout utilities */
+.cw-navbar {
+  height: 72px;
+}
+
+.cw-hero {
+  min-height: 650px;
+}
+
+.cw-practice-card {
+  min-height: 310px;
+}

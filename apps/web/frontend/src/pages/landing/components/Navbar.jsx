@@ -17,7 +17,7 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-[#202a33] bg-[#07090c]/95 backdrop-blur-xl">
       <Container>
-        <div className="relative flex h-[72px] items-center justify-between gap-5">
+        <div className="relative flex cw-navbar items-center justify-between gap-5">
           <Link
             to="/"
             aria-label="ChartWars home"
