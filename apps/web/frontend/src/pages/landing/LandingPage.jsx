@@ -2,7 +2,9 @@ import backgroundImage from "../../assets/background.png";
 import Navbar from "./components/Navbar";
 import DashboardPreview from "./sections/DashboardPreview";
 import PracticeMode from "./sections/PracticeModes";
-
+import HowItWorks from "./sections/HowItWorks";
+import PerformanceAnalytics from "./sections/PerformanceAnalytics";
+import LearnInsights from "./sections/LearnInsights";
 
 export default function LandingPage() {
   return (
@@ -52,7 +54,13 @@ export default function LandingPage() {
       </section>
        
        <DashboardPreview />
-       <PracticeMode />
+
+      <div className="space-y-0">
+           <PracticeMode />
+           <HowItWorks />
+           <PerformanceAnalytics />
+           <LearnInsights/>
+         </div>
       
     </main>
   );
