@@ -5,19 +5,19 @@ const footerGroups = [
   {
     title: "PLATFORM",
     links: [
-      { label: "Home", href: "#home" },
-      { label: "How It Works", href: "#how-it-works" },
-      { label: "Practice Modes", href: "#practice-modes" },
-      { label: "Performance Analytics", href: "#performance-analytics" },
+      { label: "Home", href: "/" },
+      { label: "How It Works", href: "/howItsWork" },
+      { label: "Practice Modes", href: "/practiceModePage" },
+      { label: "Performance Analytics", href: "/performanceAnalyticsPage" },
     ],
   },
   {
     title: "EXPLORE",
     links: [
-      { label: "Market Insights", href: "#market-pulse" },
-      { label: "Knowledge Vault", href: "#knowledge-vault" },
+      { label: "Market Insights", href: "/marketInsight"},
+      { label: "Knowledge Vault", href: "/knowledgeVault" },
       { label: "Early Access", href: "#growth-engine" },
-      { label: "Business Partnerships", href: "#growth-engine" },
+      { label: "Business Partnerships", href: "/businessContact" },
     ],
   },
   {

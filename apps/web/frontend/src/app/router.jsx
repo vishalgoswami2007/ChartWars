@@ -11,6 +11,9 @@ import Roadmap from "../pages/roadmap/Roadmap";
 import DeveloperSandbox from "../pages/developer/DeveloperSandbox";
 import TechnicalCollaboration from "../pages/developer/TechnicalCollaboration";
 import BusinessEnquiry from "../pages/developer/BusinessEnquiry";
+import EnterpriseSolution from "../pages/business/EnterpriseSolutions";
+import Strategic from "../pages/business/Strategic";
+import BusinessContact from "../pages/business/BusinessContact";
 
 export const router = createBrowserRouter([
   {
@@ -64,5 +67,17 @@ export const router = createBrowserRouter([
 {
   path: "/businessEnquiry",
   element:<BusinessEnquiry/>
+},
+{
+path: "/enterpriseSolution",
+element:<EnterpriseSolution/>
+},
+{
+  path: "/strategic",
+  element:<Strategic/>
+},
+{
+  path: "/businessContact",
+  element: <BusinessContact/>
 }
 ]);

@@ -136,19 +136,19 @@ const navigation = [
       {
         title: "Enterprise Solutions",
         description: "Discuss your team's needs",
-        href: "#growth-engine",
+        href: "/enterpriseSolution",
         icon: Building2,
       },
       {
         title: "Strategic Partnerships",
         description: "Explore collaboration opportunities",
-        href: "#growth-engine",
+        href:  "/strategic",
         icon: TrendingUp,
       },
       {
         title: "Contact Business Team",
         description: "Share your business inquiry",
-        href: "#growth-engine",
+        href:  "/businessContact",
         icon: ArrowRight,
       },
     ],
