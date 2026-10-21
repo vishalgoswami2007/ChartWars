@@ -18,6 +18,11 @@ import OurMission from "../pages/landing/footer/OurMission";
 import Contact from "../pages/landing/footer/Contact";
 import PrivacyPolicy from "../pages/landing/footer/PrivacyPolicy";
 import CookieSettings from "../pages/landing/footer/CookieSettings";
+import TermsOfUse from "../pages/landing/footer/TermsOfUse";
+import Accessibility from "../pages/landing/footer/Accessibility";
+import HelpCenter from "../pages/landing/footer/HelpCenter";
+import Cookie from "../pages/landing/footer/CookiePolicy";
+import Security from "../pages/landing/footer/Security";
 
 export const router = createBrowserRouter([
   {
@@ -99,5 +104,25 @@ element:<PrivacyPolicy/>
 {
   path:"/cookieSetting",
   element:<CookieSettings/>
+},
+{
+  path:"/termsOfUse",
+  element:<TermsOfUse/>
+},
+{
+  path:"/accessibility",
+  element:<Accessibility/>
+},
+{
+  path:"/helpCenter",
+  element:<HelpCenter/>
+},
+{
+  path:"/cookie",
+  element:<Cookie/>
+},
+{
+  path:"/security",
+  element:<Security/>
 }
 ]);

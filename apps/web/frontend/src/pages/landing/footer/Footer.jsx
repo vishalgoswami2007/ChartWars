@@ -158,13 +158,13 @@ export default function Footer() {
       className="flex flex-wrap gap-x-5 gap-y-4 lg:justify-end"
     >
       {[
-        { label: "Help Center", href: "/help" },
+        { label: "Help Center", href: "/helpCenter" },
         { label: "Contact Us", href: "/contact" },
         { label: "Security", href: "/security" },
         { label: "Privacy Policy", href: "/privacyPolicy" },
         { label: "Cookie Policy", href: "/cookies" },
         { label: "Cookie Settings", href: "/cookieSetting" },
-        { label: "Terms of Use", href: "/terms" },
+        { label: "Terms of Use", href: "/termsOfUse" },
         { label: "Accessibility", href: "/accessibility" },
       ].map((item) => (
         <a
