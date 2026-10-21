@@ -7,6 +7,7 @@ import PerformanceAnalytics from "./sections/PerformanceAnalytics";
 import LearnInsights from "./sections/LearnInsights";
 import GrowthEngine from "./sections/GrowthEngine";
 import Footer from "./footer/Footer";
+import { Link } from "react-router-dom";
 
 export default function LandingPage() {
   return (
@@ -40,16 +41,17 @@ export default function LandingPage() {
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Link to="/Signup">
             <button className="inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-orange-500 px-8 py-3 font-semibold text-black transition duration-200 hover:bg-orange-400">
               Get started <span aria-hidden="true">↗</span>
             </button>
-
-            <a
-              href="#features"
+            </Link>
+            <Link
+              to="/faq"
               className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/25 px-8 py-3 font-semibold text-white transition duration-200 hover:border-white/60 hover:bg-white/5"
             >
               Learn more
-            </a>
+            </Link>
           </div>
         </div>
    </div>

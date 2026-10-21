@@ -30,7 +30,7 @@ const navigation = [
       title: "Practice. Analyze. Improve.",
       description:
         "Explore tools designed to help you build market knowledge and practice with purpose.",
-      href: "#features",
+      href: "/practice-modes",
       action: "Explore platform",
     },
     links: [
@@ -52,6 +52,12 @@ const navigation = [
         href: "/howItsWorkPage",
         icon: Sparkles,
       },
+      {
+        title: "HelpCircle",
+        description: "Instant help center guide",
+        href: "/faq",
+        icon: ChevronDown,
+      }
     ],
   },
   {
@@ -63,7 +69,7 @@ const navigation = [
       title: "Knowledge creates confidence.",
       description:
         "Discover educational resources to support your market learning journey.",
-      href: "#learn",
+      href: "/roadmap",
       action: "Explore learning",
     },
     links: [
@@ -96,7 +102,7 @@ const navigation = [
       title: "Let's build what's next.",
       description:
         "Explore potential integrations and discuss developer-focused collaboration with ChartWars.",
-      href: "#growth-engine",
+      href: "/businessEnquiry",
       action: "Explore opportunities",
     },
     links: [
@@ -129,7 +135,7 @@ const navigation = [
       title: "Let's grow together.",
       description:
         "Discuss potential partnerships, market-learning solutions and enterprise opportunities.",
-      href: "#growth-engine",
+      href: "/businessContact",
       action: "Explore partnerships",
     },
     links: [
@@ -246,13 +252,13 @@ function MegaMenu({ item, onNavigate }) {
           <span className="text-xs text-gray-500">
             Explore the ChartWars ecosystem
           </span>
-          <a
-            href="#growth-engine"
+          <Link
+            to="signup"
             onClick={onNavigate}
             className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-300 transition hover:text-orange-600"
           >
             Early access <ArrowRight size={13} />
-          </a>
+          </Link>
         </div>
       </div>
     </div>

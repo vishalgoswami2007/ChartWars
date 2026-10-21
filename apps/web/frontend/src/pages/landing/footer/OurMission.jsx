@@ -5,7 +5,7 @@ const ROUTES = {
   home: "/",
   help: "/help",
   contact: "/contact",
-  privacy: "/privacy",
+  privacy: "/privacyPolicy",
   cookies: "/cookies",
   terms: "/terms",
   accessibility: "/accessibility",

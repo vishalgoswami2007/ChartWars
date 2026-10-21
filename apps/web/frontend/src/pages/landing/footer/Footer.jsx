@@ -1,6 +1,6 @@
 
 import logo from "../../../assets/logo.png";
-
+import { Link } from "react-router-dom";
 const footerGroups = [
   {
     title: "PLATFORM",
@@ -76,8 +76,8 @@ export default function Footer() {
               and develop financial knowledge through technology.
             </p>
 
-            <a
-              href="#growth-engine"
+            <Link
+              to="/faq"
               className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-orange-400 transition hover:text-orange-300"
             >
               Explore ChartWars
@@ -93,7 +93,7 @@ export default function Footer() {
               >
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
-            </a>
+            </Link>
           </div>
 
           {/* Navigation */}
@@ -194,7 +194,7 @@ export default function Footer() {
               Privacy Policy
             </a>
             <a
-              href="/terms"
+              href="/termsOfUse"
               className="transition hover:text-gray-300"
             >
               Terms of Use

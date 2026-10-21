@@ -23,6 +23,7 @@ import Accessibility from "../pages/landing/footer/Accessibility";
 import HelpCenter from "../pages/landing/footer/HelpCenter";
 import Cookie from "../pages/landing/footer/CookiePolicy";
 import Security from "../pages/landing/footer/Security";
+import FAQ from "../pages/landing/FAQ";
 
 export const router = createBrowserRouter([
   {
@@ -118,11 +119,15 @@ element:<PrivacyPolicy/>
   element:<HelpCenter/>
 },
 {
-  path:"/cookie",
+  path:"/cookies",
   element:<Cookie/>
 },
 {
   path:"/security",
   element:<Security/>
+},
+{
+  path:"/faq",
+  element:<FAQ/>
 }
 ]);
