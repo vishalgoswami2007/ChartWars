@@ -14,6 +14,8 @@ import BusinessEnquiry from "../pages/developer/BusinessEnquiry";
 import EnterpriseSolution from "../pages/business/EnterpriseSolutions";
 import Strategic from "../pages/business/Strategic";
 import BusinessContact from "../pages/business/BusinessContact";
+import OurMission from "../pages/landing/footer/OurMission";
+import Contact from "../pages/landing/footer/Contact";
 
 export const router = createBrowserRouter([
   {
@@ -79,5 +81,13 @@ element:<EnterpriseSolution/>
 {
   path: "/businessContact",
   element: <BusinessContact/>
+},
+{
+  path: "/ourMission",
+  element:<OurMission/>
+},
+{
+  path: "/contact",
+  element:<Contact/>
 }
 ]);

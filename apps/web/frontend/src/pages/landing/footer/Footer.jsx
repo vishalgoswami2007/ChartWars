@@ -16,15 +16,15 @@ const footerGroups = [
     links: [
       { label: "Market Insights", href: "/marketInsight"},
       { label: "Knowledge Vault", href: "/knowledgeVault" },
-      { label: "Early Access", href: "#growth-engine" },
+      { label: "Early Access", href: "/contact" },
       { label: "Business Partnerships", href: "/businessContact" },
     ],
   },
   {
     title: "COMPANY",
     links: [
-      { label: "Our Mission", href: "#about" },
-      { label: "Contact", href: "mailto:hello@chartwars.com" },
+      { label: "Our Mission", href: "/ourMission" },
+      { label: "Contact", href: "/contact" },
     ],
   },
 ];
@@ -159,7 +159,7 @@ export default function Footer() {
     >
       {[
         { label: "Help Center", href: "/help" },
-        { label: "Contact Us", href: "mailto:hello@chartwars.com" },
+        { label: "Contact Us", href: "/contact" },
         { label: "Security", href: "/security" },
         { label: "Privacy Policy", href: "/privacy" },
         { label: "Cookie Policy", href: "/cookies" },
