@@ -161,9 +161,9 @@ export default function Footer() {
         { label: "Help Center", href: "/help" },
         { label: "Contact Us", href: "/contact" },
         { label: "Security", href: "/security" },
-        { label: "Privacy Policy", href: "/privacy" },
+        { label: "Privacy Policy", href: "/privacyPolicy" },
         { label: "Cookie Policy", href: "/cookies" },
-        { label: "Cookie Settings", href: "#cookie-settings" },
+        { label: "Cookie Settings", href: "/cookieSetting" },
         { label: "Terms of Use", href: "/terms" },
         { label: "Accessibility", href: "/accessibility" },
       ].map((item) => (

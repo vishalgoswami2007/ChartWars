@@ -16,6 +16,8 @@ import Strategic from "../pages/business/Strategic";
 import BusinessContact from "../pages/business/BusinessContact";
 import OurMission from "../pages/landing/footer/OurMission";
 import Contact from "../pages/landing/footer/Contact";
+import PrivacyPolicy from "../pages/landing/footer/PrivacyPolicy";
+import CookieSettings from "../pages/landing/footer/CookieSettings";
 
 export const router = createBrowserRouter([
   {
@@ -89,5 +91,13 @@ element:<EnterpriseSolution/>
 {
   path: "/contact",
   element:<Contact/>
+},
+{
+path: "/privacyPolicy",
+element:<PrivacyPolicy/>
+},
+{
+  path:"/cookieSetting",
+  element:<CookieSettings/>
 }
 ]);
