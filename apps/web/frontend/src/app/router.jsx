@@ -47,7 +47,6 @@ import MainHome from "../pages/dashboard/MainHome";
 import DashboardPlaceholder from "../pages/dashboard/DashboardPlaceholder";
 import MarketsPage from "../pages/dashboard/MarketsPage";
 import NewsPage from "../pages/dashboard/NewsPage";
-
 import LearnPage from "../pages/dashboard/LearnPage";
 
 export const router = createBrowserRouter([
@@ -206,11 +205,11 @@ export const router = createBrowserRouter([
       },
       {
         path: "learn",
-        element: <KnowledgeVault />,
+        element: <LearnPage />,
       },
       {
-           path: "learn/roadmap",
-          element: <LearnPage initialTab="roadmap" />,
+        path: "learn/roadmap",
+        element: <LearnPage initialTab="roadmap" />,
       },
       {
         path: "news",
