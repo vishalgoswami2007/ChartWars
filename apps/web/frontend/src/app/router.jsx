@@ -46,6 +46,7 @@ import Dashboard from "../pages/Dashboard";
 import MainHome from "../pages/dashboard/MainHome";
 import DashboardPlaceholder from "../pages/dashboard/DashboardPlaceholder";
 import MarketsPage from "../pages/dashboard/MarketsPage";
+import NewsPage from "../pages/dashboard/NewsPage";
 
 export const router = createBrowserRouter([
   // Landing page
@@ -168,7 +169,7 @@ export const router = createBrowserRouter([
     element: <FAQ />,
   },
 
-  // Dashboard with nested pages
+  // Dashboard and nested pages
   {
     path: "/dashboard",
     element: <Dashboard />,
@@ -211,13 +212,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "news",
-        element: (
-          <DashboardPlaceholder
-            eyebrow="MARKET INTELLIGENCE"
-            title="Market News"
-            description="A dedicated space for market headlines and educational insights. News integration will be added later."
-          />
-        ),
+        element: <NewsPage />,
       },
       {
         path: "practice-modes",
@@ -237,16 +232,6 @@ export const router = createBrowserRouter([
         ),
       },
       {
-          path: "news",
-      element: (
-             <DashboardPlaceholder
-               eyebrow="MARKET INTELLIGENCE"
-               title="Market News"
-               description="A dedicated space for market headlines and educational insights. News integration will be added later."
-             />
-             ),
-          },
-      {
         path: "settings",
         element: (
           <DashboardPlaceholder
@@ -258,7 +243,7 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // Keep the fallback route last
+  // Fallback route
   {
     path: "*",
     element: <NotFoundPage />,
