@@ -193,7 +193,7 @@ function CoachPreview() {
             <p className="text-xs font-medium text-white/90">Trading Coach</p>
             <p className="mt-1 flex items-center gap-1 text-[10px] text-emerald-400">
               <span className="size-1.5 rounded-full bg-emerald-400" />
-              Ready to help
+              Compare your trades with the bot
             </p>
           </div>
         </div>

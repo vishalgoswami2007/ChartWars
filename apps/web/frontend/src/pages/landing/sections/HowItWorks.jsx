@@ -40,9 +40,9 @@ const steps = [
   },
   {
     number: "04",
-    title: "Win & repeat",
+    title: "Review and improve",
     description:
-      "Celebrate the win, collect your reward, and jump into the next battle.",
+      "See your discipline report and what to fix next.",
     label: "CLAIM YOUR VICTORY",
   },
 ];

@@ -32,6 +32,7 @@ import FAQ from "../pages/landing/FAQ";
 import Signup from "../pages/auth/Signup";
 import Login from "../pages/auth/Login";
 import ForgotPassword from "../pages/auth/ForgotPassword";
+import VerifyOtp from "../pages/auth/VerifyOtp";
 
 export const router = createBrowserRouter([
   {
@@ -139,7 +140,11 @@ export const router = createBrowserRouter([
     element: <NotFoundPage />,
   },
   {
-    path:"/forgotPassword",
+    path:"/forgetPassword",
     element:<ForgotPassword/>
+  },
+  {
+    path:"/verifyOtp",
+    element:<VerifyOtp/>
   }
 ]);

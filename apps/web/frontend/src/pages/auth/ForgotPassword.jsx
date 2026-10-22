@@ -10,7 +10,8 @@ const ROUTES = {
   forgotPassword: "/forgetPassword",
   home:"/",
   privacyPolicy:"/privacyPolicy",
-  termsOfUse: "/termsOfUse"
+  termsOfUse: "/termsOfUse",
+  verifyOtp: "/verifyOtp"
 };
 
 

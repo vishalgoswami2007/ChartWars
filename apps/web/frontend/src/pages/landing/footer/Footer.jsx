@@ -187,18 +187,6 @@ export default function Footer() {
           </p>
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <a
-              href="/privacy"
-              className="transition hover:text-gray-300"
-            >
-              Privacy Policy
-            </a>
-            <a
-              href="/termsOfUse"
-              className="transition hover:text-gray-300"
-            >
-              Terms of Use
-            </a>
             <span className="hidden h-3 w-px bg-white/10 sm:block" />
             <span className="text-gray-700">Built for better market learning.</span>
           </div>
