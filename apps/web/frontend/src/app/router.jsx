@@ -237,6 +237,16 @@ export const router = createBrowserRouter([
         ),
       },
       {
+          path: "news",
+      element: (
+             <DashboardPlaceholder
+               eyebrow="MARKET INTELLIGENCE"
+               title="Market News"
+               description="A dedicated space for market headlines and educational insights. News integration will be added later."
+             />
+             ),
+          },
+      {
         path: "settings",
         element: (
           <DashboardPlaceholder
