@@ -1,5 +1,6 @@
+
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 
 import Sidebar from "../components/common/Sidebar";
 import Navbar from "../components/common/Navbar";
@@ -7,6 +8,12 @@ import LiveTickerRow from "../components/common/LiveTickerRow";
 
 export default function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  const hideMarketOverview =
+    location.pathname === "/dashboard/learn" ||
+    location.pathname.startsWith("/dashboard/learn/") ||
+    location.pathname === "/dashboard/news";
 
   return (
     <div className="min-h-screen bg-[#050505] text-white">
@@ -18,7 +25,7 @@ export default function Dashboard() {
       <div className="min-h-screen lg:pl-65">
         <Navbar onMenuClick={() => setIsSidebarOpen(true)} />
 
-        <LiveTickerRow />
+        {!hideMarketOverview && <LiveTickerRow />}
 
         <Outlet />
       </div>
