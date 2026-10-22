@@ -5,7 +5,7 @@ import AuthLayout, { Alert, AuthLink, DemoNote, PasswordField, PasswordMeter, Su
 
 const ROUTES = {
   login: "/login",
-  forgotPassword: "/forgotPassword",
+  forgetPassword: "/forgetPassword",
 };
 
 const LENGTH = 6;
@@ -37,7 +37,7 @@ export default function VerifyOtp() {
   }, [step]);
 
   // Arrived without an email (for example by typing the URL): start from the beginning.
-  if (!email) return <Navigate to={ROUTES.forgotPassword} replace />;
+  if (!email) return <Navigate to={ROUTES.forgetPassword} replace />;
 
   const code = digits.join("");
 
