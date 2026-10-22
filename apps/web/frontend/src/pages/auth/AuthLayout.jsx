@@ -1,7 +1,17 @@
 import { useId, useState } from "react";
 import { Link } from "react-router-dom";
-import { ROUTES } from "../../routes";
+
 import logo from "../../assets/logo.png";
+
+const ROUTES = {
+  dashboard: "/dashboard",
+  login: "/login",
+  Signup:"/signup",
+  forgotPassword: "/forgetPassword",
+  home:"/",
+  privacyPolicy:"/privacyPolicy",
+  termsOfUse: "/termsOfUse"
+};
 
 const FOCUS =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black";

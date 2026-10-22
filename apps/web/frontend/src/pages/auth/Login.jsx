@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ROUTES } from "../../routes";
+
 import AuthLayout, { Alert, AuthLink, DemoNote, Divider, Field, GoogleButton, PasswordField, SubmitButton, postJson } from "./AuthLayout";
+const ROUTES = {
+  dashboard: "/dashboard",
+  signup: "/signup",
+  forgotPassword: "/forgetPassword",
+  home:"/"
+};
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 

@@ -1,7 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ROUTES } from "../../routes";
+
 import AuthLayout, { Alert, AuthLink, DemoNote, Divider, Field, GoogleButton, PasswordField, PasswordMeter, SubmitButton, postJson } from "./AuthLayout";
+
+const ROUTES = {
+  dashboard: "/dashboard",
+  login: "/login",
+  forgotPassword: "/forgetPassword",
+  home:"/",
+  privacyPolicy:"/privacyPolicy",
+  termsOfUse: "/termsOfUse"
+};
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -79,7 +88,7 @@ export default function Signup() {
         <label className="mt-4 flex items-start gap-3 text-xs leading-relaxed text-zinc-400">
           <input type="checkbox" name="terms" checked={values.terms} onChange={handleChange} className="mt-0.5 h-4 w-4 accent-orange-500" />
           <span>
-            I agree to the <AuthLink to={ROUTES.terms}>Terms of Use</AuthLink> and <AuthLink to={ROUTES.privacy}>Privacy Policy</AuthLink>.
+            I agree to the <AuthLink to={ROUTES.termsOfUse}>Terms of Use</AuthLink> and <AuthLink to={ROUTES.privacyPolicy}>Privacy Policy</AuthLink>.
           </span>
         </label>
         <p className="mb-5 mt-1 min-h-4 text-xs text-red-400">{errors.terms}</p>
