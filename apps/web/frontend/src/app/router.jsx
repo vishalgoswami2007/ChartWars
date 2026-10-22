@@ -35,8 +35,8 @@ import ForgotPassword from "../pages/auth/ForgotPassword";
 import VerifyOtp from "../pages/auth/VerifyOtp";
 
 import Dashboard from "../pages/Dashboard";
-import MainHome from "../components/dashboard/MainHome";
-import DashboardPlaceholder from "../components/dashboard/DashboardPlaceholder";
+import MainHome from "../pages/dashboard/MainHome";
+import DashboardPlaceholder from "../pages/dashboard/DashboardPlaceholder";
 
 export const router = createBrowserRouter([
   {
