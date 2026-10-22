@@ -1,696 +1,471 @@
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  ArrowRight,
-  ArrowUpRight,
   Activity,
   BarChart3,
-  CheckCircle2,
+  ChevronRight,
   Eye,
   EyeOff,
   LockKeyhole,
   Mail,
-  Phone,
   ShieldCheck,
-  Sparkles,
   UserRound,
-  Zap,
 } from "lucide-react";
 
-function TradingViewTicker() {
-  const containerRef = useRef(null);
+const initialForm = {
+  name: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+};
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container || container.dataset.loaded === "true") return;
+const inputClass =
+  "h-11 w-full rounded-lg border border-[#252D38] bg-[#0C1119] px-3 text-[13px] text-white outline-none placeholder:text-[#626D7C] transition focus:border-emerald-500/70 focus:ring-2 focus:ring-emerald-500/10";
 
-    container.dataset.loaded = "true";
-
-    const script = document.createElement("script");
-    script.src =
-      "https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js";
-    script.async = true;
-    script.type = "text/javascript";
-
-    script.innerHTML = JSON.stringify({
-      symbols: [
-        { proName: "BINANCE:BTCUSDT", title: "Bitcoin" },
-        { proName: "BINANCE:ETHUSDT", title: "Ethereum" },
-        { proName: "NASDAQ:AAPL", title: "Apple" },
-        { proName: "NASDAQ:NVDA", title: "NVIDIA" },
-        { proName: "NASDAQ:TSLA", title: "Tesla" },
-      ],
-      showSymbolLogo: true,
-      isTransparent: true,
-      displayMode: "adaptive",
-      colorTheme: "dark",
-      locale: "en",
-    });
-
-    container.appendChild(script);
-
-    return () => {
-      container.replaceChildren();
-      container.dataset.loaded = "false";
-    };
-  }, []);
+function MarketPanel() {
+  const points =
+    "0,118 22,108 42,114 61,87 80,96 99,72 119,81 140,58 158,68 178,47 197,59 218,33 238,44 258,25 278,38 298,16 320,27 342,12";
 
   return (
-    <div className="tradingview-widget-container w-full overflow-hidden">
-      <div ref={containerRef} className="tradingview-widget-container__widget" />
-    </div>
-  );
-}
+    <section className="relative hidden h-dvh min-h-0 flex-col overflow-hidden border-r border-white/[0.07] bg-[#080B11] p-7 xl:p-9 lg:flex">
+      <div className="pointer-events-none absolute -left-44 top-1/4 h-105 w-105 rounded-full bg-emerald-500/4.5 blur-[110px]" />
 
-function TradingViewChart() {
-  const containerRef = useRef(null);
+      <Link to="/" className="relative z-10 flex w-fit items-center gap-2.5">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-500/25 bg-emerald-500/8">
+          <Activity size={19} className="text-emerald-400" strokeWidth={1.7} />
+        </div>
+        <div className="text-[19px] font-semibold tracking-[-0.7px]">
+          ChartWars
+          <span className="ml-2 rounded border border-[#26313D] px-1.5 py-0.5 align-middle text-[9px] font-medium tracking-[1px] text-[#8995A5]">
+            SIM
+          </span>
+        </div>
+      </Link>
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container || container.dataset.loaded === "true") return;
+      <div className="relative z-10 my-auto max-w-165 py-6">
+        <div className="mb-5 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[2.2px] text-emerald-400">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          Market simulation platform
+        </div>
 
-    container.dataset.loaded = "true";
+        <h1 className="max-w-155 text-[clamp(30px,3.2vw,51px)] font-semibold leading-[1.12] tracking-[-2px] text-white">
+          Institutional-grade simulation.
+          <span className="mt-2 block text-[#8D98A8]">
+            Trade global markets.
+          </span>
+        </h1>
 
-    const script = document.createElement("script");
-    script.src =
-      "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
-    script.async = true;
-    script.type = "text/javascript";
+        <p className="mt-4 max-w-117.5 text-[13px] leading-6 text-[#929DAD]">
+          Test your strategies, analyze price action, and sharpen your
+          decision-making in a risk-free trading environment.
+        </p>
 
-    script.innerHTML = JSON.stringify({
-      autosize: true,
-      symbol: "BINANCE:BTCUSDT",
-      interval: "60",
-      timezone: "Asia/Kolkata",
-      theme: "dark",
-      style: "1",
-      locale: "en",
-      backgroundColor: "rgba(9, 9, 11, 1)",
-      gridColor: "rgba(255, 255, 255, 0.04)",
-      hide_top_toolbar: false,
-      hide_legend: false,
-      allow_symbol_change: true,
-      save_image: false,
-      calendar: false,
-      support_host: "https://www.tradingview.com",
-    });
+        <div className="mt-8 overflow-hidden rounded-xl border border-[#222B37] bg-[#0B1017]">
+          <div className="flex items-center justify-between border-b border-[#222B37] px-4 py-3">
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-[1.5px] text-[#8792A1]">
+                Market overview
+              </p>
+              <p className="mt-1 text-xs text-white">Illustrative price chart</p>
+            </div>
+            <span className="flex items-center gap-1.5 rounded-md border border-emerald-500/20 bg-emerald-500/6 px-2 py-1 text-[9px] text-emerald-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              SIMULATED
+            </span>
+          </div>
 
-    container.appendChild(script);
+          <div className="grid grid-cols-3 divide-x divide-[#222B37] border-b border-[#222B37]">
+            {[
+              ["MARKET", "Global"],
+              ["MODE", "Practice"],
+              ["RISK", "Virtual funds"],
+            ].map(([label, value]) => (
+              <div key={label} className="px-3 py-3">
+                <p className="text-[9px] tracking-[1px] text-[#687587]">{label}</p>
+                <p className="mt-1 text-xs font-medium text-[#D5DCE5]">{value}</p>
+              </div>
+            ))}
+          </div>
 
-    return () => {
-      container.replaceChildren();
-      container.dataset.loaded = "false";
-    };
-  }, []);
+          <div className="px-4 pb-3 pt-4">
+            <div className="relative h-37.5 overflow-hidden">
+              <div
+                className="absolute inset-0"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(to right, #202A35 1px, transparent 1px), linear-gradient(to bottom, #202A35 1px, transparent 1px)",
+                  backgroundSize: "42px 30px",
+                  opacity: 0.42,
+                }}
+              />
+              <svg
+                viewBox="0 0 342 135"
+                preserveAspectRatio="none"
+                className="relative h-full w-full"
+                aria-label="Illustrative rising market trend"
+              >
+                <defs>
+                  <linearGradient id="marketFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10B981" stopOpacity=".20" />
+                    <stop offset="100%" stopColor="#10B981" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+                <polygon
+                  points={`0,135 ${points} 342,135`}
+                  fill="url(#marketFill)"
+                />
+                <polyline
+                  points={points}
+                  fill="none"
+                  stroke="#10B981"
+                  strokeWidth="2"
+                  vectorEffect="non-scaling-stroke"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+            <div className="mt-2 flex justify-between text-[9px] text-[#687587]">
+              <span>Illustrative data</span>
+              <span>For practice only</span>
+            </div>
+          </div>
+        </div>
 
-  return (
-    <div className="h-62.5 w-full overflow-hidden rounded-xl sm:h-75">
-      <div
-        ref={containerRef}
-        className="tradingview-widget-container h-full w-full"
-      >
-        <div className="tradingview-widget-container__widget h-full w-full" />
-      </div>
-    </div>
-  );
-}
-
-function PasswordStrength({ password }) {
-  const checks = [
-    password.length >= 8,
-    /[A-Z]/.test(password) && /[a-z]/.test(password),
-    /\d/.test(password),
-    /[^A-Za-z0-9]/.test(password),
-  ];
-
-  const score = checks.filter(Boolean).length;
-
-  const label =
-    !password
-      ? "Use at least 8 characters"
-      : score <= 1
-        ? "Weak password"
-        : score === 2
-          ? "Fair password"
-          : score === 3
-            ? "Good password"
-            : "Strong password";
-
-  const strengthColor =
-    score <= 1
-      ? "bg-red-500"
-      : score === 2
-        ? "bg-yellow-500"
-        : score === 3
-          ? "bg-orange-500"
-          : "bg-emerald-500";
-
-  return (
-    <div className="mt-3">
-      <div className="flex gap-1.5">
-        {[1, 2, 3, 4].map((bar) => (
-          <div
-            key={bar}
-            className={`h-1 flex-1 rounded-full ${
-              score >= bar ? strengthColor : "bg-zinc-800"
-            }`}
-          />
-        ))}
+        <div className="mt-5 flex items-center gap-5 text-[11px] text-[#8D98A8]">
+          <span className="flex items-center gap-1.5">
+            <ShieldCheck size={14} className="text-emerald-400" />
+            Risk-free practice
+          </span>
+          <span className="flex items-center gap-1.5">
+            <BarChart3 size={14} className="text-emerald-400" />
+            Strategy analysis
+          </span>
+        </div>
       </div>
 
-      <p className="mt-2 text-xs text-zinc-500">{label}</p>
-    </div>
-  );
-}
-
-function FormField({
-  label,
-  icon: Icon,
-  error,
-  children,
-}) {
-  return (
-    <div>
-      <label className="mb-2 block text-sm font-medium text-zinc-300">
-        {label}
-      </label>
-
-      <div
-        className={`flex items-center gap-3 rounded-xl border bg-zinc-900/70 px-3.5 transition focus-within:border-orange-500/70 focus-within:ring-2 focus-within:ring-orange-500/10 ${
-          error ? "border-red-500/60" : "border-white/9"
-        }`}
-      >
-        <Icon size={17} className="shrink-0 text-zinc-500" />
-        {children}
+      <div className="relative z-10 flex items-center justify-between text-[10px] text-[#697484]">
+        <span>© {new Date().getFullYear()} ChartWars</span>
+        <span>Markets are simulated · No real-money orders</span>
       </div>
-
-      {error && <p className="mt-1.5 text-xs text-red-400">{error}</p>}
-    </div>
+    </section>
   );
 }
 
-export default function Signup() {
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirmPassword: "",
-    acceptedTerms: false,
-  });
+export default function AuthPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
 
+  const [mode, setMode] = useState(
+    location.pathname === "/login" ? "login" : "signup"
+  );
+  const [form, setForm] = useState(initialForm);
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [notice, setNotice] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function updateField(event) {
-    const { name, value, checked, type } = event.target;
+  const isSignup = mode === "signup";
 
+  const switchMode = (nextMode) => {
+    setMode(nextMode);
+    setError("");
+    setShowPassword(false);
+    setShowConfirm(false);
+    setForm(initialForm);
+    navigate(nextMode === "signup" ? "/signup" : "/login", {
+      replace: true,
+    });
+  };
+
+  const update = (event) => {
     setForm((previous) => ({
       ...previous,
-      [name]: type === "checkbox" ? checked : value,
+      [event.target.name]: event.target.value,
     }));
+    setError("");
+  };
 
-    setErrors((previous) => ({
-      ...previous,
-      [name]: "",
-    }));
-
-    setNotice("");
-  }
-
-  function validateForm() {
-    const nextErrors = {};
-
-    if (form.name.trim().length < 2) {
-      nextErrors.name = "Enter your full name.";
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      nextErrors.email = "Enter a valid email address.";
-    }
-
-    if (form.phone && !/^[0-9]{10,15}$/.test(form.phone.replace(/[\s+-]/g, ""))) {
-      nextErrors.phone = "Enter a valid phone number.";
-    }
-
-    if (
-      form.password.length < 8 ||
-      !/[A-Z]/.test(form.password) ||
-      !/[a-z]/.test(form.password) ||
-      !/\d/.test(form.password)
-    ) {
-      nextErrors.password =
-        "Use 8+ characters with uppercase, lowercase and a number.";
-    }
-
-    if (form.confirmPassword !== form.password) {
-      nextErrors.confirmPassword = "Passwords do not match.";
-    }
-
-    if (!form.acceptedTerms) {
-      nextErrors.acceptedTerms = "Please accept the terms to continue.";
-    }
-
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  }
-
-  async function handleSubmit(event) {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    setError("");
 
-    if (!validateForm()) return;
+    if (isSignup && form.password !== form.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
 
-    // UI only: connect this form to your Express signup API later.
-    setNotice(
-      "Form validated successfully. Connect your backend API to create your account."
-    );
-  }
+    if (form.password.length < 8) {
+      setError("Use a password with at least 8 characters.");
+      return;
+    }
 
-  function handleGoogleSignup() {
-    setNotice(
-      "Google signup is not connected yet. Configure Google OAuth to enable it."
-    );
-  }
+    setLoading(true);
+
+    // UI validation only. Connect your backend API here.
+    setTimeout(() => {
+      setLoading(false);
+      setError(
+        isSignup
+          ? "Form validated. Connect the signup API to create your account."
+          : "Form validated. Connect the login API to authenticate your account."
+      );
+    }, 250);
+  };
+
+  const googleSignIn = () => {
+    setError("Google authentication has not been connected yet.");
+  };
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-black font-sans text-white selection:bg-orange-500 selection:text-black">
-      <div className="grid min-h-screen lg:grid-cols-[1.08fr_0.92fr]">
-        {/* LEFT PANEL */}
-        <section className="relative hidden min-h-screen flex-col justify-between overflow-hidden border-r border-white/[0.07] bg-zinc-950 p-8 lg:flex xl:p-12">
-          <div className="pointer-events-none absolute -left-32 top-32 h-96 w-96 rounded-full bg-orange-500/8 blur-[120px]" />
-          <div className="pointer-events-none absolute -right-20 bottom-20 h-80 w-80 rounded-full bg-orange-600/5 blur-[110px]" />
+    <main className="grid h-dvh min-h-0 w-full grid-cols-1 overflow-hidden bg-[#080B11] text-white lg:grid-cols-[60fr_40fr]">
+      <MarketPanel />
 
-          {/* Branding */}
-          <div className="relative z-10 flex items-center justify-between gap-4">
-            <a href="/" className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-orange-500/30 bg-orange-500/10">
-                <Activity size={23} className="text-orange-500" />
-              </div>
-
-              <div>
-                <p className="text-xl font-black tracking-tight">
-                  Chart<span className="text-orange-500">Wars</span>
-                </p>
-                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                  Practice. Compete. Improve.
-                </p>
-              </div>
-            </a>
-
-            <span className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-zinc-400">
-              <span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-orange-500" />
+      <section className="flex h-dvh min-h-0 items-center justify-center overflow-hidden px-5 py-4 sm:px-8 lg:px-6 xl:px-10">
+        <div className="w-full max-w-97.5">
+          <div className="mb-5 flex items-center justify-between lg:hidden">
+            <Link to="/" className="flex items-center gap-2 text-lg font-semibold">
+              <Activity size={21} className="text-emerald-400" />
+              ChartWars
+            </Link>
+            <span className="text-[10px] uppercase tracking-[1.5px] text-[#8D98A8]">
               Trading simulator
             </span>
           </div>
 
-          {/* Main pitch */}
-          <div className="relative z-10 my-12 max-w-2xl">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/[0.07] px-3 py-2 text-xs font-medium text-orange-400">
-              <Sparkles size={14} />
-              Your next level starts here
-            </div>
-
-            <h1 className="text-5xl font-black leading-[1.12] tracking-tight xl:text-6xl">
-              Trade smarter.
-              <br />
-              <span className="text-orange-500">Practice harder.</span>
-              <br />
-              Play to improve.
-            </h1>
-
-            <p className="mt-5 max-w-lg text-base leading-7 text-zinc-400">
-              Build your trading discipline, test your strategies, and
-              challenge your friends — without risking real money in practice
-              mode.
-            </p>
-
-            {/* Feature cards */}
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
-              {[
-                {
-                  icon: Zap,
-                  title: "Practice mode",
-                  detail: "Virtual trading",
-                },
-                {
-                  icon: BarChart3,
-                  title: "Chart analysis",
-                  detail: "Study the market",
-                },
-                {
-                  icon: ShieldCheck,
-                  title: "Learn safely",
-                  detail: "No real-money orders",
-                },
-              ].map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <div
-                    key={item.title}
-                    className="rounded-2xl border border-white/8 bg-white/2.5 p-4 transition hover:border-orange-500/25 hover:bg-orange-500/2.5"
-                  >
-                    <Icon size={20} className="text-orange-500" />
-                    <p className="mt-4 text-sm font-semibold text-zinc-200">
-                      {item.title}
-                    </p>
-                    <p className="mt-1 text-xs text-zinc-500">
-                      {item.detail}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Live market widget */}
-            <div className="mt-8 overflow-hidden rounded-2xl border border-white/8 bg-black/60 p-3">
-              <div className="mb-3 flex items-center justify-between px-1">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-orange-500" />
-                  <span className="text-xs font-semibold text-zinc-300">
-                    Market watch
-                  </span>
-                </div>
-                <span className="text-[10px] text-zinc-600">
-                  Powered by TradingView
-                </span>
-              </div>
-
-              <TradingViewTicker />
-            </div>
-
-            {/* Chart */}
-            <div className="mt-4 overflow-hidden rounded-2xl border border-white/8 bg-black/60 p-3">
-              <div className="mb-3 flex items-center justify-between px-1">
-                <div>
-                  <p className="text-sm font-semibold text-zinc-200">
-                    BTC / USDT
-                  </p>
-                  <p className="mt-1 text-xs text-zinc-500">
-                    Market chart preview
-                  </p>
-                </div>
-
-                <ArrowUpRight size={18} className="text-orange-500" />
-              </div>
-
-              <TradingViewChart />
-
-              <p className="mt-2 text-[10px] leading-5 text-zinc-600">
-                External market data is for reference and may differ from
-                ChartWars simulation data.
+          <div key={mode} className="auth-fade-in">
+            <div className="mb-5">
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[2px] text-emerald-400">
+                {isSignup ? "Create account" : "Secure access"}
               </p>
-            </div>
-          </div>
-
-          <div className="relative z-10 flex items-center justify-between gap-4 border-t border-white/[0.07] pt-5 text-xs text-zinc-600">
-            <p>© {new Date().getFullYear()} ChartWars</p>
-            <p>Built for practice, not financial advice.</p>
-          </div>
-        </section>
-
-        {/* RIGHT PANEL */}
-        <section className="relative flex min-h-screen items-center justify-center bg-black px-5 py-10 sm:px-10 lg:px-8 xl:px-14">
-          <div className="pointer-events-none absolute right-0 top-0 h-72 w-72 rounded-full bg-orange-500/4.5 blur-[100px] lg:hidden" />
-
-          <div className="relative z-10 w-full max-w-md">
-            {/* Mobile branding */}
-            <a href="/" className="mb-10 flex items-center gap-3 lg:hidden">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-orange-500/30 bg-orange-500/10">
-                <Activity size={21} className="text-orange-500" />
-              </div>
-
-              <span className="text-xl font-black">
-                Chart<span className="text-orange-500">Wars</span>
-              </span>
-            </a>
-
-            <div className="mb-8">
-              <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-orange-500">
-                <Sparkles size={14} />
-                Create your account
-              </span>
-
-              <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
-                Join the battle.
+              <h2 className="text-[30px] font-semibold leading-tight tracking-[-1.2px] sm:text-[34px]">
+                {isSignup ? "Create your trading account" : "Access your terminal"}
               </h2>
-
-              <p className="mt-3 text-sm leading-6 text-zinc-400">
-                Create your account and start improving your trading skills.
+              <p className="mt-2 text-[12px] leading-5 text-[#9CA3AF]">
+                {isSignup
+                  ? "Set up your account to start practicing."
+                  : "Sign in to continue your trading practice."}
               </p>
             </div>
 
-            {/* Google button - UI only */}
             <button
               type="button"
-              onClick={handleGoogleSignup}
-              className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/12 bg-zinc-950 px-4 py-3.5 text-sm font-semibold text-zinc-200 transition hover:border-white/25 hover:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+              onClick={googleSignIn}
+              className="flex h-10 w-full items-center justify-center gap-2.5 rounded-lg border border-[#252D38] bg-[#0C1119] text-[12px] font-medium text-[#E3E8EF] transition hover:border-[#3B4756] hover:bg-[#111923]"
             >
-              <svg
-                viewBox="0 0 48 48"
-                className="h-5 w-5"
-                aria-hidden="true"
-              >
-                <path
-                  fill="#EA4335"
-                  d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 3.02 13.22l7.98 6.19C12.9 13.72 18.02 9.5 24 9.5Z"
-                  transform="translate(0 4)"
-                />
-                <path
-                  fill="#4285F4"
-                  d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.72 7.18l7.62 5.91c4.45-4.11 7.14-10.17 7.14-17.56Z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M10.99 28.59A14.4 14.4 0 0 1 10.2 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.86.92 7.51 2.98 10.78l8.01-6.19Z"
-                  transform="translate(1 0)"
-                />
-                <path
-                  fill="#34A853"
-                  d="M24 48c6.48 0 11.93-2.14 15.9-5.89l-7.62-5.91c-2.12 1.42-4.83 2.27-8.28 2.27-5.98 0-11.06-4.04-12.87-9.48l-8.01 6.19C6.61 42.72 14.62 48 24 48Z"
-                />
-              </svg>
-
+              <span className="text-sm font-bold text-white">G</span>
               Continue with Google
-              <ArrowRight size={16} className="ml-auto text-zinc-500" />
             </button>
 
-            <div className="my-6 flex items-center gap-4">
-              <div className="h-px flex-1 bg-white/9" />
-              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-600">
-                Or sign up with email
+            <div className="my-4 flex items-center gap-3">
+              <div className="h-px flex-1 bg-[#252D38]" />
+              <span className="text-[9px] uppercase tracking-[1.5px] text-[#6F7B8B]">
+                Or continue with email
               </span>
-              <div className="h-px flex-1 bg-white/9" />
+              <div className="h-px flex-1 bg-[#252D38]" />
             </div>
 
-            {notice && (
-              <div
-                role="status"
-                className="mb-5 flex gap-3 rounded-xl border border-orange-500/20 bg-orange-500/[0.07] p-3.5 text-sm leading-6 text-orange-300"
-              >
-                <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
-                <p>{notice}</p>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} noValidate className="space-y-4">
-              <FormField
-                label="Full name"
-                icon={UserRound}
-                error={errors.name}
-              >
-                <input
-                  name="name"
-                  type="text"
-                  autoComplete="name"
-                  value={form.name}
-                  onChange={updateField}
-                  placeholder="Enter your full name"
-                  aria-invalid={Boolean(errors.name)}
-                  className="min-w-0 flex-1 bg-transparent py-3.5 text-sm text-white outline-none placeholder:text-zinc-600"
-                />
-              </FormField>
-
-              <FormField
-                label="Email address"
-                icon={Mail}
-                error={errors.email}
-              >
-                <input
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  value={form.email}
-                  onChange={updateField}
-                  placeholder="you@example.com"
-                  aria-invalid={Boolean(errors.email)}
-                  className="min-w-0 flex-1 bg-transparent py-3.5 text-sm text-white outline-none placeholder:text-zinc-600"
-                />
-              </FormField>
-
-              <FormField
-                label="Phone number (optional)"
-                icon={Phone}
-                error={errors.phone}
-              >
-                <input
-                  name="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  value={form.phone}
-                  onChange={updateField}
-                  placeholder="Enter phone number"
-                  aria-invalid={Boolean(errors.phone)}
-                  className="min-w-0 flex-1 bg-transparent py-3.5 text-sm text-white outline-none placeholder:text-zinc-600"
-                />
-              </FormField>
-
-              <FormField
-                label="Password"
-                icon={LockKeyhole}
-                error={errors.password}
-              >
-                <input
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  value={form.password}
-                  onChange={updateField}
-                  placeholder="Create a strong password"
-                  aria-invalid={Boolean(errors.password)}
-                  className="min-w-0 flex-1 bg-transparent py-3.5 text-sm text-white outline-none placeholder:text-zinc-600"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((value) => !value)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="shrink-0 text-zinc-500 transition hover:text-white"
-                >
-                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                </button>
-              </FormField>
-
-              <PasswordStrength password={form.password} />
-
-              <FormField
-                label="Confirm password"
-                icon={LockKeyhole}
-                error={errors.confirmPassword}
-              >
-                <input
-                  name="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  value={form.confirmPassword}
-                  onChange={updateField}
-                  placeholder="Re-enter your password"
-                  aria-invalid={Boolean(errors.confirmPassword)}
-                  className="min-w-0 flex-1 bg-transparent py-3.5 text-sm text-white outline-none placeholder:text-zinc-600"
-                />
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowConfirmPassword((value) => !value)
-                  }
-                  aria-label={
-                    showConfirmPassword
-                      ? "Hide confirm password"
-                      : "Show confirm password"
-                  }
-                  className="shrink-0 text-zinc-500 transition hover:text-white"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff size={17} />
-                  ) : (
-                    <Eye size={17} />
-                  )}
-                </button>
-              </FormField>
-
-              <div className="pt-1">
-                <label className="flex cursor-pointer items-start gap-3">
-                  <input
-                    type="checkbox"
-                    name="acceptedTerms"
-                    checked={form.acceptedTerms}
-                    onChange={updateField}
-                    className="mt-1 h-4 w-4 shrink-0 accent-orange-500"
-                  />
-
-                  <span className="text-xs leading-5 text-zinc-500">
-                    I agree to the{" "}
-                    <a
-                      href="/terms"
-                      className="font-medium text-zinc-300 underline decoration-zinc-700 underline-offset-4 transition hover:text-orange-400"
-                    >
-                      Terms of Service
-                    </a>{" "}
-                    and{" "}
-                    <a
-                      href="/privacy"
-                      className="font-medium text-zinc-300 underline decoration-zinc-700 underline-offset-4 transition hover:text-orange-400"
-                    >
-                      Privacy Policy
-                    </a>
-                    .
+            <form onSubmit={handleSubmit} className="space-y-3">
+              {isSignup && (
+                <label className="block">
+                  <span className="mb-1.5 block text-[11px] font-medium text-[#C7CFD9]">
+                    Full name
                   </span>
+                  <div className="relative">
+                    <UserRound
+                      size={15}
+                      strokeWidth={1.5}
+                      className="absolute left-3 top-3.25 text-[#7E8999]"
+                    />
+                    <input
+                      className={`${inputClass} pl-9`}
+                      name="name"
+                      value={form.name}
+                      onChange={update}
+                      placeholder="Your full name"
+                      autoComplete="name"
+                      required
+                    />
+                  </div>
+                </label>
+              )}
+
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-medium text-[#C7CFD9]">
+                  Email address
+                </span>
+                <div className="relative">
+                  <Mail
+                    size={15}
+                    strokeWidth={1.5}
+                    className="absolute left-3 top-3.25 text-[#7E8999]"
+                  />
+                  <input
+                    className={`${inputClass} pl-9`}
+                    name="email"
+                    type="email"
+                    value={form.email}
+                    onChange={update}
+                    placeholder="name@company.com"
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+              </label>
+
+              <div className={isSignup ? "grid grid-cols-2 gap-3" : "block"}>
+                <label className="block min-w-0">
+                  <span className="mb-1.5 block text-[11px] font-medium text-[#C7CFD9]">
+                    Password
+                  </span>
+                  <div className="relative">
+                    <LockKeyhole
+                      size={15}
+                      strokeWidth={1.5}
+                      className="absolute left-3 top-3.25 text-[#7E8999]"
+                    />
+                    <input
+                      className={`${inputClass} pl-9 pr-9`}
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={form.password}
+                      onChange={update}
+                      placeholder="8+ characters"
+                      autoComplete={isSignup ? "new-password" : "current-password"}
+                      minLength={8}
+                      required
+                    />
+                    <button
+                      type="button"
+                      aria-label="Toggle password visibility"
+                      onClick={() => setShowPassword((value) => !value)}
+                      className="absolute right-3 top-3.25 text-[#7E8999] hover:text-white"
+                    >
+                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
                 </label>
 
-                {errors.acceptedTerms && (
-                  <p className="mt-2 text-xs text-red-400">
-                    {errors.acceptedTerms}
-                  </p>
+                {isSignup && (
+                  <label className="block min-w-0">
+                    <span className="mb-1.5 block text-[11px] font-medium text-[#C7CFD9]">
+                      Confirm password
+                    </span>
+                    <div className="relative">
+                      <LockKeyhole
+                        size={15}
+                        strokeWidth={1.5}
+                        className="absolute left-3 top-3.25 text-[#7E8999]"
+                      />
+                      <input
+                        className={`${inputClass} pl-9 pr-9`}
+                        name="confirmPassword"
+                        type={showConfirm ? "text" : "password"}
+                        value={form.confirmPassword}
+                        onChange={update}
+                        placeholder="Repeat password"
+                        autoComplete="new-password"
+                        minLength={8}
+                        required
+                      />
+                      <button
+                        type="button"
+                        aria-label="Toggle confirm password visibility"
+                        onClick={() => setShowConfirm((value) => !value)}
+                        className="absolute right-3 top-3.25 text-[#7E8999] hover:text-white"
+                      >
+                        {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </label>
                 )}
               </div>
+
+              {isSignup ? (
+                <p className="pt-0.5 text-[10px] leading-4 text-[#7F8A99]">
+                  By creating an account, you agree to our{" "}
+                  <Link to="/termsOfUse" className="text-[#B8C2CF] underline underline-offset-2">
+                    Terms
+                  </Link>{" "}
+                  and{" "}
+                  <Link to="/privacyPolicy" className="text-[#B8C2CF] underline underline-offset-2">
+                    Privacy Policy
+                  </Link>
+                  .
+                </p>
+              ) : (
+                <div className="flex justify-end">
+                  <Link
+                    to="/forgot-password"
+                    className="text-[11px] text-emerald-400 hover:text-emerald-300"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+              )}
+
+              {error && (
+                <p
+                  role="status"
+                  className="rounded-md border border-emerald-500/15 bg-emerald-500/5 px-3 py-2 text-[10px] leading-4 text-emerald-300"
+                >
+                  {error}
+                </p>
+              )}
 
               <button
                 type="submit"
                 disabled={loading}
-                className="group flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-4 text-sm font-bold text-black shadow-lg shadow-orange-500/8 transition hover:bg-orange-400 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                className="group flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 text-[12px] font-semibold text-[#04130E] transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Create your account
-                <ArrowRight
-                  size={17}
-                  className="transition-transform group-hover:translate-x-1"
-                />
+                {loading
+                  ? "Please wait..."
+                  : isSignup
+                    ? "Create account"
+                    : "Sign in"}
+                {!loading && (
+                  <ChevronRight
+                    size={16}
+                    className="transition-transform group-hover:translate-x-0.5"
+                  />
+                )}
               </button>
             </form>
 
-            <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-white/6 bg-zinc-950/70 p-3.5">
-              <ShieldCheck
-                size={17}
-                className="mt-0.5 shrink-0 text-orange-500"
-              />
-              <p className="text-xs leading-5 text-zinc-500">
-                ChartWars practice mode uses virtual funds. Trading involves
-                risk, and simulated results do not guarantee real-world
-                performance.
-              </p>
-            </div>
-
-            <p className="mt-7 text-center text-sm text-zinc-500">
-              Already have an account?{" "}
-              <a
-                href="/login"
-                className="font-semibold text-orange-400 transition hover:text-orange-300"
+            <div className="my-4 flex items-center gap-2 text-center text-[11px]">
+              <span className="text-[#8994A3]">
+                {isSignup ? "Already have an account?" : "New to ChartWars?"}
+              </span>
+              <button
+                type="button"
+                onClick={() => switchMode(isSignup ? "login" : "signup")}
+                className="font-medium text-emerald-400 hover:text-emerald-300"
               >
-                Sign in
-              </a>
-            </p>
-
-            <p className="mt-8 text-center text-[10px] leading-5 text-zinc-700">
-              By continuing, you agree to use ChartWars responsibly.
-              <br />
-              © {new Date().getFullYear()} ChartWars.
-            </p>
+                {isSignup ? "Sign in" : "Create account"}
+              </button>
+            </div>
           </div>
-        </section>
-      </div>
+
+          <div className="flex items-center justify-center gap-1.5 text-[9px] text-[#687484]">
+            <ShieldCheck size={12} />
+            Practice with virtual funds · No real-money orders
+          </div>
+        </div>
+      </section>
+
+      <style>{`
+        @keyframes authFade {
+          from { opacity: 0; transform: translateY(5px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .auth-fade-in {
+          animation: authFade 220ms ease-out both;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .auth-fade-in { animation: none; }
+        }
+      `}</style>
     </main>
   );
 }
