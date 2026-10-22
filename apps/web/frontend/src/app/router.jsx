@@ -48,6 +48,8 @@ import DashboardPlaceholder from "../pages/dashboard/DashboardPlaceholder";
 import MarketsPage from "../pages/dashboard/MarketsPage";
 import NewsPage from "../pages/dashboard/NewsPage";
 
+import LearnPage from "../pages/dashboard/LearnPage";
+
 export const router = createBrowserRouter([
   // Landing page
   {
@@ -207,8 +209,8 @@ export const router = createBrowserRouter([
         element: <KnowledgeVault />,
       },
       {
-        path: "learn/roadmap",
-        element: <Roadmap />,
+           path: "learn/roadmap",
+          element: <LearnPage initialTab="roadmap" />,
       },
       {
         path: "news",
