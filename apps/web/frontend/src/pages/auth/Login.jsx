@@ -86,7 +86,7 @@ export default function Login() {
           error={errors.password}
           right={<AuthLink to={ROUTES.forgotPassword} className="text-xs">Forgot password?</AuthLink>}
         />
-        <label className="mb-6 flex items-center gap-3 text-sm text-zinc-400">
+        <label className="mb-4 flex items-center gap-3 text-sm text-zinc-400">
           <input type="checkbox" name="remember" checked={values.remember} onChange={handleChange} className="h-4 w-4 accent-orange-500" />
           Keep me signed in on this device
         </label>
