@@ -34,6 +34,10 @@ import Login from "../pages/auth/Login";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import VerifyOtp from "../pages/auth/VerifyOtp";
 
+import Dashboard from "../pages/Dashboard";
+import MainHome from "../components/dashboard/MainHome";
+import DashboardPlaceholder from "../components/dashboard/DashboardPlaceholder";
+
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -146,5 +150,86 @@ export const router = createBrowserRouter([
   {
     path:"/verifyOtp",
     element:<VerifyOtp/>
-  }
+  },
+
+  {
+  path: "/dashboard",
+  element: <Dashboard />,
+  children: [
+    {
+      index: true,
+      element: <MainHome />,
+    },
+    {
+      path: "markets",
+      element: (
+        <MarketInsight />
+      ),
+    },
+    {
+      path: "rooms",
+      element: (
+        <DashboardPlaceholder
+          eyebrow="PRACTICE ARENA"
+          title="Trading Rooms"
+          description="Create a practice room, join a challenge, and compete in a simulated market environment."
+        />
+      ),
+    },
+    {
+      path: "friends",
+      element: (
+        <DashboardPlaceholder
+          eyebrow="YOUR NETWORK"
+          title="Friends"
+          description="Find friends, manage invitations, and get ready for your next trading challenge."
+        />
+      ),
+    },
+    {
+      path: "learn",
+      element: <KnowledgeVault />,
+    },
+    {
+      path: "learn/roadmap",
+      element: <Roadmap />,
+    },
+    {
+      path: "news",
+      element: (
+        <DashboardPlaceholder
+          eyebrow="MARKET INTELLIGENCE"
+          title="Market News"
+          description="A dedicated space for market headlines and educational insights. News integration will be added later."
+        />
+      ),
+    },
+    {
+      path: "practice-modes",
+      element: <PracticeModesPage />,
+    },
+    {
+      path: "analytics",
+      element: <PerformanceAnalyticsPage />,
+    },
+    {
+      path: "profile",
+      element: (
+        <DashboardPlaceholder
+          title="Your Profile"
+          description="Your public profile and trading practice details will appear here."
+        />
+      ),
+    },
+    {
+      path: "settings",
+      element: (
+        <DashboardPlaceholder
+          title="Settings"
+          description="Manage your account preferences and dashboard settings."
+        />
+      ),
+    },
+  ],
+},
 ]);
