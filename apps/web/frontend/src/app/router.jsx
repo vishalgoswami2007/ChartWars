@@ -1,8 +1,11 @@
+
 import { createBrowserRouter } from "react-router-dom";
 
+// Main pages
 import LandingPage from "../pages/landing/LandingPage";
 import NotFoundPage from "./NotFoundPage";
 
+// Existing feature pages
 import PracticeModesPage from "../pages/practice/PracticeModesPage";
 import PerformanceAnalyticsPage from "../pages/analytics/PerformanceAnalyticsPage";
 import HowItWorksPage from "../pages/work/HowItsWork";
@@ -10,14 +13,17 @@ import MarketInsight from "../pages/Market/MarketInsight";
 import KnowledgeVault from "../pages/Knowledge/KnowledgeVault";
 import Roadmap from "../pages/roadmap/Roadmap";
 
+// Developer pages
 import DeveloperSandbox from "../pages/developer/DeveloperSandbox";
 import TechnicalCollaboration from "../pages/developer/TechnicalCollaboration";
 import BusinessEnquiry from "../pages/developer/BusinessEnquiry";
 
+// Business pages
 import EnterpriseSolution from "../pages/business/EnterpriseSolutions";
 import Strategic from "../pages/business/Strategic";
 import BusinessContact from "../pages/business/BusinessContact";
 
+// Footer and information pages
 import OurMission from "../pages/landing/footer/OurMission";
 import Contact from "../pages/landing/footer/Contact";
 import PrivacyPolicy from "../pages/landing/footer/PrivacyPolicy";
@@ -29,20 +35,26 @@ import Cookie from "../pages/landing/footer/CookiePolicy";
 import Security from "../pages/landing/footer/Security";
 import FAQ from "../pages/landing/FAQ";
 
+// Authentication pages
 import Signup from "../pages/auth/Signup";
 import Login from "../pages/auth/Login";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import VerifyOtp from "../pages/auth/VerifyOtp";
 
+// Dashboard layout and pages
 import Dashboard from "../pages/Dashboard";
 import MainHome from "../pages/dashboard/MainHome";
 import DashboardPlaceholder from "../pages/dashboard/DashboardPlaceholder";
+import MarketsPage from "../pages/dashboard/MarketsPage";
 
 export const router = createBrowserRouter([
+  // Landing page
   {
     path: "/",
     element: <LandingPage />,
   },
+
+  // Authentication
   {
     path: "/signup",
     element: <Signup />,
@@ -51,6 +63,16 @@ export const router = createBrowserRouter([
     path: "/login",
     element: <Login />,
   },
+  {
+    path: "/forgetPassword",
+    element: <ForgotPassword />,
+  },
+  {
+    path: "/verifyOtp",
+    element: <VerifyOtp />,
+  },
+
+  // Existing standalone pages
   {
     path: "/practice-modes",
     element: <PracticeModesPage />,
@@ -75,6 +97,8 @@ export const router = createBrowserRouter([
     path: "/roadmap",
     element: <Roadmap />,
   },
+
+  // Developer pages
   {
     path: "/developerSandbox",
     element: <DeveloperSandbox />,
@@ -87,6 +111,8 @@ export const router = createBrowserRouter([
     path: "/businessEnquiry",
     element: <BusinessEnquiry />,
   },
+
+  // Business pages
   {
     path: "/enterpriseSolution",
     element: <EnterpriseSolution />,
@@ -99,6 +125,8 @@ export const router = createBrowserRouter([
     path: "/businessContact",
     element: <BusinessContact />,
   },
+
+  // Information pages
   {
     path: "/ourMission",
     element: <OurMission />,
@@ -139,97 +167,90 @@ export const router = createBrowserRouter([
     path: "/faq",
     element: <FAQ />,
   },
+
+  // Dashboard with nested pages
+  {
+    path: "/dashboard",
+    element: <Dashboard />,
+    children: [
+      {
+        index: true,
+        element: <MainHome />,
+      },
+      {
+        path: "markets",
+        element: <MarketsPage />,
+      },
+      {
+        path: "rooms",
+        element: (
+          <DashboardPlaceholder
+            eyebrow="PRACTICE ARENA"
+            title="Trading Rooms"
+            description="Create a practice room, join a challenge, and compete in a simulated market environment."
+          />
+        ),
+      },
+      {
+        path: "friends",
+        element: (
+          <DashboardPlaceholder
+            eyebrow="YOUR NETWORK"
+            title="Friends"
+            description="Find friends, manage invitations, and get ready for your next trading challenge."
+          />
+        ),
+      },
+      {
+        path: "learn",
+        element: <KnowledgeVault />,
+      },
+      {
+        path: "learn/roadmap",
+        element: <Roadmap />,
+      },
+      {
+        path: "news",
+        element: (
+          <DashboardPlaceholder
+            eyebrow="MARKET INTELLIGENCE"
+            title="Market News"
+            description="A dedicated space for market headlines and educational insights. News integration will be added later."
+          />
+        ),
+      },
+      {
+        path: "practice-modes",
+        element: <PracticeModesPage />,
+      },
+      {
+        path: "analytics",
+        element: <PerformanceAnalyticsPage />,
+      },
+      {
+        path: "profile",
+        element: (
+          <DashboardPlaceholder
+            title="Your Profile"
+            description="Your public profile and trading practice details will appear here."
+          />
+        ),
+      },
+      {
+        path: "settings",
+        element: (
+          <DashboardPlaceholder
+            title="Settings"
+            description="Manage your account preferences and dashboard settings."
+          />
+        ),
+      },
+    ],
+  },
+
+  // Keep the fallback route last
   {
     path: "*",
     element: <NotFoundPage />,
   },
-  {
-    path:"/forgetPassword",
-    element:<ForgotPassword/>
-  },
-  {
-    path:"/verifyOtp",
-    element:<VerifyOtp/>
-  },
-
-  {
-  path: "/dashboard",
-  element: <Dashboard />,
-  children: [
-    {
-      index: true,
-      element: <MainHome />,
-    },
-    {
-      path: "markets",
-      element: (
-        <MarketInsight />
-      ),
-    },
-    {
-      path: "rooms",
-      element: (
-        <DashboardPlaceholder
-          eyebrow="PRACTICE ARENA"
-          title="Trading Rooms"
-          description="Create a practice room, join a challenge, and compete in a simulated market environment."
-        />
-      ),
-    },
-    {
-      path: "friends",
-      element: (
-        <DashboardPlaceholder
-          eyebrow="YOUR NETWORK"
-          title="Friends"
-          description="Find friends, manage invitations, and get ready for your next trading challenge."
-        />
-      ),
-    },
-    {
-      path: "learn",
-      element: <KnowledgeVault />,
-    },
-    {
-      path: "learn/roadmap",
-      element: <Roadmap />,
-    },
-    {
-      path: "news",
-      element: (
-        <DashboardPlaceholder
-          eyebrow="MARKET INTELLIGENCE"
-          title="Market News"
-          description="A dedicated space for market headlines and educational insights. News integration will be added later."
-        />
-      ),
-    },
-    {
-      path: "practice-modes",
-      element: <PracticeModesPage />,
-    },
-    {
-      path: "analytics",
-      element: <PerformanceAnalyticsPage />,
-    },
-    {
-      path: "profile",
-      element: (
-        <DashboardPlaceholder
-          title="Your Profile"
-          description="Your public profile and trading practice details will appear here."
-        />
-      ),
-    },
-    {
-      path: "settings",
-      element: (
-        <DashboardPlaceholder
-          title="Settings"
-          description="Manage your account preferences and dashboard settings."
-        />
-      ),
-    },
-  ],
-},
 ]);
