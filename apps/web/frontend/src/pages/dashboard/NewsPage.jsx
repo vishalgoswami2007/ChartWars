@@ -1,5 +1,4 @@
-
-import { useCallback,  useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertCircle,
   ArrowUpRight,
@@ -119,59 +118,94 @@ export default function NewsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const loadNews = useCallback(
-    async ({ page = "", append = false, refresh = false } = {}) => {
-      if (append) {
-        setLoadingMore(true);
-      } else if (refresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+  // First page: runs on mount, when category or search change, and on Refresh.
+  useEffect(() => {
+    let cancelled = false;
 
-      setError("");
-
-      try {
-        const result = await fetchNews({
-          category,
-          search,
-          page,
-        });
-
-        setArticles((current) =>
-          append
-            ? [
-                ...current,
-                ...result.articles.filter(
-                  (incoming) =>
-                    !current.some(
-                      (existing) =>
-                        existing.article_id === incoming.article_id
-                    )
-                ),
-              ]
-            : result.articles
-        );
-
+    fetchNews({ category, search })
+      .then((result) => {
+        if (cancelled) return;
+        setArticles(result.articles);
         setNextPage(result.nextPage);
+        setError("");
         setLastUpdated(new Date());
-      } catch (err) {
+      })
+      .catch((err) => {
+        if (cancelled) return;
         setError(err.message || "Unable to load market news.");
-        if (!append) setArticles([]);
+        setArticles([]);
         setNextPage(null);
-      } finally {
+      })
+      .finally(() => {
+        if (cancelled) return;
         setLoading(false);
-        setLoadingMore(false);
         setRefreshing(false);
-      }
-    },
-    [category, search]
-  );
+      });
+
+    return () => {
+      cancelled = true; // ignore a stale response if the inputs changed meanwhile
+    };
+  }, [category, search, reloadKey]);
+
+  function refresh() {
+    setRefreshing(true);
+    setError("");
+    setReloadKey((key) => key + 1);
+  }
+
+  async function loadMore() {
+    if (!nextPage || loadingMore) return;
+
+    setLoadingMore(true);
+    setError("");
+
+    try {
+      const result = await fetchNews({ category, search, page: nextPage });
+
+      setArticles((current) => [
+        ...current,
+        ...result.articles.filter(
+          (incoming) =>
+            !current.some(
+              (existing) => existing.article_id === incoming.article_id
+            )
+        ),
+      ]);
+      setNextPage(result.nextPage);
+      setLastUpdated(new Date());
+    } catch (err) {
+      setError(err.message || "Unable to load more news.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  function changeCategory(nextCategory) {
+    if (nextCategory === category) return;
+    setLoading(true);
+    setError("");
+    setCategory(nextCategory);
+  }
 
   function handleSearch(event) {
     event.preventDefault();
-    setSearch(searchInput.trim());
+    const next = searchInput.trim();
+    if (next === search) return;
+    setLoading(true);
+    setError("");
+    setSearch(next);
+  }
+
+  function clearFilters() {
+    if (category !== "all" || search !== "") {
+      setLoading(true);
+      setError("");
+    }
+    setSearchInput("");
+    setSearch("");
+    setCategory("all");
   }
 
   const isInitialLoading = loading && articles.length === 0;
@@ -196,7 +230,7 @@ export default function NewsPage() {
 
           <button
             type="button"
-            onClick={() => loadNews({ refresh: true })}
+            onClick={refresh}
             disabled={loading || refreshing}
             className="inline-flex items-center justify-center gap-2 self-start rounded-lg border border-white/10 bg-[#111111] px-4 py-3 text-sm font-medium text-neutral-200 transition hover:border-orange-500/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 md:self-auto"
           >
@@ -223,7 +257,7 @@ export default function NewsPage() {
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => setCategory(item.id)}
+                    onClick={() => changeCategory(item.id)}
                     aria-pressed={active}
                     className={`rounded-full border px-4 py-2.5 text-sm font-medium transition ${
                       active
@@ -287,8 +321,9 @@ export default function NewsPage() {
 
             <button
               type="button"
-              onClick={() => loadNews({ refresh: true })}
-              className="shrink-0 rounded-lg border border-red-500/20 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10"
+              onClick={refresh}
+              disabled={refreshing}
+              className="shrink-0 rounded-lg border border-red-500/20 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10 disabled:opacity-50"
             >
               Try again
             </button>
@@ -334,7 +369,7 @@ export default function NewsPage() {
                 <button
                   type="button"
                   disabled={loadingMore}
-                  onClick={() => loadNews({ page: nextPage, append: true })}
+                  onClick={loadMore}
                   className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-[#111111] px-6 py-3 text-sm font-semibold text-white transition hover:border-orange-500/40 disabled:opacity-50"
                 >
                   {loadingMore && (
@@ -358,11 +393,7 @@ export default function NewsPage() {
             </p>
             <button
               type="button"
-              onClick={() => {
-                setSearchInput("");
-                setSearch("");
-                setCategory("all");
-              }}
+              onClick={clearFilters}
               className="mt-4 text-sm font-medium text-orange-400 hover:text-orange-300"
             >
               Clear filters
