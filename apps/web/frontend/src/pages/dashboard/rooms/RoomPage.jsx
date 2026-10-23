@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import OnlineMode from "../online/OnlineMode";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -1275,13 +1276,16 @@ export default function RoomPage() {
 
       {transitioning && <div className="rooms-transition" />}
 
-      {activeMode ? (
+     {activeMode?.id === "online" ? (
+              <OnlineMode onBack={goBack} />
+      ) : activeMode ? (
         <div className="rooms-content">
           <ModeEntry
             mode={activeMode}
             onBack={goBack}
             onFindMatch={handlePrimaryAction}
-          />
+      />
+  
 
           {stage && (
             <div className="mx-5 mb-5 rounded-xl border border-orange-500/20 bg-orange-500/5 p-4 text-center text-xs text-orange-200">

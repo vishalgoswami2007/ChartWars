@@ -734,28 +734,6 @@ export default function LearnPage({ initialTab = "learn" }) {
   return (
     <main className="min-h-screen bg-[#050505] px-4 py-8 text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-360">
-        <header className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-orange-500">
-              ChartWars Academy
-            </p>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              Learn the market.
-              <span className="text-neutral-500"> Master the process.</span>
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-400 sm:text-base">
-              Build market knowledge, understand risk and develop a systematic
-              approach to trading — one concept at a time.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 self-start rounded-lg border border-white/8 bg-[#0c0c0c] px-3 py-2.5">
-            <ShieldCheck size={17} className="text-orange-400" />
-            <span className="text-xs text-neutral-300">
-              Risk-first learning
-            </span>
-          </div>
-        </header>
 
         <nav
           aria-label="Learning sections"

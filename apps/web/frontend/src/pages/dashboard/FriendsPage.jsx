@@ -15,7 +15,7 @@ import {
   Check,
   CircleHelp,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+
 
 
 import ChatWindow from "./friends/ChatWindow";
@@ -119,8 +119,7 @@ function Avatar({ user, size = "md" }) {
 }
 
 export default function FriendsPage() {
-  const navigate = useNavigate();
-
+  
   const [activeTab, setActiveTab] = useState("discover");
   const [search, setSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
@@ -217,35 +216,7 @@ export default function FriendsPage() {
   return (
     <main className="min-h-full bg-[#080808] px-4 py-5 text-white sm:px-6 lg:px-8 lg:py-8">
       <div className="mx-auto max-w-375">
-        {/* Page heading */}
-        <header className="mb-7 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <div className="mb-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.23em] text-[#e87524]">
-              <Users size={14} />
-              Community
-            </div>
-
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              Friends
-              <span className="ml-3 text-zinc-600">/</span>
-              <span className="ml-3 text-zinc-400">Connect & compete</span>
-            </h1>
-
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
-              Find your people, build your trading circle, and keep every
-              practice conversation in one place.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => navigate("/dashboard/markets")}
-            className="inline-flex w-fit items-center justify-center gap-2 rounded-lg bg-[#e87524] px-4 py-3 text-sm font-semibold text-black transition hover:bg-[#f28b3f]"
-          >
-            Explore markets
-            <ArrowUpRight size={16} />
-          </button>
-        </header>
+  
 
         {/* Feature summary */}
         <section className="mb-7 grid gap-3 sm:grid-cols-3">

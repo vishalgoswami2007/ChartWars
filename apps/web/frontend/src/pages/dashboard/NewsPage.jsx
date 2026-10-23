@@ -213,34 +213,6 @@ export default function NewsPage() {
   return (
     <main className="min-h-screen bg-[#050505] px-4 py-8 text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-360">
-        {/* Page heading */}
-        <section className="mb-7 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-orange-500">
-              Market Intelligence
-            </p>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              Market Pulse
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-400 sm:text-base">
-              Financial headlines across crypto, forex, Indian markets,
-              IPOs and the global economy.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={refresh}
-            disabled={loading || refreshing}
-            className="inline-flex items-center justify-center gap-2 self-start rounded-lg border border-white/10 bg-[#111111] px-4 py-3 text-sm font-medium text-neutral-200 transition hover:border-orange-500/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 md:self-auto"
-          >
-            <RefreshCw
-              size={15}
-              className={refreshing ? "animate-spin" : ""}
-            />
-            Refresh news
-          </button>
-        </section>
 
         {/* Centered horizontal category navigation */}
         <section className="mb-6 border-y border-white/8 py-4">
@@ -292,6 +264,7 @@ export default function NewsPage() {
             >
               Search
             </button>
+
           </form>
 
           <div className="text-xs text-neutral-500">
@@ -299,6 +272,21 @@ export default function NewsPage() {
               ? `Updated ${lastUpdated.toLocaleTimeString("en-IN")}`
               : "Waiting for news"}
           </div>
+          <section className="mb-7 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+          
+          <button
+            type="button"
+            onClick={refresh}
+            disabled={loading || refreshing}
+            className="inline-flex items-center justify-center gap-2 self-start rounded-lg border border-white/10 bg-[#111111] px-4 py-3 text-sm font-medium text-neutral-200 transition hover:border-orange-500/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 md:self-auto"
+          >
+            <RefreshCw
+              size={15}
+              className={refreshing ? "animate-spin" : ""}
+            />
+            Refresh news
+          </button>
+        </section>
         </section>
 
         {/* Error state */}
