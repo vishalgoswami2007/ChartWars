@@ -55,10 +55,10 @@ const navigation = [
 ];
 
 const roomLinks = [
+  { label: "Online Mode", mode: "online", icon: Swords },
   { label: "Friends Room", mode: "friends", icon: Users },
   { label: "Blind Room", mode: "blind", icon: EyeOff },
   { label: "VS Coaches", mode: "coaches", icon: Bot },
-  { label: "Online Mode", mode: "online", icon: Swords },
   {
     label: "Tournament",
     mode: "tournament",
@@ -68,7 +68,7 @@ const roomLinks = [
 ];
 
 const baseItemClass =
-  "group relative flex w-full items-center gap-3 rounded-lg px-3 py-3 text-[13px] font-medium transition-colors duration-200";
+  "group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-colors duration-200";
 
 const activeItemClass = "bg-orange-500/10 text-orange-400";
 
@@ -92,6 +92,9 @@ export default function Sidebar({
   const handleRoomToggle = () => {
     setRoomsExpanded((current) => !current);
   };
+
+  const accountIconClass =
+    "flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-zinc-400 transition hover:border-orange-500/40 hover:bg-orange-500/10 hover:text-orange-400";
 
   return (
     <>
@@ -126,7 +129,6 @@ export default function Sidebar({
               <h1 className="text-sm font-bold tracking-widest text-white">
                 CHARTWARS
               </h1>
-
               <p className="mt-1 text-[9px] uppercase tracking-wider text-zinc-500">
                 Practice. Compete. Improve.
               </p>
@@ -144,7 +146,7 @@ export default function Sidebar({
         </div>
 
         {/* Main navigation */}
-        <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-7">
+        <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-5">
           <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
             Workspace
           </p>
@@ -172,7 +174,6 @@ export default function Sidebar({
                               {(isActive || isRoomsRoute) && (
                                 <span className="absolute bottom-2 left-0 top-2 w-1 rounded-r-full bg-orange-500" />
                               )}
-
                               <DoorOpen size={18} strokeWidth={1.8} />
                               <span>Rooms</span>
                             </>
@@ -220,15 +221,10 @@ export default function Sidebar({
                                     title="Tournament mode is coming soon"
                                     className="flex cursor-not-allowed items-center gap-2 rounded-lg px-3 py-2.5 text-zinc-600"
                                   >
-                                    <RoomIcon
-                                      size={15}
-                                      strokeWidth={1.8}
-                                    />
-
+                                    <RoomIcon size={15} strokeWidth={1.8} />
                                     <span className="min-w-0 flex-1 text-[11px]">
                                       {roomLabel}
                                     </span>
-
                                     <span className="text-[8px] font-semibold uppercase tracking-wider text-zinc-600">
                                       Soon
                                     </span>
@@ -250,12 +246,7 @@ export default function Sidebar({
                                   {isSelected && (
                                     <span className="absolute bottom-2 left-0 top-2 w-0.5 rounded-r-full bg-orange-500" />
                                   )}
-
-                                  <RoomIcon
-                                    size={15}
-                                    strokeWidth={1.8}
-                                  />
-
+                                  <RoomIcon size={15} strokeWidth={1.8} />
                                   <span className="min-w-0 flex-1">
                                     {roomLabel}
                                   </span>
@@ -292,7 +283,6 @@ export default function Sidebar({
                         {isActive && (
                           <span className="absolute bottom-2 left-0 top-2 w-1 rounded-r-full bg-orange-500" />
                         )}
-
                         <Icon size={18} strokeWidth={1.8} />
                         <span>{label}</span>
                       </>
@@ -304,52 +294,38 @@ export default function Sidebar({
           </div>
         </nav>
 
-        {/* Bottom account navigation */}
-        <div className="shrink-0 border-t border-white/10 px-3 py-4">
-          <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
-            Account
-          </p>
-
+        {/* Compact account actions: icons only, side by side */}
+        <div className="flex shrink-0 items-center justify-center gap-3 border-t border-white/10 px-4 py-3">
           <NavLink
             to="/dashboard/profile"
             onClick={onClose}
+            aria-label="Profile"
+            title="Profile"
             className={({ isActive }) =>
-              `${baseItemClass} ${
-                isActive ? activeItemClass : inactiveItemClass
+              `${accountIconClass} ${
+                isActive
+                  ? "border-orange-500/50 bg-orange-500/10 text-orange-400"
+                  : ""
               }`
             }
           >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <span className="absolute bottom-2 left-0 top-2 w-1 rounded-r-full bg-orange-500" />
-                )}
-
-                <UserRound size={18} strokeWidth={1.8} />
-                <span>Profile</span>
-              </>
-            )}
+            <UserRound size={19} strokeWidth={1.8} />
           </NavLink>
 
           <NavLink
             to="/dashboard/settings"
             onClick={onClose}
+            aria-label="Settings"
+            title="Settings"
             className={({ isActive }) =>
-              `${baseItemClass} ${
-                isActive ? activeItemClass : inactiveItemClass
+              `${accountIconClass} ${
+                isActive
+                  ? "border-orange-500/50 bg-orange-500/10 text-orange-400"
+                  : ""
               }`
             }
           >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <span className="absolute bottom-2 left-0 top-2 w-1 rounded-r-full bg-orange-500" />
-                )}
-
-                <Settings size={18} strokeWidth={1.8} />
-                <span>Settings</span>
-              </>
-            )}
+            <Settings size={19} strokeWidth={1.8} />
           </NavLink>
         </div>
       </aside>
