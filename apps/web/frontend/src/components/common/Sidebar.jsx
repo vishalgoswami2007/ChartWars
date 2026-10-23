@@ -10,7 +10,6 @@ import {
   Settings,
   UserRound,
   X,
-  Flame,
   ChevronDown,
   EyeOff,
   Bot,
@@ -38,20 +37,28 @@ const navigation = [
     icon: DoorOpen,
     expandable: true,
   },
-  { label: "Friends", path: "/dashboard/friendsPage", icon: Users },
   {
-    label: "Online Mode",
-    path: "/dashboard/rooms?mode=online",
-    icon: Swords,
+    label: "Friends",
+    path: "/dashboard/friendsPage",
+    icon: Users,
   },
-  { label: "Learn", path: "/dashboard/learn", icon: GraduationCap },
-  { label: "News", path: "/dashboard/news", icon: Newspaper },
+  {
+    label: "Learn",
+    path: "/dashboard/learn",
+    icon: GraduationCap,
+  },
+  {
+    label: "News",
+    path: "/dashboard/news",
+    icon: Newspaper,
+  },
 ];
 
 const roomLinks = [
   { label: "Friends Room", mode: "friends", icon: Users },
   { label: "Blind Room", mode: "blind", icon: EyeOff },
   { label: "VS Coaches", mode: "coaches", icon: Bot },
+  { label: "Online Mode", mode: "online", icon: Swords },
   {
     label: "Tournament",
     mode: "tournament",
@@ -68,12 +75,11 @@ const activeItemClass = "bg-orange-500/10 text-orange-400";
 const inactiveItemClass =
   "text-zinc-400 hover:bg-white/5 hover:text-zinc-100";
 
-export default function Sidebar({ isOpen = false, onClose = () => {} }) {
+export default function Sidebar({
+  isOpen = false,
+  onClose = () => {},
+}) {
   const location = useLocation();
-
-  const [roomsExpanded, setRoomsExpanded] = useState(
-    location.pathname.startsWith("/dashboard/rooms"),
-  );
 
   const currentMode = new URLSearchParams(location.search).get("mode");
 
@@ -81,8 +87,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
     location.pathname === "/dashboard/rooms" ||
     location.pathname.startsWith("/dashboard/rooms/");
 
-  const isOnlineMode =
-    isRoomsRoute && currentMode === "online";
+  const [roomsExpanded, setRoomsExpanded] = useState(isRoomsRoute);
 
   const handleRoomToggle = () => {
     setRoomsExpanded((current) => !current);
@@ -138,8 +143,8 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
           </button>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 pb-4 pt-7">
+        {/* Main navigation */}
+        <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-7">
           <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
             Workspace
           </p>
@@ -250,7 +255,16 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
                                     size={15}
                                     strokeWidth={1.8}
                                   />
-                                  <span>{roomLabel}</span>
+
+                                  <span className="min-w-0 flex-1">
+                                    {roomLabel}
+                                  </span>
+
+                                  {mode === "online" && (
+                                    <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider text-orange-400">
+                                      Live
+                                    </span>
+                                  )}
                                 </NavLink>
                               );
                             },
@@ -261,98 +275,82 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
                   );
                 }
 
-                const isOnlineLink = label === "Online Mode";
-
                 return (
                   <NavLink
                     key={path}
                     to={path}
                     end={end}
                     onClick={onClose}
-                    className={({ isActive }) => {
-                      const selected = isOnlineLink
-                        ? isOnlineMode
-                        : isActive;
-
-                      return `${baseItemClass} ${
-                        selected ? activeItemClass : inactiveItemClass
-                      }`;
-                    }}
+                    className={({ isActive }) =>
+                      `${baseItemClass} ${
+                        isActive ? activeItemClass : inactiveItemClass
+                      }`
+                    }
                   >
-                    {({ isActive }) => {
-                      const selected = isOnlineLink
-                        ? isOnlineMode
-                        : isActive;
+                    {({ isActive }) => (
+                      <>
+                        {isActive && (
+                          <span className="absolute bottom-2 left-0 top-2 w-1 rounded-r-full bg-orange-500" />
+                        )}
 
-                      return (
-                        <>
-                          {selected && (
-                            <span className="absolute bottom-2 left-0 top-2 w-1 rounded-r-full bg-orange-500" />
-                          )}
-
-                          <Icon size={18} strokeWidth={1.8} />
-
-                          <span>{label}</span>
-
-                          {isOnlineLink && (
-                            <span className="ml-auto rounded-full border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-orange-400">
-                              Live
-                            </span>
-                          )}
-                        </>
-                      );
-                    }}
+                        <Icon size={18} strokeWidth={1.8} />
+                        <span>{label}</span>
+                      </>
+                    )}
                   </NavLink>
                 );
               },
             )}
           </div>
-
-          {/* Account navigation */}
-          <div className="mt-8 border-t border-white/10 pt-5">
-            <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
-              Account
-            </p>
-
-            <NavLink
-              to="/dashboard/profile"
-              onClick={onClose}
-              className={({ isActive }) =>
-                `${baseItemClass} ${
-                  isActive ? activeItemClass : inactiveItemClass
-                }`
-              }
-            >
-              <UserRound size={18} strokeWidth={1.8} />
-              <span>Profile</span>
-            </NavLink>
-
-            <NavLink
-              to="/dashboard/settings"
-              onClick={onClose}
-              className={({ isActive }) =>
-                `${baseItemClass} ${
-                  isActive ? activeItemClass : inactiveItemClass
-                }`
-              }
-            >
-              <Settings size={18} strokeWidth={1.8} />
-              <span>Settings</span>
-            </NavLink>
-          </div>
         </nav>
 
-        {/* Bottom learning note */}
-        <div className="m-4 rounded-xl border border-white/10 bg-white/2.5 p-4">
-          <div className="mb-2 flex items-center gap-2 text-orange-400">
-            <Flame size={16} />
-            <span className="text-xs font-semibold">Keep improving</span>
-          </div>
-
-          <p className="text-[11px] leading-5 text-zinc-500">
-            Practice your analysis, learn from each round, and sharpen your
-            skills.
+        {/* Bottom account navigation */}
+        <div className="shrink-0 border-t border-white/10 px-3 py-4">
+          <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
+            Account
           </p>
+
+          <NavLink
+            to="/dashboard/profile"
+            onClick={onClose}
+            className={({ isActive }) =>
+              `${baseItemClass} ${
+                isActive ? activeItemClass : inactiveItemClass
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                {isActive && (
+                  <span className="absolute bottom-2 left-0 top-2 w-1 rounded-r-full bg-orange-500" />
+                )}
+
+                <UserRound size={18} strokeWidth={1.8} />
+                <span>Profile</span>
+              </>
+            )}
+          </NavLink>
+
+          <NavLink
+            to="/dashboard/settings"
+            onClick={onClose}
+            className={({ isActive }) =>
+              `${baseItemClass} ${
+                isActive ? activeItemClass : inactiveItemClass
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                {isActive && (
+                  <span className="absolute bottom-2 left-0 top-2 w-1 rounded-r-full bg-orange-500" />
+                )}
+
+                <Settings size={18} strokeWidth={1.8} />
+                <span>Settings</span>
+              </>
+            )}
+          </NavLink>
         </div>
       </aside>
     </>
