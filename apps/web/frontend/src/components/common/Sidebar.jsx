@@ -27,18 +27,35 @@ const navigation = [
     path: "/dashboard/markets",
     icon: ChartNoAxesCombined,
   },
-  { label: "Rooms", path: "/dashboard/rooms", icon: DoorOpen, expandable: true },
+  {
+    label: "Leaderboard",
+    path: "/dashboard/leaderboard",
+    icon: Trophy,
+  },
+  {
+    label: "Rooms",
+    path: "/dashboard/rooms",
+    icon: DoorOpen,
+    expandable: true,
+  },
   { label: "Friends", path: "/dashboard/friendsPage", icon: Users },
   { label: "Learn", path: "/dashboard/learn", icon: GraduationCap },
   { label: "News", path: "/dashboard/news", icon: Newspaper },
 ];
 
+
 const roomLinks = [
   { label: "Friends Room", mode: "friends", icon: Users },
   { label: "Blind Room", mode: "blind", icon: EyeOff },
   { label: "VS Coaches", mode: "coaches", icon: Bot },
-  { label: "Tournament", mode: "tournament", icon: Trophy, comingSoon: true },
+  {
+    label: "Tournament",
+    mode: "tournament",
+    icon: Trophy,
+    comingSoon: true,
+  },
 ];
+
 
 const baseItemClass =
   "group relative flex w-full items-center gap-3 rounded-lg px-3 py-3 text-[13px] font-medium transition-colors duration-200";

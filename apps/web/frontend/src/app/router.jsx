@@ -51,6 +51,7 @@ import RoomsPage from "../pages/dashboard/rooms/RoomPage";
 import NewsPage from "../pages/dashboard/NewsPage";
 import LearnPage from "../pages/dashboard/LearnPage";
 import FriendsPage from "../pages/dashboard/FriendsPage";
+import LeaderboardPage from "../pages/dashboard/LeaderboardPage";
 
 const friendsElement = (
   <FriendsPage
@@ -130,6 +131,10 @@ export const router = createBrowserRouter([
       {
         path: "news",
         element: <NewsPage />,
+      },
+      {
+        path: "leaderboard",
+        element: <LeaderboardPage />,
       },
       {
         path: "practice-modes",
