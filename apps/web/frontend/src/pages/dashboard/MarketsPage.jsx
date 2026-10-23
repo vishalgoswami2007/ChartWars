@@ -1,5 +1,4 @@
-
-import { useCallback, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 
 import { fetchMarkets } from "../../services/cryptoMarketAPI";
@@ -9,6 +8,7 @@ import MarketTable from "./markets/MarketTable";
 import CoinDetailPanel from "./markets/CoinDetailPanel";
 
 const PAGE_SIZE = 100;
+const REQUEST_TIMEOUT_MS = 15000;
 
 export default function MarketsPage() {
   const [coins, setCoins] = useState([]);
@@ -22,34 +22,57 @@ export default function MarketsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const loadMarkets = useCallback(async ({ manual = false } = {}) => {
-    if (manual) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
+  // Fetch on mount, when the page changes, and when Refresh is pressed.
+  useEffect(() => {
+    const controller = new AbortController();
+    let timedOut = false;
 
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, REQUEST_TIMEOUT_MS);
+
+    fetchMarkets({ page, perPage: PAGE_SIZE, signal: controller.signal })
+      .then((result) => {
+        setCoins(result);
+        setLastUpdated(new Date());
+        setError("");
+      })
+      .catch((err) => {
+        if (err.name === "AbortError") {
+          if (timedOut) {
+            setError("Market request timed out. Check your connection and try again.");
+          }
+          return; // cancelled by cleanup: the next run takes over
+        }
+        setError(err instanceof Error ? err.message : "Unable to load markets.");
+      })
+      .finally(() => {
+        clearTimeout(timeoutId);
+        if (!controller.signal.aborted || timedOut) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      });
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [page, reloadKey]);
+
+  const refresh = () => {
+    setRefreshing(true);
     setError("");
-
-    try {
-      const result = await fetchMarkets({ page, perPage: PAGE_SIZE });
-      setCoins(result);
-      setLastUpdated(new Date());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load markets.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [page]);
-
-
+    setReloadKey((key) => key + 1);
+  };
 
   const visibleCoins = useMemo(() => {
-    let result = coins.filter((coin) => {
-      const term = search.trim().toLowerCase();
+    const term = search.trim().toLowerCase();
 
+    const filtered = coins.filter((coin) => {
       const matchesSearch =
         !term ||
         coin.name.toLowerCase().includes(term) ||
@@ -66,25 +89,27 @@ export default function MarketsPage() {
       return matchesSearch && matchesFilter;
     });
 
-    result = [...result].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       switch (sort) {
         case "market_cap_asc":
           return (a.market_cap ?? 0) - (b.market_cap ?? 0);
         case "volume_desc":
           return (b.total_volume ?? 0) - (a.total_volume ?? 0);
         case "price_change_desc":
-          return (b.price_change_percentage_24h ?? -Infinity) -
-            (a.price_change_percentage_24h ?? -Infinity);
+          return (
+            (b.price_change_percentage_24h ?? -Infinity) -
+            (a.price_change_percentage_24h ?? -Infinity)
+          );
         case "price_change_asc":
-          return (a.price_change_percentage_24h ?? Infinity) -
-            (b.price_change_percentage_24h ?? Infinity);
+          return (
+            (a.price_change_percentage_24h ?? Infinity) -
+            (b.price_change_percentage_24h ?? Infinity)
+          );
         case "market_cap_desc":
         default:
           return (b.market_cap ?? 0) - (a.market_cap ?? 0);
       }
     });
-
-    return result;
   }, [coins, search, filter, sort]);
 
   const toggleWatchlist = (coinId) => {
@@ -96,6 +121,8 @@ export default function MarketsPage() {
   };
 
   const handlePageChange = (nextPage) => {
+    setLoading(true);
+    setError("");
     setPage(nextPage);
     setSelectedCoin(null);
     setSearch("");
@@ -128,14 +155,11 @@ export default function MarketsPage() {
 
           <button
             type="button"
-            onClick={() => loadMarkets({ manual: true })}
+            onClick={refresh}
             disabled={loading || refreshing}
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/2.5 px-3 py-2.5 text-xs font-medium text-zinc-300 transition hover:border-[#e87524]/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <RefreshCw
-              size={14}
-              className={refreshing ? "animate-spin" : ""}
-            />
+            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
             Refresh
           </button>
         </div>
@@ -157,8 +181,9 @@ export default function MarketsPage() {
           </div>
           <button
             type="button"
-            onClick={() => loadMarkets({ manual: true })}
-            className="self-start rounded-lg border border-white/1 px-3 py-2 text-xs text-zinc-300 hover:text-white sm:self-center"
+            onClick={refresh}
+            disabled={refreshing}
+            className="self-start rounded-lg border border-white/10 px-3 py-2 text-xs text-zinc-300 hover:text-white disabled:opacity-50 sm:self-center"
           >
             Try again
           </button>
@@ -219,9 +244,7 @@ export default function MarketsPage() {
                 Previous
               </button>
 
-              <span className="px-2 text-xs tabular-nums text-zinc-500">
-                {page}
-              </span>
+              <span className="px-2 text-xs tabular-nums text-zinc-500">{page}</span>
 
               <button
                 type="button"
