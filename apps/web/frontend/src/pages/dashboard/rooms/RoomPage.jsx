@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import OnlineMode from "../online/OnlineMode";
+import OnlineMode from "./online-mode/OnlineMode";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -495,14 +495,13 @@ function ModeEntry({ mode, onBack, onFindMatch }) {
       <div className="mode-entry-glow" />
 
       <button
-        type="button"
-        onClick={onBack}
-        className="relative z-10 flex items-center gap-2 text-xs text-zinc-400 transition hover:text-white"
+          type="button"
+          onClick={onBack}
+         className="absolute right-5 top-5 z-20 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-xs font-medium text-zinc-300 transition hover:border-orange-500/40 hover:bg-orange-500/10 hover:text-white sm:right-7 sm:top-7"
       >
-        <ArrowLeft size={15} />
-        Back to global rooms
-      </button>
-
+           <ArrowLeft size={15} />
+           Back to Lobby
+          </button>
       <div className="relative z-10 mx-auto mt-16 max-w-xl text-center">
         <div
           className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border"
