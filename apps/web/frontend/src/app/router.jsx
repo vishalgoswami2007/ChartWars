@@ -1,17 +1,17 @@
 
 import { createBrowserRouter } from "react-router-dom";
 
-// Main pages
+// Landing
 import LandingPage from "../pages/landing/LandingPage";
-import NotFoundPage from "./NotFoundPage";
+import NotFoundPage from "../pages/NotFoundPage";
 
-// Existing feature pages
-import PracticeModesPage from "../pages/practice/PracticeModesPage";
-import PerformanceAnalyticsPage from "../pages/analytics/PerformanceAnalyticsPage";
+// Public feature pages
+import PracticeModesPage from "../pages/work/PracticeModesPage";
+import PerformanceAnalyticsPage from "../pages/work/PerformanceAnalyticsPage";
 import HowItWorksPage from "../pages/work/HowItsWork";
 import MarketInsight from "../pages/Market/MarketInsight";
-import KnowledgeVault from "../pages/Knowledge/KnowledgeVault";
-import Roadmap from "../pages/roadmap/Roadmap";
+import KnowledgeVault from "../pages/learn/KnowledgeVault";
+import Roadmap from "../pages/learn/Roadmap";
 
 // Developer pages
 import DeveloperSandbox from "../pages/developer/DeveloperSandbox";
@@ -19,42 +19,40 @@ import TechnicalCollaboration from "../pages/developer/TechnicalCollaboration";
 import BusinessEnquiry from "../pages/developer/BusinessEnquiry";
 
 // Business pages
-import EnterpriseSolution from "../pages/business/EnterpriseSolutions";
+import EnterpriseSolution from "../pages/business/EnterpriseSolution";
 import Strategic from "../pages/business/Strategic";
 import BusinessContact from "../pages/business/BusinessContact";
 
-// Footer and information pages
-import OurMission from "../pages/landing/footer/OurMission";
-import Contact from "../pages/landing/footer/Contact";
-import PrivacyPolicy from "../pages/landing/footer/PrivacyPolicy";
-import CookieSettings from "../pages/landing/footer/CookieSettings";
-import TermsOfUse from "../pages/landing/footer/TermsOfUse";
-import Accessibility from "../pages/landing/footer/Accessibility";
-import HelpCenter from "../pages/landing/footer/HelpCenter";
-import Cookie from "../pages/landing/footer/CookiePolicy";
-import Security from "../pages/landing/footer/Security";
-import FAQ from "../pages/landing/FAQ";
+// Information pages
+import OurMission from "../pages/info/OurMission";
+import Contact from "../pages/info/Contact";
+import PrivacyPolicy from "../pages/info/PrivacyPolicy";
+import CookieSettings from "../pages/info/CookieSettings";
+import TermsOfUse from "../pages/info/TermsOfUse";
+import Accessibility from "../pages/info/Accessibility";
+import HelpCenter from "../pages/info/HelpCenter";
+import Cookie from "../pages/info/Cookie";
+import Security from "../pages/info/Security";
+import FAQ from "../pages/info/FAQ";
 
-// Authentication pages
+// Authentication
 import Signup from "../pages/auth/Signup";
 import Login from "../pages/auth/Login";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import VerifyOtp from "../pages/auth/VerifyOtp";
 
-// Dashboard layout and pages
-import Dashboard from "../pages/Dashboard";
+// Dashboard
+import Dashboard from "../pages/dashboard/Dashboard";
 import MainHome from "../pages/dashboard/MainHome";
 import DashboardPlaceholder from "../pages/dashboard/DashboardPlaceholder";
 import MarketsPage from "../pages/dashboard/MarketsPage";
+import CoinChartPage from "../pages/dashboard/markets/CoinChartPage";
+import RoomsPage from "../pages/dashboard/rooms/RoomsPage";
 import NewsPage from "../pages/dashboard/NewsPage";
 import LearnPage from "../pages/dashboard/LearnPage";
 
-// Market chart and practice rooms
-import CoinChartPage from "../pages/dashboard/markets/CoinChartPage";
-import RoomsPage from "../pages/dashboard/RoomsPage";
-
 export const router = createBrowserRouter([
-  // Landing page
+  // Main website
   {
     path: "/",
     element: <LandingPage />,
@@ -70,108 +68,12 @@ export const router = createBrowserRouter([
     element: <Login />,
   },
   {
-    path: "/forgetPassword",
+    path: "/forgot-password",
     element: <ForgotPassword />,
   },
   {
-    path: "/verifyOtp",
+    path: "/verify-otp",
     element: <VerifyOtp />,
-  },
-
-  // Existing standalone pages
-  {
-    path: "/practice-modes",
-    element: <PracticeModesPage />,
-  },
-  {
-    path: "/performance-Analytics",
-    element: <PerformanceAnalyticsPage />,
-  },
-  {
-    path: "/howItsWorkPage",
-    element: <HowItWorksPage />,
-  },
-  {
-    path: "/marketInsight",
-    element: <MarketInsight />,
-  },
-  {
-    path: "/knowledgeVault",
-    element: <KnowledgeVault />,
-  },
-  {
-    path: "/roadmap",
-    element: <Roadmap />,
-  },
-
-  // Developer pages
-  {
-    path: "/developerSandbox",
-    element: <DeveloperSandbox />,
-  },
-  {
-    path: "/technicalCollaboration",
-    element: <TechnicalCollaboration />,
-  },
-  {
-    path: "/businessEnquiry",
-    element: <BusinessEnquiry />,
-  },
-
-  // Business pages
-  {
-    path: "/enterpriseSolution",
-    element: <EnterpriseSolution />,
-  },
-  {
-    path: "/strategic",
-    element: <Strategic />,
-  },
-  {
-    path: "/businessContact",
-    element: <BusinessContact />,
-  },
-
-  // Information pages
-  {
-    path: "/ourMission",
-    element: <OurMission />,
-  },
-  {
-    path: "/contact",
-    element: <Contact />,
-  },
-  {
-    path: "/privacyPolicy",
-    element: <PrivacyPolicy />,
-  },
-  {
-    path: "/cookieSetting",
-    element: <CookieSettings />,
-  },
-  {
-    path: "/termsOfUse",
-    element: <TermsOfUse />,
-  },
-  {
-    path: "/accessibility",
-    element: <Accessibility />,
-  },
-  {
-    path: "/helpCenter",
-    element: <HelpCenter />,
-  },
-  {
-    path: "/cookies",
-    element: <Cookie />,
-  },
-  {
-    path: "/security",
-    element: <Security />,
-  },
-  {
-    path: "/faq",
-    element: <FAQ />,
   },
 
   // Dashboard and nested pages
@@ -201,7 +103,7 @@ export const router = createBrowserRouter([
           <DashboardPlaceholder
             eyebrow="YOUR NETWORK"
             title="Friends"
-            description="Find friends, manage invitations, and get ready for your next trading challenge."
+            description="Connect with other traders and prepare for practice sessions."
           />
         ),
       },
@@ -211,7 +113,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "learn/roadmap",
-        element: <LearnPage initialTab="roadmap" />,
+        element: <Roadmap />,
       },
       {
         path: "news",
@@ -229,8 +131,9 @@ export const router = createBrowserRouter([
         path: "profile",
         element: (
           <DashboardPlaceholder
-            title="Your Profile"
-            description="Your public profile and trading practice details will appear here."
+            eyebrow="YOUR ACCOUNT"
+            title="Profile"
+            description="Your profile and trading-practice identity."
           />
         ),
       },
@@ -238,15 +141,112 @@ export const router = createBrowserRouter([
         path: "settings",
         element: (
           <DashboardPlaceholder
+            eyebrow="PREFERENCES"
             title="Settings"
-            description="Manage your account preferences and dashboard settings."
+            description="Manage your account preferences and experience."
           />
         ),
       },
     ],
   },
 
-  // Fallback route
+  // Public feature pages
+  {
+    path: "/practice-modes",
+    element: <PracticeModesPage />,
+  },
+  {
+    path: "/performance-analytics",
+    element: <PerformanceAnalyticsPage />,
+  },
+  {
+    path: "/how-it-works",
+    element: <HowItWorksPage />,
+  },
+  {
+    path: "/market-insight",
+    element: <MarketInsight />,
+  },
+  {
+    path: "/knowledge-vault",
+    element: <KnowledgeVault />,
+  },
+  {
+    path: "/roadmap",
+    element: <Roadmap />,
+  },
+
+  // Developer pages
+  {
+    path: "/developer-sandbox",
+    element: <DeveloperSandbox />,
+  },
+  {
+    path: "/technical-collaboration",
+    element: <TechnicalCollaboration />,
+  },
+  {
+    path: "/business-enquiry",
+    element: <BusinessEnquiry />,
+  },
+
+  // Business pages
+  {
+    path: "/enterprise-solution",
+    element: <EnterpriseSolution />,
+  },
+  {
+    path: "/strategic",
+    element: <Strategic />,
+  },
+  {
+    path: "/business-contact",
+    element: <BusinessContact />,
+  },
+
+  // Information pages
+  {
+    path: "/our-mission",
+    element: <OurMission />,
+  },
+  {
+    path: "/contact",
+    element: <Contact />,
+  },
+  {
+    path: "/privacy-policy",
+    element: <PrivacyPolicy />,
+  },
+  {
+    path: "/cookie-settings",
+    element: <CookieSettings />,
+  },
+  {
+    path: "/terms-of-use",
+    element: <TermsOfUse />,
+  },
+  {
+    path: "/accessibility",
+    element: <Accessibility />,
+  },
+  {
+    path: "/help-center",
+    element: <HelpCenter />,
+  },
+  {
+    path: "/cookie",
+    element: <Cookie />,
+  },
+  {
+    path: "/security",
+    element: <Security />,
+  },
+  {
+    path: "/faq",
+    element: <FAQ />,
+  },
+
+  // Fallback
   {
     path: "*",
     element: <NotFoundPage />,
