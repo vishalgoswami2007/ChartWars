@@ -49,6 +49,10 @@ import MarketsPage from "../pages/dashboard/MarketsPage";
 import NewsPage from "../pages/dashboard/NewsPage";
 import LearnPage from "../pages/dashboard/LearnPage";
 
+// Market chart and practice rooms
+import CoinChartPage from "../pages/dashboard/markets/CoinChartPage";
+import RoomsPage from "../pages/dashboard/RoomsPage";
+
 export const router = createBrowserRouter([
   // Landing page
   {
@@ -184,14 +188,12 @@ export const router = createBrowserRouter([
         element: <MarketsPage />,
       },
       {
+        path: "markets/:coinId",
+        element: <CoinChartPage />,
+      },
+      {
         path: "rooms",
-        element: (
-          <DashboardPlaceholder
-            eyebrow="PRACTICE ARENA"
-            title="Trading Rooms"
-            description="Create a practice room, join a challenge, and compete in a simulated market environment."
-          />
-        ),
+        element: <RoomsPage />,
       },
       {
         path: "friends",
