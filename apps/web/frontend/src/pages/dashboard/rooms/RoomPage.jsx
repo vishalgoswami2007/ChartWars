@@ -1,1523 +1,1161 @@
 
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import {  useSearchParams } from "react-router-dom";
 import {
-  ArrowDownRight,
   ArrowLeft,
-  ArrowRight,
   ArrowUpRight,
-  Activity,
-  Award,
-  Check,
-  Clock3,
-  Crown,
-  DoorOpen,
-  GraduationCap,
-  Medal,
+  Bot,
+  ChevronRight,
+  CircleDot,
+  EyeOff,
+  Globe2,
+  Maximize2,
   Minus,
   Plus,
   Radio,
-  ShieldCheck,
   Swords,
-  Trophy,
   Users,
-  Wallet,
-  X,
   Zap,
 } from "lucide-react";
 
-
 const MODES = [
+  {
+    id: "online",
+    title: "Online Mode",
+    subtitle: "GLOBAL MATCHMAKING",
+    icon: Swords,
+    accent: "#f97316",
+    description: "Enter the global arena.",
+    players: "2,410",
+  },
   {
     id: "friends",
     title: "Friends Room",
-    description: "Practice alongside friends and compare your decisions.",
-    detail: "Social practice",
+    subtitle: "PRIVATE BATTLES",
     icon: Users,
-    status: "Available",
+    accent: "#38bdf8",
+    description: "Challenge your circle.",
+    players: "824",
   },
   {
     id: "blind",
     title: "Blind Room",
-    description: "Predict the next move before the hidden candle is revealed.",
-    detail: "Prediction challenge",
-    icon: ShieldCheck,
-    status: "Preview",
+    subtitle: "HIDDEN CHALLENGE",
+    icon: EyeOff,
+    accent: "#a78bfa",
+    description: "Trade without the clues.",
+    players: "316",
   },
   {
     id: "coaches",
-    title: "VS Coaches",
-    description: "Build your market-reading skills with guided challenges.",
-    detail: "Guided practice",
-    icon: GraduationCap,
-    status: "Available",
-  },
-  {
-    id: "tournament",
-    title: "Tournament",
-    description: "Compete in structured rounds and climb the leaderboard.",
-    detail: "Competitive arena",
-    icon: Trophy,
-    status: "Coming Soon",
+    title: "VS Bot / Coaches",
+    subtitle: "AI TRAINING LAB",
+    icon: Bot,
+    accent: "#34d399",
+    description: "Sharpen your strategy.",
+    players: "592",
   },
 ];
 
-const EMOTES = [
-  { emoji: "🚀", label: "MOONSHOT!" },
-  { emoji: "📉", label: "REKT!" },
-  { emoji: "🐋", label: "WHALE MOVE" },
-  { emoji: "🤫", label: "HODL!" },
-  { emoji: "💎", label: "DIAMOND HANDS" },
-  { emoji: "🤡", label: "NOOB TRADER" },
+const BATTLES = [
+  { flagA: "🇮🇳", nameA: "Trader_A", flagB: "🇬🇧", nameB: "ChartFox" },
+  { flagA: "🇺🇸", nameA: "BullRunner", flagB: "🇯🇵", nameB: "Kaito_X" },
+  { flagA: "🇩🇪", nameA: "AlphaWolf", flagB: "🇮🇳", nameB: "Vikram_7" },
+  { flagA: "🇧🇷", nameA: "CryptoLeo", flagB: "🇺🇸", nameB: "NovaTrade" },
 ];
 
-const INITIAL_PLAYERS = [
-  {
-    id: "you",
-    name: "You",
-    handle: "@yourprofile",
-    rating: 100,
-    balance: 10000,
-    pnl: 0,
-    color: "#36D399",
-    avatar: "Y",
-    isYou: true,
-  },
-  {
-    id: "nova",
-    name: "Trader Nova",
-    handle: "@nova_trades",
-    rating: 108,
-    balance: 10000,
-    pnl: 184,
-    color: "#44B8FF",
-    avatar: "N",
-  },
-  {
-    id: "atlas",
-    name: "Atlas",
-    handle: "@atlas_chart",
-    rating: 96,
-    balance: 10000,
-    pnl: -72,
-    color: "#E87524",
-    avatar: "A",
-  },
-  {
-    id: "pixel",
-    name: "PixelTrader",
-    handle: "@pixel_fx",
-    rating: 103,
-    balance: 10000,
-    pnl: 48,
-    color: "#F472B6",
-    avatar: "P",
-  },
-];
-
-function money(value, decimals = 2) {
-  const absolute = Math.abs(value).toLocaleString("en-US", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
-
-  return `${value < 0 ? "-" : ""}$${absolute}`;
-}
-
-function signedMoney(value) {
-  return `${value > 0 ? "+" : value < 0 ? "−" : ""}$${Math.abs(value).toFixed(2)}`;
-}
-
-function Avatar({ player, size = "h-10 w-10" }) {
+function GlobeFlag({ flag, className = "" }) {
   return (
-    <div
-      className={`flex ${size} shrink-0 items-center justify-center rounded-xl border text-sm font-bold`}
-      style={{
-        color: player.color,
-        borderColor: `${player.color}55`,
-        background: `${player.color}16`,
-      }}
-      aria-label={player.name}
+    <span
+      className={`globe-flag ${className}`}
+      aria-label="Active battle location"
     >
-      {player.avatar}
-    </div>
+      {flag}
+    </span>
   );
 }
 
-function Panel({ children, className = "" }) {
-  return (
-    <section
-      className={`min-w-0 rounded-xl border border-white/10 bg-[#0d0d0d] ${className}`}
-    >
-      {children}
-    </section>
-  );
-}
+function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
+  const [dragging, setDragging] = useState(false);
+  const [lastX, setLastX] = useState(0);
 
-function SectionLabel({ children }) {
-  return (
-    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-      {children}
-    </p>
-  );
-}
+  const theme =
+    activeMode === "blind"
+      ? "blind"
+      : activeMode === "coaches"
+        ? "coaches"
+        : activeMode === "friends"
+          ? "friends"
+          : "online";
 
-function MarketChart({ price, candles, players, positions }) {
-  const chart = useMemo(() => {
-    const width = 760;
-    const height = 350;
-    const left = 18;
-    const right = 88;
-    const top = 18;
-    const bottom = 30;
-    const plotWidth = width - left - right;
-    const plotHeight = height - top - bottom;
+  const handlePointerDown = (event) => {
+    setDragging(true);
+    setLastX(event.clientX);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
 
-    const values = candles.map((candle) => [
-      candle.open,
-      candle.close,
-      candle.high,
-      candle.low,
-    ]).flat();
+  const handlePointerMove = (event) => {
+    if (!dragging) return;
 
-    const minimum = Math.min(...values) - 2;
-    const maximum = Math.max(...values) + 2;
-    const range = Math.max(maximum - minimum, 1);
+    const delta = event.clientX - lastX;
+    setRotation((value) => value + delta * 0.55);
+    setLastX(event.clientX);
+  };
 
-    const y = (value) =>
-      top + ((maximum - value) / range) * plotHeight;
-
-    const candleWidth = Math.max(
-      3,
-      Math.min(10, (plotWidth / candles.length) * 0.58)
-    );
-
-    const renderedCandles = candles.map((candle, index) => {
-      const x = left + (index / Math.max(candles.length, 1)) * plotWidth;
-      const rising = candle.close >= candle.open;
-
-      return {
-        x,
-        wickTop: y(candle.high),
-        wickBottom: y(candle.low),
-        bodyTop: y(Math.max(candle.open, candle.close)),
-        bodyHeight: Math.max(
-          2,
-          Math.abs(y(candle.open) - y(candle.close))
-        ),
-        color: rising ? "#36D399" : "#F87171",
-        candleWidth,
-      };
-    });
-
-    return {
-      width,
-      height,
-      left,
-      top,
-      right,
-      bottom,
-      plotWidth,
-      plotHeight,
-      y,
-      minimum,
-      maximum,
-      renderedCandles,
-    };
-  }, [candles]);
-
-  const gridValues = Array.from({ length: 6 }, (_, index) =>
-    chart.maximum - ((chart.maximum - chart.minimum) * index) / 5
-  );
+  const handlePointerUp = () => {
+    setDragging(false);
+  };
 
   return (
-    <div className="relative min-w-0 overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#F7931A]/10 text-[#F7931A]">
-            ₿
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-white">BTC / USD</p>
-            <p className="text-[10px] text-zinc-500">
-              Bitcoin · Simulated market
-            </p>
-          </div>
+    <div className={`globe-scene theme-${theme}`}>
+      <div className="globe-topline">
+        <div className="flex items-center gap-2">
+          <span className="live-dot" />
+          <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-400">
+            Global network
+          </span>
         </div>
-        <div className="text-right">
-          <p className="font-mono text-lg font-semibold text-white">
-            {money(price)}
-          </p>
-          <p className="text-[10px] text-emerald-400">
-            <Activity className="mr-1 inline" size={12} />
-            LIVE DEMO FEED
-          </p>
-        </div>
+
+        <span className="flex items-center gap-1.5 text-[10px] text-zinc-500">
+          <Radio size={12} />
+          LIVE SIMULATION
+        </span>
       </div>
 
-      <div className="flex items-center justify-between gap-2 border-b border-white/8 px-4 py-2">
-        <div className="flex flex-wrap gap-1">
-          {["1m", "5m", "15m", "1h"].map((timeframe, index) => (
-            <span
-              key={timeframe}
-              className={`rounded-md px-2.5 py-1.5 text-[10px] ${
-                index === 1
-                  ? "bg-[#E87524]/15 text-[#F59A55]"
-                  : "text-zinc-500"
-              }`}
-            >
-              {timeframe}
-            </span>
-          ))}
-        </div>
-        <span className="text-[10px] text-zinc-500">Candles · USD</span>
-      </div>
-
-      <svg
-        viewBox={`0 0 ${chart.width} ${chart.height}`}
-        className="block h-auto w-full"
+      <div
+        className={`globe-stage ${dragging ? "is-dragging" : ""}`}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         role="img"
-        aria-label="Simulated Bitcoin candlestick chart"
+        aria-label="Interactive cyber globe with country flags and animated battle routes"
       >
-        <defs>
-          <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#E87524" stopOpacity=".09" />
-            <stop offset="100%" stopColor="#E87524" stopOpacity="0" />
-          </linearGradient>
-        </defs>
+        <div className="globe-aura" />
+        <div className="globe-orbit orbit-one" />
+        <div className="globe-orbit orbit-two" />
 
-        {gridValues.map((value, index) => {
-          const y = chart.y(value);
-          return (
-            <g key={index}>
-              <line
-                x1={chart.left}
-                y1={y}
-                x2={chart.width - chart.right}
-                y2={y}
-                stroke="#ffffff"
-                strokeOpacity=".07"
-                strokeDasharray="3 5"
-              />
-              <text
-                x={chart.width - chart.right + 8}
-                y={y + 4}
-                fill="#71717a"
-                fontSize="11"
-              >
-                {value.toFixed(0)}
-              </text>
-            </g>
-          );
-        })}
-
-        {Array.from({ length: 7 }, (_, index) => {
-          const x = chart.left + (chart.plotWidth * index) / 6;
-          return (
-            <line
-              key={index}
-              x1={x}
-              y1={chart.top}
-              x2={x}
-              y2={chart.height - chart.bottom}
-              stroke="#ffffff"
-              strokeOpacity=".04"
-            />
-          );
-        })}
-
-        {chart.renderedCandles.map((candle, index) => (
-          <g key={index}>
-            <line
-              x1={candle.x}
-              y1={candle.wickTop}
-              x2={candle.x}
-              y2={candle.wickBottom}
-              stroke={candle.color}
-              strokeWidth="1.2"
-            />
-            <rect
-              x={candle.x - candle.candleWidth / 2}
-              y={candle.bodyTop}
-              width={candle.candleWidth}
-              height={candle.bodyHeight}
-              rx="1"
-              fill={candle.color}
-            />
-          </g>
-        ))}
-
-        {positions.map((position) => {
-          const player = players.find((item) => item.id === position.playerId);
-          if (!player) return null;
-
-          const y = chart.y(position.entryPrice);
-          return (
-            <g key={position.id}>
-              <line
-                x1={chart.left}
-                y1={y}
-                x2={chart.width - chart.right}
-                y2={y}
-                stroke={player.color}
-                strokeOpacity=".9"
-                strokeDasharray="5 4"
-              />
-              <rect
-                x={chart.left + 5}
-                y={y - 14}
-                width="118"
-                height="18"
-                rx="4"
-                fill="#090909"
-                stroke={player.color}
-                strokeOpacity=".65"
-              />
-              <text
-                x={chart.left + 11}
-                y={y - 2}
-                fill={player.color}
-                fontSize="10"
-              >
-                {player.isYou ? "YOU" : player.name} · {position.side}
-              </text>
-            </g>
-          );
-        })}
-
-        <line
-          x1={chart.left}
-          y1={chart.y(price)}
-          x2={chart.width - chart.right}
-          y2={chart.y(price)}
-          stroke="#E87524"
-          strokeOpacity=".8"
-          strokeDasharray="2 4"
-        />
-
-        <rect
-          x={chart.width - chart.right + 3}
-          y={chart.y(price) - 10}
-          width="63"
-          height="20"
-          rx="4"
-          fill="#E87524"
-        />
-        <text
-          x={chart.width - chart.right + 8}
-          y={chart.y(price) + 4}
-          fill="#090909"
-          fontSize="10"
-          fontWeight="700"
-        >
-          {price.toFixed(1)}
-        </text>
-
-        {["09:00", "09:15", "09:30", "09:45", "10:00", "10:15"].map(
-          (label, index) => (
-            <text
-              key={label}
-              x={chart.left + (chart.plotWidth * index) / 5}
-              y={chart.height - 8}
-              fill="#71717a"
-              fontSize="10"
-              textAnchor={index === 0 ? "start" : "middle"}
-            >
-              {label}
-            </text>
-          )
-        )}
-      </svg>
-
-      <div className="flex flex-wrap items-center gap-4 border-t border-white/8 px-4 py-3 text-[10px] text-zinc-500">
-        <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-emerald-400" />
-          Bullish candle
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-red-400" />
-          Bearish candle
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-[#E87524]" />
-          Current price
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function PlayerCard({ player, rank, onEmote, activeEmote }) {
-  const up = player.pnl >= 0;
-  const health = Math.max(8, Math.min(100, 50 + player.pnl / 10));
-
-  return (
-    <div className="relative rounded-xl border border-white/8 bg-white/2 p-3">
-      {activeEmote && (
-        <div className="pointer-events-none absolute -top-8 right-2 z-20 animate-bounce rounded-xl border border-white/10 bg-[#202020] px-3 py-2 text-center shadow-xl">
-          <span className="text-2xl">{activeEmote.emoji}</span>
-          <p className="text-[9px] font-semibold text-white">
-            {activeEmote.label}
-          </p>
-        </div>
-      )}
-
-      <div className="flex items-center gap-2.5">
-        <div className="relative">
-          <Avatar player={player} size="h-9 w-9" />
-          {rank === 1 && (
-            <Crown
-              size={13}
-              className="absolute -right-1 -top-1 text-amber-300"
-              fill="currentColor"
-            />
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-semibold text-white">
-            {player.name}
-          </p>
-          <p className="truncate text-[10px] text-zinc-500">
-            {player.handle}
-          </p>
-        </div>
-        <span className="text-xs font-bold text-zinc-400">#{rank}</span>
-      </div>
-
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="text-[10px] text-zinc-500">CW Rating</span>
-        <span className="font-mono text-xs font-semibold text-white">
-          {Math.round(player.rating)}
-        </span>
-      </div>
-
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="text-[10px] text-zinc-500">Live PnL</span>
-        <span
-          className={`font-mono text-xs font-semibold ${
-            up ? "text-emerald-400" : "text-red-400"
-          }`}
-        >
-          {signedMoney(player.pnl)}
-        </span>
-      </div>
-
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/8">
         <div
-          className="h-full rounded-full transition-all duration-500"
+          className="globe-sphere"
           style={{
-            width: `${health}%`,
-            backgroundColor: up ? "#36D399" : "#F87171",
+            transform: `rotate(${rotation}deg) scale(${zoom})`,
           }}
-        />
+        >
+          <div className="globe-grid globe-grid-one" />
+          <div className="globe-grid globe-grid-two" />
+          <div className="globe-land land-one" />
+          <div className="globe-land land-two" />
+          <div className="globe-land land-three" />
+          <div className="globe-land land-four" />
+          <div className="globe-shine" />
+
+          <svg
+            className="globe-routes"
+            viewBox="0 0 400 400"
+            fill="none"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient id="route-gradient">
+                <stop offset="0%" stopColor="#f97316" stopOpacity="0.15" />
+                <stop offset="50%" stopColor="#fb923c" />
+                <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.5" />
+              </linearGradient>
+              <filter id="route-glow">
+                <feGaussianBlur stdDeviation="2.8" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            <path
+              d="M 91 147 Q 174 30 273 139"
+              stroke="url(#route-gradient)"
+              strokeWidth="1.8"
+              strokeDasharray="4 5"
+              filter="url(#route-glow)"
+              className="route-line route-one"
+            />
+            <path
+              d="M 91 147 Q 68 234 191 273"
+              stroke="url(#route-gradient)"
+              strokeWidth="1.5"
+              strokeDasharray="4 5"
+              filter="url(#route-glow)"
+              className="route-line route-two"
+            />
+            <path
+              d="M 191 273 Q 313 255 273 139"
+              stroke="url(#route-gradient)"
+              strokeWidth="1.5"
+              strokeDasharray="4 5"
+              filter="url(#route-glow)"
+              className="route-line route-three"
+            />
+            <circle cx="91" cy="147" r="4" fill="#fb923c" />
+            <circle cx="273" cy="139" r="4" fill="#38bdf8" />
+            <circle cx="191" cy="273" r="4" fill="#fb923c" />
+          </svg>
+        </div>
+
+        <GlobeFlag flag="🇮🇳" className="flag-india" />
+        <GlobeFlag flag="🇬🇧" className="flag-uk" />
+        <GlobeFlag flag="🇺🇸" className="flag-usa" />
+        <GlobeFlag flag="🇯🇵" className="flag-japan" />
+
+        <div className="globe-center-mark">
+          <Globe2 size={17} />
+        </div>
       </div>
 
-      {player.isYou && (
+      <div className="globe-controls">
         <button
           type="button"
-          onClick={() => onEmote(player.id)}
-          className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-[10px] text-zinc-300 transition hover:border-[#E87524]/50 hover:text-white"
+          onClick={() => setZoom((value) => Math.max(0.85, value - 0.1))}
+          aria-label="Zoom out globe"
+          title="Zoom out"
         >
-          Send reaction <Zap size={12} />
+          <Minus size={15} />
         </button>
-      )}
+
+        <button
+          type="button"
+          onClick={() => setZoom((value) => Math.min(1.25, value + 0.1))}
+          aria-label="Zoom in globe"
+          title="Zoom in"
+        >
+          <Plus size={15} />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setRotation(0);
+            setZoom(1);
+          }}
+          aria-label="Reset globe view"
+          title="Reset view"
+        >
+          <Maximize2 size={14} />
+        </button>
+      </div>
+
+      <div className="globe-caption">
+        <div>
+          <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500">
+            Network status
+          </p>
+          <p className="mt-1 text-xs font-semibold text-zinc-200">
+            {activeMode === "blind"
+              ? "ENCRYPTED ZONE"
+              : activeMode === "coaches"
+                ? "AI TRAINING GRID"
+                : activeMode === "friends"
+                  ? "SOCIAL BATTLE ZONE"
+                  : "GLOBAL ARENA ACTIVE"}
+          </p>
+        </div>
+
+        <div className="text-right">
+          <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500">
+            Battle routes
+          </p>
+          <p className="mt-1 text-xs font-semibold text-orange-400">03 ACTIVE</p>
+        </div>
+      </div>
     </div>
   );
 }
 
-function OnlineArena({ matchType, duration, onExit, onRematch }) {
-  const [players, setPlayers] = useState(() =>
-    INITIAL_PLAYERS.slice(0, matchType === "duel" ? 2 : 4)
-  );
-  const [price, setPrice] = useState(67420);
-  const [candles, setCandles] = useState(() => {
-    let current = 67420;
-    return Array.from({ length: 48 }, (_, index) => {
-      const open = current;
-      const close = open + (Math.random() - 0.48) * 8;
-      const high = Math.max(open, close) + Math.random() * 4;
-      const low = Math.min(open, close) - Math.random() * 4;
-      current = close;
-      return { time: index, open, close, high, low };
-    });
-  });
-  const [positions, setPositions] = useState([]);
-  const [quantity, setQuantity] = useState(0.01);
-  const [balance, setBalance] = useState(10000);
-  const [elapsed, setElapsed] = useState(0);
-  const [activeEmotes, setActiveEmotes] = useState({});
-  const [result, setResult] = useState(null);
-  const [tab, setTab] = useState("positions");
+function ModeCard({ mode, active, onHover, onClick }) {
+  const Icon = mode.icon;
 
-  const totalSeconds = Number(duration) * 60;
-  const remaining = Math.max(0, totalSeconds - elapsed);
+  return (
+    <button
+      type="button"
+      onMouseEnter={() => onHover(mode.id)}
+      onFocus={() => onHover(mode.id)}
+      onMouseLeave={() => onHover(null)}
+      onBlur={() => onHover(null)}
+      onClick={onClick}
+      className={`mode-card ${active ? "mode-card-active" : ""}`}
+      style={{ "--mode-accent": mode.accent }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="mode-icon">
+          <Icon size={21} strokeWidth={1.7} />
+        </div>
+
+        <ArrowUpRight
+          size={17}
+          className="mode-arrow text-zinc-600 transition"
+        />
+      </div>
+
+      <div className="mt-5">
+        <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
+          {mode.subtitle}
+        </p>
+
+        <h3 className="mt-2 text-[17px] font-semibold tracking-tight text-zinc-100">
+          {mode.title}
+        </h3>
+
+        <p className="mt-1.5 text-xs text-zinc-500">{mode.description}</p>
+      </div>
+
+      <div className="mt-5 flex items-center justify-between border-t border-white/[0.07] pt-3">
+        <span className="flex items-center gap-1.5 text-[10px] text-zinc-500">
+          <span
+            className="h-1.5 w-1.5 rounded-full"
+            style={{ backgroundColor: mode.accent }}
+          />
+          {mode.players} active
+        </span>
+
+        <span className="flex items-center gap-1 text-[10px] font-semibold text-zinc-300">
+          ENTER <ChevronRight size={13} />
+        </span>
+      </div>
+    </button>
+  );
+}
+
+function GlobalFeed() {
+  const [feedIndex, setFeedIndex] = useState(0);
 
   useEffect(() => {
-    if (result) return undefined;
+    const interval = window.setInterval(() => {
+      setFeedIndex((index) => (index + 1) % BATTLES.length);
+    }, 3200);
 
-    const timer = window.setInterval(() => {
-      setElapsed((value) => Math.min(value + 1, totalSeconds));
-      setPrice((current) => current + (Math.random() - 0.49) * 24);
-      setCandles((previous) => {
-        const nextPrice = price + (Math.random() - 0.49) * 24;
-        const last = previous[previous.length - 1];
-        const open = last?.close ?? price;
-        const candle = {
-          time: (last?.time ?? 0) + 1,
-          open,
-          close: nextPrice,
-          high: Math.max(open, nextPrice) + Math.random() * 5,
-          low: Math.min(open, nextPrice) - Math.random() * 5,
-        };
-        return [...previous.slice(-47), candle];
-      });
-      setPlayers((previous) =>
-        previous.map((player) => {
-          if (player.isYou) return player;
-          return {
-            ...player,
-            pnl: player.pnl + (Math.random() - 0.5) * 18,
-          };
-        })
-      );
-    }, 1000);
+    return () => window.clearInterval(interval);
+  }, []);
 
-    return () => window.clearInterval(timer);
-  }, [result, price, totalSeconds]);
+  const battle = BATTLES[feedIndex];
+
+  return (
+    <div className="global-feed">
+      <div className="flex shrink-0 items-center gap-2">
+        <span className="live-dot" />
+        <span className="text-[9px] font-bold uppercase tracking-[0.17em] text-zinc-400">
+          Live feed
+        </span>
+      </div>
+
+      <div className="feed-battle" key={feedIndex}>
+        <span className="text-base">{battle.flagA}</span>
+        <span className="feed-player">{battle.nameA}</span>
+        <span className="text-[10px] text-zinc-600">VS</span>
+        <span className="feed-player">{battle.nameB}</span>
+        <span className="text-base">{battle.flagB}</span>
+        <Swords size={13} className="text-orange-400" />
+        <span className="text-[9px] font-semibold uppercase tracking-wider text-orange-400">
+          LIVE
+        </span>
+      </div>
+
+      <span className="hidden shrink-0 text-[9px] text-zinc-600 sm:block">
+        SIMULATED MATCHES
+      </span>
+    </div>
+  );
+}
+
+function ModeEntry({ mode, onBack, onFindMatch }) {
+  const Icon = mode.icon;
+  const isOnline = mode.id === "online";
+
+  return (
+    <div className="mode-entry">
+      <div className="mode-entry-glow" />
+
+      <button
+        type="button"
+        onClick={onBack}
+        className="relative z-10 flex items-center gap-2 text-xs text-zinc-400 transition hover:text-white"
+      >
+        <ArrowLeft size={15} />
+        Back to global rooms
+      </button>
+
+      <div className="relative z-10 mx-auto mt-16 max-w-xl text-center">
+        <div
+          className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border"
+          style={{
+            color: mode.accent,
+            borderColor: `${mode.accent}55`,
+            backgroundColor: `${mode.accent}12`,
+            boxShadow: `0 0 45px ${mode.accent}15`,
+          }}
+        >
+          <Icon size={30} strokeWidth={1.5} />
+        </div>
+
+        <p
+          className="mt-8 text-[10px] font-semibold uppercase tracking-[0.3em]"
+          style={{ color: mode.accent }}
+        >
+          {mode.subtitle}
+        </p>
+
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-5xl">
+          {mode.title}
+        </h1>
+
+        <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-zinc-400">
+          {isOnline
+            ? "Step into the global arena. Find opponents, test your market instincts, and compete in a simulated trading battle."
+            : mode.id === "friends"
+              ? "Create a private practice room and challenge your friends in a simulated market battle."
+              : mode.id === "blind"
+                ? "Enter a mystery trading challenge and test your decision-making without the usual visual clues."
+                : "Train your trading instincts against a simulated opponent and sharpen your strategy round by round."}
+        </p>
+
+        {isOnline && (
+          <div className="mx-auto mt-8 grid max-w-sm grid-cols-2 gap-3">
+            <div className="rounded-xl border border-white/10 bg-white/3 p-4 text-left">
+              <p className="text-[9px] uppercase tracking-widest text-zinc-500">
+                Match type
+              </p>
+              <p className="mt-2 text-sm font-semibold text-white">1v1 Duel</p>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/3 p-4 text-left">
+              <p className="text-[9px] uppercase tracking-widest text-zinc-500">
+                Match duration
+              </p>
+              <p className="mt-2 text-sm font-semibold text-white">5 minutes</p>
+            </div>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={onFindMatch}
+          className="mt-8 inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 text-sm font-bold text-black transition hover:brightness-110"
+          style={{ backgroundColor: mode.accent }}
+        >
+          <Zap size={16} />
+          {isOnline
+            ? "Find a match"
+            : mode.id === "friends"
+              ? "Create a room"
+              : mode.id === "blind"
+                ? "Enter blind room"
+                : "Start training"}
+        </button>
+
+        <p className="mt-4 text-[10px] text-zinc-600">
+          Frontend prototype · No real matchmaking or live exchange orders
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default function RoomPage() {
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const selectedMode = searchParams.get("mode");
+  const activeMode = MODES.find((mode) => mode.id === selectedMode);
+  const [hoveredMode, setHoveredMode] = useState(null);
+  const [rotation, setRotation] = useState(-15);
+  const [zoom, setZoom] = useState(1);
+  const [transitioning, setTransitioning] = useState(false);
 
   useEffect(() => {
-    if (remaining === 0 && !result) {
-      const sorted = [...players].sort((a, b) => b.pnl - a.pnl);
-      const myRank = sorted.findIndex((player) => player.isYou) + 1;
-      const change = myRank === 1 ? 16 : myRank === 2 ? 8 : -8;
+    if (!transitioning) return undefined;
 
-      setResult({ rank: myRank, change });
-    }
-  }, [remaining, result, players]);
+    const timeout = window.setTimeout(() => {
+      setTransitioning(false);
+    }, 650);
 
-  const rankedPlayers = useMemo(
-    () => [...players].sort((a, b) => b.pnl - a.pnl),
-    [players]
-  );
+    return () => window.clearTimeout(timeout);
+  }, [transitioning]);
 
-  const myPlayer = players.find((player) => player.isYou);
-  const myPnl = positions.reduce((sum, position) => {
-    const movement =
-      position.side === "BUY"
-        ? price - position.entryPrice
-        : position.entryPrice - price;
-    return sum + movement * position.quantity;
-  }, 0);
-
-  const myEquity = balance + myPnl;
-
-  const placeOrder = (side) => {
-    if (result) return;
-
-    const required = price * quantity;
-    if (side === "BUY" && required > balance) return;
-
-    setPositions((previous) => [
-      ...previous,
-      {
-        id: `${Date.now()}-${Math.random()}`,
-        playerId: "you",
-        side,
-        entryPrice: price,
-        quantity,
-      },
-    ]);
-  };
-
-  const closePosition = (position) => {
-    const movement =
-      position.side === "BUY"
-        ? price - position.entryPrice
-        : position.entryPrice - price;
-    const pnl = movement * position.quantity;
-
-    setBalance((current) => current + pnl);
-    setPositions((previous) =>
-      previous.filter((item) => item.id !== position.id)
-    );
-    setPlayers((previous) =>
-      previous.map((player) =>
-        player.isYou ? { ...player, pnl: player.pnl + pnl } : player
-      )
-    );
-  };
-
-  const sendEmote = (playerId) => {
-    const emote = EMOTES[Math.floor(Math.random() * EMOTES.length)];
-    setActiveEmotes((previous) => ({ ...previous, [playerId]: emote }));
+  const enterMode = (modeId) => {
+    setTransitioning(true);
 
     window.setTimeout(() => {
-      setActiveEmotes((previous) => {
-        const next = { ...previous };
-        delete next[playerId];
-        return next;
-      });
-    }, 2000);
+      setSearchParams({ mode: modeId });
+    }, 260);
   };
 
-  if (result) {
-    const newRating = (myPlayer?.rating ?? 100) + result.change;
+  const goBack = () => {
+    setSearchParams({});
+    setTransitioning(false);
+  };
 
-    return (
-      <main className="mx-auto flex min-h-[70vh] w-full max-w-3xl items-center px-4 py-10 sm:px-7">
-        <Panel className="w-full overflow-hidden">
-          <div className="border-b border-white/8 px-6 py-5 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#E87524]/30 bg-[#E87524]/10 text-[#F59A55]">
-              {result.rank === 1 ? (
-                <Trophy size={30} />
-              ) : (
-                <Medal size={30} />
-              )}
-            </div>
-            <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#E87524]">
-              Match complete
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold text-white">
-              {result.rank === 1 ? "Victory secured." : "Round complete."}
-            </h1>
-            <p className="mt-2 text-sm text-zinc-400">
-              You finished #{result.rank} in this simulated match.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-px bg-white/8 sm:grid-cols-3">
-            <div className="bg-[#0d0d0d] p-5 text-center">
-              <SectionLabel>Final PnL</SectionLabel>
-              <p className="mt-2 font-mono text-lg text-white">
-                {signedMoney(myPlayer?.pnl ?? 0)}
-              </p>
-            </div>
-            <div className="bg-[#0d0d0d] p-5 text-center">
-              <SectionLabel>Old rating</SectionLabel>
-              <p className="mt-2 font-mono text-lg text-zinc-300">
-                {myPlayer?.rating ?? 100}
-              </p>
-            </div>
-            <div className="col-span-2 bg-[#0d0d0d] p-5 text-center sm:col-span-1">
-              <SectionLabel>Demo rating change</SectionLabel>
-              <p
-                className={`mt-2 font-mono text-lg font-bold ${
-                  result.change >= 0 ? "text-emerald-400" : "text-red-400"
-                }`}
-              >
-                {result.change > 0 ? "+" : ""}
-                {result.change} CW
-              </p>
-              <p className="mt-1 text-[10px] text-zinc-500">
-                New rating: {newRating}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 p-5 sm:flex-row">
-            <button
-              type="button"
-              onClick={onRematch}
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#E87524] px-4 py-3 text-sm font-semibold text-black transition hover:bg-[#F59A55]"
-            >
-              <Swords size={16} /> Find another match
-            </button>
-            <button
-              type="button"
-              onClick={onExit}
-              className="flex items-center justify-center gap-2 rounded-lg border border-white/10 px-4 py-3 text-sm text-zinc-300 transition hover:bg-white/5"
-            >
-              <DoorOpen size={16} /> Exit arena
-            </button>
-          </div>
-          <p className="px-5 pb-5 text-center text-[10px] leading-5 text-zinc-600">
-            Frontend demonstration only. Ratings, PnL and match results are not
-            saved to a server or the Global Leaderboard.
-          </p>
-        </Panel>
-      </main>
-    );
-  }
-
-  return (
-    <main className="mx-auto w-full max-w-[1600px] space-y-4 px-3 py-4 sm:px-6 sm:py-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onExit}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-zinc-400 transition hover:text-white"
-            aria-label="Exit match"
-          >
-            <ArrowLeft size={16} />
-          </button>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-400">
-                Demo match active
-              </p>
-            </div>
-            <h1 className="mt-1 text-lg font-semibold text-white sm:text-xl">
-              {matchType === "duel" ? "Online Duel" : "4-Player Rumble"}
-            </h1>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#0d0d0d] px-4 py-2.5">
-          <Clock3 size={16} className="text-[#E87524]" />
-          <div>
-            <p className="text-[9px] uppercase tracking-wider text-zinc-500">
-              Time remaining
-            </p>
-            <p className="font-mono text-base font-semibold text-white">
-              {String(Math.floor(remaining / 60)).padStart(2, "0")}:
-              {String(remaining % 60).padStart(2, "0")}
-            </p>
-          </div>
-        </div>
-      </header>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {players
-          .filter((player) => player.isYou || matchType === "duel")
-          .map((player) => (
-            <Panel key={player.id} className="p-4">
-              <div className="flex items-center gap-3">
-                <Avatar player={player} size="h-11 w-11" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-white">
-                    {player.isYou ? "YOU · TRADER" : player.name}
-                  </p>
-                  <p className="mt-1 text-[10px] text-zinc-500">
-                    CW Rating {Math.round(player.rating)}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <SectionLabel>Virtual PnL</SectionLabel>
-                  <p
-                    className={`mt-1 font-mono text-base font-semibold ${
-                      player.pnl + (player.isYou ? myPnl : 0) >= 0
-                        ? "text-emerald-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    {signedMoney(player.pnl + (player.isYou ? myPnl : 0))}
-                  </p>
-                </div>
-              </div>
-            </Panel>
-          ))}
-      </div>
-
-      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_310px]">
-        <div className="min-w-0 space-y-4">
-          <Panel className="overflow-hidden">
-            <MarketChart
-              price={price}
-              candles={candles}
-              players={players}
-              positions={positions}
-            />
-          </Panel>
-
-          <Panel className="p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <SectionLabel>Trade execution</SectionLabel>
-                <h2 className="mt-1 text-sm font-semibold text-white">
-                  BTC / USD · Paper trading
-                </h2>
-              </div>
-              <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] text-zinc-500">
-                No real orders
-              </span>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <div className="rounded-lg border border-white/8 bg-white/2 p-3">
-                <SectionLabel>Available balance</SectionLabel>
-                <p className="mt-2 font-mono text-lg text-white">
-                  {money(balance)}
-                </p>
-              </div>
-              <div className="rounded-lg border border-white/8 bg-white/2 p-3">
-                <SectionLabel>Open PnL</SectionLabel>
-                <p
-                  className={`mt-2 font-mono text-lg ${
-                    myPnl >= 0 ? "text-emerald-400" : "text-red-400"
-                  }`}
-                >
-                  {signedMoney(myPnl)}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <label className="text-xs text-zinc-400" htmlFor="trade-size">
-                Order size (BTC)
-              </label>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setQuantity((value) =>
-                      Math.max(0.001, Number((value - 0.01).toFixed(3)))
-                    )
-                  }
-                  className="flex h-8 w-8 items-center justify-center rounded-md border border-white/10 text-zinc-300"
-                  aria-label="Decrease order size"
-                >
-                  <Minus size={13} />
-                </button>
-                <input
-                  id="trade-size"
-                  type="number"
-                  min="0.001"
-                  max="0.1"
-                  step="0.001"
-                  value={quantity}
-                  onChange={(event) =>
-                    setQuantity(
-                      Math.max(
-                        0.001,
-                        Math.min(0.1, Number(event.target.value) || 0.001)
-                      )
-                    )
-                  }
-                  className="w-24 rounded-md border border-white/10 bg-black px-2 py-2 text-center font-mono text-xs text-white outline-none focus:border-[#E87524]/60"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setQuantity((value) =>
-                      Math.min(0.1, Number((value + 0.01).toFixed(3)))
-                    )
-                  }
-                  className="flex h-8 w-8 items-center justify-center rounded-md border border-white/10 text-zinc-300"
-                  aria-label="Increase order size"
-                >
-                  <Plus size={13} />
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => placeOrder("BUY")}
-                className="flex items-center justify-center gap-2 rounded-lg bg-emerald-400 px-3 py-3 text-sm font-bold text-black transition hover:bg-emerald-300"
-              >
-                <ArrowUpRight size={17} /> Buy / Long
-              </button>
-              <button
-                type="button"
-                onClick={() => placeOrder("SELL")}
-                className="flex items-center justify-center gap-2 rounded-lg bg-red-400 px-3 py-3 text-sm font-bold text-black transition hover:bg-red-300"
-              >
-                <ArrowDownRight size={17} /> Sell / Short
-              </button>
-            </div>
-            <p className="mt-3 text-[10px] leading-5 text-zinc-600">
-              Demo execution only. Orders are not sent to an exchange. This
-              prototype does not model fees, margin or liquidation.
-            </p>
-          </Panel>
-
-          <Panel className="overflow-hidden">
-            <div className="flex gap-1 border-b border-white/8 p-2">
-              {[
-                { id: "positions", label: `Open positions (${positions.length})` },
-                { id: "activity", label: "Trade activity" },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setTab(item.id)}
-                  className={`rounded-lg px-3 py-2 text-[10px] ${
-                    tab === item.id
-                      ? "bg-white/8 text-white"
-                      : "text-zinc-500 hover:text-white"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
-            {tab === "positions" ? (
-              positions.length ? (
-                <div className="divide-y divide-white/6">
-                  {positions.map((position) => {
-                    const movement =
-                      position.side === "BUY"
-                        ? price - position.entryPrice
-                        : position.entryPrice - price;
-                    const pnl = movement * position.quantity;
-
-                    return (
-                      <div
-                        key={position.id}
-                        className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
-                      >
-                        <div>
-                          <span
-                            className={`text-xs font-semibold ${
-                              position.side === "BUY"
-                                ? "text-emerald-400"
-                                : "text-red-400"
-                            }`}
-                          >
-                            {position.side}
-                          </span>
-                          <p className="mt-1 text-[10px] text-zinc-500">
-                            BTC · {position.quantity} BTC @{" "}
-                            {money(position.entryPrice)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span
-                            className={`font-mono text-xs ${
-                              pnl >= 0 ? "text-emerald-400" : "text-red-400"
-                            }`}
-                          >
-                            {signedMoney(pnl)}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => closePosition(position)}
-                            className="rounded-md border border-white/10 px-2.5 py-1.5 text-[10px] text-zinc-300 hover:border-white/30"
-                          >
-                            Close
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="p-6 text-center">
-                  <Activity className="mx-auto text-zinc-600" size={22} />
-                  <p className="mt-2 text-xs text-zinc-400">
-                    No open positions yet
-                  </p>
-                  <p className="mt-1 text-[10px] text-zinc-600">
-                    Place a demo order to see its entry line on the chart.
-                  </p>
-                </div>
-              )
-            ) : (
-              <div className="p-4">
-                {positions.length ? (
-                  positions.map((position) => (
-                    <div
-                      key={position.id}
-                      className="flex justify-between gap-3 py-2 text-xs"
-                    >
-                      <span className="text-zinc-400">
-                        {position.side} · BTC
-                      </span>
-                      <span className="font-mono text-zinc-300">
-                        {money(position.entryPrice)}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-zinc-500">
-                    Your trade activity will appear here.
-                  </p>
-                )}
-              </div>
-            )}
-          </Panel>
-        </div>
-
-        <aside className="min-w-0 space-y-4">
-          <Panel className="p-4">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <SectionLabel>Competition</SectionLabel>
-                <h2 className="mt-1 text-sm font-semibold text-white">
-                  Match leaderboard
-                </h2>
-              </div>
-              <Trophy size={18} className="text-[#E87524]" />
-            </div>
-
-            <p className="mt-2 text-[10px] text-zinc-500">
-              Ranked by simulated match PnL · Not CW Rating
-            </p>
-
-            <div className="mt-4 space-y-3">
-              {rankedPlayers.map((player, index) => (
-                <PlayerCard
-                  key={player.id}
-                  player={player}
-                  rank={index + 1}
-                  activeEmote={activeEmotes[player.id]}
-                  onEmote={sendEmote}
-                />
-              ))}
-            </div>
-          </Panel>
-
-          <Panel className="p-4">
-            <div className="flex items-center justify-between gap-2">
-              <SectionLabel>Quick reactions</SectionLabel>
-              <span className="text-[10px] text-zinc-600">No voice chat</span>
-            </div>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              {EMOTES.map((emote) => (
-                <button
-                  key={emote.label}
-                  type="button"
-                  onClick={() => sendEmote("you")}
-                  title={emote.label}
-                  className="rounded-lg border border-white/8 bg-white/2 px-1 py-2.5 transition hover:border-[#E87524]/50 hover:bg-[#E87524]/8"
-                >
-                  <span className="text-xl">{emote.emoji}</span>
-                  <span className="mt-1 block text-[8px] text-zinc-500">
-                    {emote.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </Panel>
-
-          <Panel className="p-4">
-            <div className="flex items-center gap-2">
-              <Wallet size={16} className="text-[#E87524]" />
-              <SectionLabel>Your account</SectionLabel>
-            </div>
-            <div className="mt-4 flex items-center justify-between">
-              <span className="text-xs text-zinc-500">Virtual equity</span>
-              <span className="font-mono text-sm text-white">
-                {money(myEquity)}
-              </span>
-            </div>
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-xs text-zinc-500">Open positions</span>
-              <span className="text-xs text-white">{positions.length}</span>
-            </div>
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-xs text-zinc-500">Starting CW Rating</span>
-              <span className="font-mono text-xs text-white">
-                {myPlayer?.rating ?? 100}
-              </span>
-            </div>
-          </Panel>
-
-          <button
-            type="button"
-            onClick={onExit}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 px-4 py-3 text-xs text-zinc-400 transition hover:border-white/20 hover:text-white"
-          >
-            <X size={14} /> Leave demo match
-          </button>
-        </aside>
-      </div>
-    </main>
-  );
-}
-
-function OnlineLobby({ onStart, rating = 100 }) {
-  const [matchType, setMatchType] = useState("duel");
-  const [duration, setDuration] = useState("5");
-
-  return (
-    <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0d0d0d] p-6 sm:p-9">
-        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-[#E87524]/10 blur-3xl" />
-        <div className="relative max-w-2xl">
-          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#E87524]">
-            <Radio size={13} /> ChartWars · Online arena
-          </div>
-          <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Your next rival is waiting.
-          </h2>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-400">
-            Enter a simulated trading duel, read the market, manage your virtual
-            positions and climb the match standings.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            {["Skill-first competition", "Virtual funds", "No voice chat"].map(
-              (label) => (
-                <span
-                  key={label}
-                  className="rounded-full border border-white/10 px-3 py-1.5 text-[10px] text-zinc-400"
-                >
-                  {label}
-                </span>
-              )
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <div className="mb-4">
-          <SectionLabel>Step 01 · Select your format</SectionLabel>
-          <h3 className="mt-2 text-lg font-semibold text-white">
-            Choose your battle
-          </h3>
-        </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {[
-            {
-              id: "duel",
-              title: "1v1 Duel",
-              description: "A focused head-to-head trading challenge.",
-              players: "2 PLAYERS",
-              icon: Swords,
-            },
-            {
-              id: "rumble",
-              title: "4-Player Rumble",
-              description: "Four traders. One market. One winner.",
-              players: "4 PLAYERS",
-              icon: Users,
-            },
-          ].map((mode) => {
-            const Icon = mode.icon;
-            const selected = matchType === mode.id;
-            return (
-              <button
-                key={mode.id}
-                type="button"
-                onClick={() => setMatchType(mode.id)}
-                className={`rounded-xl border p-5 text-left transition ${
-                  selected
-                    ? "border-[#E87524]/60 bg-[#E87524]/6"
-                    : "border-white/10 bg-[#0d0d0d] hover:border-white/20"
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div
-                    className={`flex h-12 w-12 items-center justify-center rounded-xl border ${
-                      selected
-                        ? "border-[#E87524]/40 bg-[#E87524]/10 text-[#F59A55]"
-                        : "border-white/10 text-zinc-400"
-                    }`}
-                  >
-                    <Icon size={22} />
-                  </div>
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-[9px] font-semibold ${
-                      selected
-                        ? "bg-[#E87524]/15 text-[#F59A55]"
-                        : "bg-white/5 text-zinc-500"
-                    }`}
-                  >
-                    {mode.players}
-                  </span>
-                </div>
-                <h4 className="mt-5 text-lg font-semibold text-white">
-                  {mode.title}
-                </h4>
-                <p className="mt-2 text-xs leading-5 text-zinc-400">
-                  {mode.description}
-                </p>
-                <div className="mt-4 flex items-center justify-between">
-                  <span className="text-[10px] text-zinc-500">
-                    {selected ? "Selected format" : "Select format"}
-                  </span>
-                  <span
-                    className={`flex h-5 w-5 items-center justify-center rounded-full border ${
-                      selected
-                        ? "border-[#E87524] bg-[#E87524] text-black"
-                        : "border-white/20 text-transparent"
-                    }`}
-                  >
-                    <Check size={12} />
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section>
-        <div className="mb-4">
-          <SectionLabel>Step 02 · Match settings</SectionLabel>
-          <h3 className="mt-2 text-lg font-semibold text-white">
-            Set your duration
-          </h3>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          {["5", "10", "15"].map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setDuration(value)}
-              className={`rounded-xl border p-4 text-center transition ${
-                duration === value
-                  ? "border-[#E87524]/60 bg-[#E87524]/6"
-                  : "border-white/10 bg-[#0d0d0d] hover:border-white/20"
-              }`}
-            >
-              <Clock3
-                size={18}
-                className={`mx-auto ${
-                  duration === value ? "text-[#F59A55]" : "text-zinc-500"
-                }`}
-              />
-              <p className="mt-2 text-xl font-semibold text-white">{value}</p>
-              <p className="text-[10px] text-zinc-500">Minutes</p>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <Panel className="flex flex-col justify-between gap-5 p-5 sm:flex-row sm:items-center">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#E87524]/25 bg-[#E87524]/10 text-[#F59A55]">
-            <Award size={23} />
-          </div>
-          <div>
-            <SectionLabel>Your competitive profile</SectionLabel>
-            <p className="mt-1 text-sm font-semibold text-white">
-              CW Rating · {rating}
-            </p>
-            <p className="mt-1 text-[10px] text-zinc-500">
-              New player starting rating
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => onStart(matchType, duration)}
-          className="flex items-center justify-center gap-2 rounded-lg bg-[#E87524] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#F59A55]"
-        >
-          <Swords size={16} /> Enter demo arena <ArrowRight size={16} />
-        </button>
-      </Panel>
-
-      <p className="text-center text-[10px] leading-5 text-zinc-600">
-        Prototype matchmaking: this opens a local demo match with simulated
-        opponents. It does not connect to real strangers yet.
-      </p>
-    </div>
-  );
-}
-
-export default function RoomsPage() {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [selectedMode, setSelectedMode] = useState(
-    searchParams.get("mode") || "friends"
-  );
-  const [onlineMatch, setOnlineMatch] = useState(null);
-
-  const coinId = searchParams.get("coin");
-  const startingBalance = searchParams.get("balance") || "10000";
-  const duration = searchParams.get("duration") || "5";
-
-  const startMode = (mode) => {
-    setSelectedMode(mode);
-
-    if (mode === "online") {
-      setOnlineMatch(null);
+  const handlePrimaryAction = () => {
+    // The nested screens are UI prototypes for now.
+    // Connect real matchmaking and room creation when the API is ready.
+    if (activeMode?.id === "online") {
+      setSearchParams({ mode: "online", stage: "matchmaking" });
       return;
     }
 
-    if (mode === "tournament") return;
+    if (activeMode?.id === "friends") {
+      setSearchParams({ mode: "friends", stage: "create" });
+      return;
+    }
 
-    if (["friends", "blind", "coaches"].includes(mode) && coinId) {
-      navigate(
-        `/dashboard/markets/${encodeURIComponent(coinId)}?mode=${mode}&balance=${encodeURIComponent(startingBalance)}&duration=${encodeURIComponent(duration)}`
-      );
+    if (activeMode?.id === "blind") {
+      setSearchParams({ mode: "blind", stage: "challenge" });
+      return;
+    }
+
+    if (activeMode?.id === "coaches") {
+      setSearchParams({ mode: "coaches", stage: "training" });
     }
   };
 
-  const openArena = (matchType, matchDuration) => {
-    setOnlineMatch({ matchType, duration: matchDuration });
-  };
-
-  const exitArena = () => {
-    setOnlineMatch(null);
-    setSelectedMode("online");
-  };
-
-  if (onlineMatch) {
-    return (
-      <OnlineArena
-        matchType={onlineMatch.matchType}
-        duration={onlineMatch.duration}
-        onExit={exitArena}
-        onRematch={() => openArena(onlineMatch.matchType, onlineMatch.duration)}
-      />
-    );
-  }
-
-  if (selectedMode === "online") {
-    return (
-      <main className="mx-auto w-full max-w-360 space-y-7 px-4 py-6 sm:px-7 sm:py-8 lg:px-9">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setSelectedMode("friends")}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-zinc-400 transition hover:text-white"
-            aria-label="Back to room selection"
-          >
-            <ArrowLeft size={16} />
-          </button>
-          <div>
-            <SectionLabel>Rooms / Online mode</SectionLabel>
-            <h1 className="mt-1 text-xl font-semibold text-white">
-              Online Matchmaking
-            </h1>
-          </div>
-        </div>
-        <OnlineLobby onStart={openArena} rating={100} />
-      </main>
-    );
-  }
+  const stage = searchParams.get("stage");
 
   return (
-    <main className="mx-auto w-full max-w-360 space-y-7 px-4 py-6 sm:px-7 sm:py-8 lg:px-9">
-      <section className="relative overflow-hidden rounded-2xl border border-white/8 bg-[#0d0d0d] p-6 sm:p-9">
-        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-[#E87524]/8 blur-3xl" />
+    <div className="rooms-page relative min-h-full overflow-hidden rounded-2xl">
+      <style>{`
+        .rooms-page {
+          --room-orange: #f97316;
+          color: #f4f4f5;
+          background:
+            radial-gradient(ellipse at 20% 18%, rgba(249,115,22,.075), transparent 36%),
+            radial-gradient(ellipse at 88% 76%, rgba(59,130,246,.045), transparent 32%),
+            #090909;
+        }
 
-        <div className="relative max-w-2xl">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#E87524]">
-            ChartWars · Practice arena
-          </p>
-          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-4xl">
-            Every round makes you sharper.
-          </h1>
-          <p className="mt-3 max-w-xl text-xs leading-6 text-zinc-400 sm:text-sm">
-            Choose your practice style, work with virtual funds, and learn to
-            read market movements without risking real money.
-          </p>
-          <div className="mt-5 flex flex-wrap items-center gap-2 text-[10px] text-zinc-500">
-            {["Virtual funds", "Skill-first practice", "No real trades"].map(
-              (label) => (
-                <span
-                  key={label}
-                  className="rounded-full border border-white/10 px-3 py-1.5"
-                >
-                  {label}
-                </span>
-              )
-            )}
-          </div>
+        .rooms-page * { box-sizing: border-box; }
+
+        .rooms-grid-bg {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          opacity: .16;
+          background-image:
+            linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+          background-size: 44px 44px;
+          mask-image: linear-gradient(to bottom, black, transparent 80%);
+        }
+
+        .rooms-content { position: relative; z-index: 1; }
+
+        .rooms-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          padding: 22px 24px 20px;
+          border-bottom: 1px solid rgba(255,255,255,.07);
+        }
+
+        .network-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          border: 1px solid rgba(249,115,22,.22);
+          background: rgba(249,115,22,.06);
+          border-radius: 999px;
+          padding: 7px 11px;
+          color: #fdba74;
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: .15em;
+          text-transform: uppercase;
+        }
+
+        .live-dot {
+          display: inline-block;
+          width: 6px;
+          height: 6px;
+          flex: 0 0 auto;
+          border-radius: 50%;
+          background: #fb923c;
+          box-shadow: 0 0 12px rgba(249,115,22,.8);
+          animation: roomPulse 1.7s ease-in-out infinite;
+        }
+
+        .rooms-layout {
+          display: grid;
+          grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr);
+          gap: 24px;
+          padding: 24px;
+        }
+
+        .globe-panel {
+          min-width: 0;
+          overflow: hidden;
+          border: 1px solid rgba(255,255,255,.08);
+          border-radius: 20px;
+          background: linear-gradient(145deg, rgba(255,255,255,.035), rgba(255,255,255,.008));
+        }
+
+        .globe-scene { --globe-accent: #f97316; }
+        .theme-friends { --globe-accent: #38bdf8; }
+        .theme-blind { --globe-accent: #a78bfa; }
+        .theme-coaches { --globe-accent: #34d399; }
+
+        .globe-topline {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 17px 18px 0;
+        }
+
+        .globe-stage {
+          position: relative;
+          display: grid;
+          place-items: center;
+          width: 100%;
+          max-width: 540px;
+          aspect-ratio: 1 / 1;
+          margin: 0 auto;
+          overflow: hidden;
+          cursor: grab;
+          touch-action: pan-y;
+          user-select: none;
+        }
+
+        .globe-stage.is-dragging { cursor: grabbing; }
+
+        .globe-aura {
+          position: absolute;
+          width: 72%;
+          aspect-ratio: 1;
+          border-radius: 50%;
+          background: var(--globe-accent);
+          filter: blur(75px);
+          opacity: .12;
+          transition: background .5s ease, opacity .5s ease;
+        }
+
+        .globe-orbit {
+          position: absolute;
+          width: 84%;
+          aspect-ratio: 1;
+          border: 1px solid rgba(249,115,22,.15);
+          border-radius: 50%;
+          transform: rotate(-24deg) scaleY(.34);
+          pointer-events: none;
+        }
+
+        .orbit-two {
+          width: 96%;
+          border-color: rgba(255,255,255,.08);
+          transform: rotate(52deg) scaleY(.45);
+        }
+
+        .globe-sphere {
+          position: relative;
+          width: 70%;
+          aspect-ratio: 1;
+          overflow: hidden;
+          border-radius: 50%;
+          background:
+            radial-gradient(circle at 32% 26%, rgba(94,170,190,.16), transparent 24%),
+            radial-gradient(circle at 65% 67%, rgba(0,0,0,.8), transparent 56%),
+            radial-gradient(circle at 42% 38%, #17303a, #09171f 62%, #030609 100%);
+          box-shadow:
+            inset -22px -8px 42px rgba(0,0,0,.9),
+            inset 6px 4px 20px rgba(120,220,255,.09),
+            0 0 0 1px rgba(125,211,252,.2),
+            0 0 36px color-mix(in srgb, var(--globe-accent) 22%, transparent);
+          transition: transform .18s ease-out, filter .5s ease, background .5s ease;
+          will-change: transform;
+        }
+
+        .theme-blind .globe-sphere {
+          filter: grayscale(.82) hue-rotate(35deg) brightness(.67);
+        }
+
+        .theme-coaches .globe-sphere {
+          filter: hue-rotate(35deg) saturate(.85);
+        }
+
+        .theme-friends .globe-sphere {
+          filter: hue-rotate(25deg) saturate(.8);
+        }
+
+        .globe-grid {
+          position: absolute;
+          inset: -12%;
+          border: 1px solid rgba(125,211,252,.22);
+          border-radius: 50%;
+        }
+
+        .globe-grid-one {
+          transform: scaleX(.38);
+          box-shadow: 0 0 0 1px rgba(125,211,252,.07);
+        }
+
+        .globe-grid-two {
+          transform: scaleX(.76);
+          border-color: rgba(125,211,252,.13);
+        }
+
+        .globe-land {
+          position: absolute;
+          background: linear-gradient(135deg, #345b5d, #16383d 65%, #10262d);
+          opacity: .8;
+          filter: drop-shadow(0 0 4px rgba(103,232,249,.12));
+        }
+
+        .land-one {
+          top: 19%;
+          left: 18%;
+          width: 31%;
+          height: 23%;
+          border-radius: 48% 28% 55% 30%;
+          transform: rotate(-28deg);
+          clip-path: polygon(8% 12%, 56% 0, 100% 30%, 80% 58%, 60% 100%, 33% 72%, 0 49%);
+        }
+
+        .land-two {
+          top: 44%;
+          left: 30%;
+          width: 22%;
+          height: 35%;
+          border-radius: 40%;
+          transform: rotate(-22deg);
+          clip-path: polygon(10% 0, 86% 12%, 100% 39%, 63% 68%, 48% 100%, 21% 72%, 0 30%);
+        }
+
+        .land-three {
+          top: 21%;
+          right: 13%;
+          width: 35%;
+          height: 29%;
+          border-radius: 45%;
+          transform: rotate(16deg);
+          clip-path: polygon(0 20%, 37% 0, 77% 15%, 100% 50%, 65% 65%, 55% 100%, 20% 70%);
+        }
+
+        .land-four {
+          right: 22%;
+          bottom: 21%;
+          width: 25%;
+          height: 20%;
+          border-radius: 40%;
+          transform: rotate(-12deg);
+          clip-path: polygon(8% 0, 100% 16%, 78% 70%, 38% 100%, 0 54%);
+        }
+
+        .globe-shine {
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          background: linear-gradient(115deg, rgba(255,255,255,.13), transparent 28%, transparent 70%, rgba(0,0,0,.5));
+          box-shadow: inset -18px -5px 32px rgba(0,0,0,.65);
+        }
+
+        .globe-routes {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          overflow: visible;
+        }
+
+        .route-line { animation: routeFlow 4s linear infinite; }
+        .route-two { animation-delay: -1.2s; }
+        .route-three { animation-delay: -2.2s; }
+
+        .globe-flag {
+          position: absolute;
+          z-index: 3;
+          display: grid;
+          width: 34px;
+          height: 34px;
+          place-items: center;
+          border: 1px solid rgba(255,255,255,.28);
+          border-radius: 50%;
+          background: rgba(12,12,12,.9);
+          font-size: 17px;
+          box-shadow: 0 0 0 4px rgba(249,115,22,.07), 0 0 24px var(--globe-accent);
+          animation: flagPulse 2s ease-in-out infinite;
+          pointer-events: none;
+        }
+
+        .flag-india { left: 18%; top: 35%; }
+        .flag-uk { right: 18%; top: 32%; animation-delay: -.7s; }
+        .flag-usa { left: 33%; bottom: 20%; animation-delay: -1.1s; }
+        .flag-japan { right: 19%; bottom: 27%; animation-delay: -1.5s; }
+
+        .globe-center-mark {
+          position: absolute;
+          bottom: 9%;
+          left: 50%;
+          display: grid;
+          width: 31px;
+          height: 31px;
+          place-items: center;
+          border: 1px solid rgba(255,255,255,.1);
+          border-radius: 50%;
+          color: var(--globe-accent);
+          background: rgba(8,8,8,.85);
+          transform: translateX(-50%);
+          transition: color .4s ease;
+        }
+
+        .globe-controls {
+          display: flex;
+          justify-content: center;
+          gap: 7px;
+          margin-top: -8px;
+        }
+
+        .globe-controls button {
+          display: grid;
+          width: 32px;
+          height: 32px;
+          place-items: center;
+          border: 1px solid rgba(255,255,255,.09);
+          border-radius: 9px;
+          color: #a1a1aa;
+          background: rgba(255,255,255,.025);
+          transition: color .2s ease, border-color .2s ease;
+        }
+
+        .globe-controls button:hover {
+          color: white;
+          border-color: rgba(249,115,22,.4);
+        }
+
+        .globe-caption {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin: 17px 18px 18px;
+          padding-top: 15px;
+          border-top: 1px solid rgba(255,255,255,.07);
+        }
+
+        .mode-list { display: flex; min-width: 0; flex-direction: column; gap: 11px; }
+
+        .mode-card {
+          position: relative;
+          width: 100%;
+          overflow: hidden;
+          padding: 17px;
+          text-align: left;
+          border: 1px solid rgba(255,255,255,.085);
+          border-radius: 16px;
+          background: linear-gradient(125deg, rgba(255,255,255,.04), rgba(255,255,255,.012));
+          transition: transform .25s ease, border-color .25s ease, background .25s ease, box-shadow .25s ease;
+        }
+
+        .mode-card::after {
+          content: "";
+          position: absolute;
+          right: -40px;
+          top: -60px;
+          width: 140px;
+          height: 140px;
+          border-radius: 50%;
+          background: var(--mode-accent);
+          opacity: 0;
+          filter: blur(45px);
+          transition: opacity .25s ease;
+          pointer-events: none;
+        }
+
+        .mode-card:hover, .mode-card-active {
+          transform: translateY(-2px);
+          border-color: color-mix(in srgb, var(--mode-accent) 42%, transparent);
+          background: linear-gradient(125deg, color-mix(in srgb, var(--mode-accent) 8%, #111), rgba(255,255,255,.012));
+          box-shadow: 0 10px 35px rgba(0,0,0,.15);
+        }
+
+        .mode-card:hover::after, .mode-card-active::after { opacity: .12; }
+
+        .mode-icon {
+          position: relative;
+          z-index: 1;
+          display: grid;
+          width: 42px;
+          height: 42px;
+          place-items: center;
+          border: 1px solid color-mix(in srgb, var(--mode-accent) 32%, transparent);
+          border-radius: 12px;
+          color: var(--mode-accent);
+          background: color-mix(in srgb, var(--mode-accent) 10%, transparent);
+        }
+
+        .mode-arrow { position: relative; z-index: 1; }
+        .mode-card:hover .mode-arrow { color: var(--mode-accent); transform: translate(2px, -2px); }
+
+        .global-feed {
+          display: flex;
+          align-items: center;
+          gap: 18px;
+          min-width: 0;
+          margin: 0 24px 24px;
+          padding: 14px 17px;
+          border: 1px solid rgba(255,255,255,.075);
+          border-radius: 14px;
+          background: rgba(255,255,255,.02);
+        }
+
+        .feed-battle {
+          display: flex;
+          min-width: 0;
+          flex: 1;
+          align-items: center;
+          justify-content: center;
+          gap: 9px;
+          animation: feedIn .3s ease;
+        }
+
+        .feed-player {
+          max-width: 100px;
+          overflow: hidden;
+          color: #d4d4d8;
+          font-size: 11px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .mode-entry {
+          position: relative;
+          min-height: 650px;
+          overflow: hidden;
+          padding: 24px;
+          animation: entryFade .45s ease both;
+        }
+
+        .mode-entry-glow {
+          position: absolute;
+          top: 8%;
+          left: 50%;
+          width: 430px;
+          height: 430px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(249,115,22,.12), transparent 68%);
+          transform: translateX(-50%);
+          pointer-events: none;
+        }
+
+        .rooms-transition {
+          position: absolute;
+          z-index: 20;
+          inset: 0;
+          background: radial-gradient(circle at 38% 45%, rgba(249,115,22,.24), #050505 65%);
+          animation: zoomEntry .65s ease-in forwards;
+          pointer-events: none;
+        }
+
+        @keyframes roomPulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: .35; }
+        }
+
+        @keyframes flagPulse {
+          0%, 100% { box-shadow: 0 0 0 3px rgba(249,115,22,.06), 0 0 16px var(--globe-accent); }
+          50% { box-shadow: 0 0 0 7px rgba(249,115,22,.035), 0 0 25px var(--globe-accent); }
+        }
+
+        @keyframes routeFlow { to { stroke-dashoffset: -36; } }
+
+        @keyframes feedIn {
+          from { opacity: 0; transform: translateY(5px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes entryFade {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes zoomEntry {
+          0% { opacity: 0; transform: scale(.96); }
+          45% { opacity: 1; transform: scale(1.02); }
+          100% { opacity: 0; transform: scale(1.16); }
+        }
+
+        @media (min-width: 1200px) {
+          .mode-card { padding: 19px; }
+          .mode-list { gap: 13px; }
+        }
+
+        @media (max-width: 900px) {
+          .rooms-layout { grid-template-columns: minmax(0, 1fr); }
+          .globe-panel { max-width: 680px; width: 100%; margin: 0 auto; }
+          .mode-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .mode-card { padding: 15px; }
+        }
+
+        @media (max-width: 560px) {
+          .rooms-header { align-items: flex-start; padding: 18px 15px; }
+          .rooms-layout { gap: 16px; padding: 15px; }
+          .network-pill { font-size: 8px; letter-spacing: .08em; }
+          .mode-list { grid-template-columns: minmax(0, 1fr); }
+          .mode-card { padding: 15px; }
+          .global-feed { flex-wrap: wrap; gap: 10px; margin: 0 15px 18px; padding: 12px; }
+          .feed-battle { justify-content: flex-start; gap: 6px; }
+          .feed-player { max-width: 70px; font-size: 10px; }
+          .globe-flag { width: 29px; height: 29px; font-size: 14px; }
+          .mode-entry { min-height: 600px; padding: 18px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .rooms-page *, .rooms-page *::before, .rooms-page *::after {
+            animation-duration: .01ms !important;
+            animation-iteration-count: 1 !important;
+            scroll-behavior: auto !important;
+            transition-duration: .01ms !important;
+          }
+        }
+      `}</style>
+
+      <div className="rooms-grid-bg" />
+
+      {transitioning && <div className="rooms-transition" />}
+
+      {activeMode ? (
+        <div className="rooms-content">
+          <ModeEntry
+            mode={activeMode}
+            onBack={goBack}
+            onFindMatch={handlePrimaryAction}
+          />
+
+          {stage && (
+            <div className="mx-5 mb-5 rounded-xl border border-orange-500/20 bg-orange-500/5 p-4 text-center text-xs text-orange-200">
+              {stage === "matchmaking"
+                ? "Matchmaking preview selected. Live opponent search will be connected to the backend later."
+                : stage === "create"
+                  ? "Room creation preview selected. Invite links and friend presence need backend integration."
+                  : stage === "challenge"
+                    ? "Blind challenge preview selected. Challenge rules will be implemented with the game engine."
+                    : "Training preview selected. Bot behavior will be implemented in a later phase."}
+            </div>
+          )}
         </div>
-      </section>
+      ) : (
+        <div className="rooms-content">
+          <header className="rooms-header">
+            <div>
+              <div className="network-pill">
+                <CircleDot size={12} />
+                ChartWars arena
+              </div>
 
-      <section>
-        <div className="mb-4 flex items-end justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-white">Choose your room</h2>
-            <p className="mt-1 text-xs text-zinc-500">
-              Select a mode to continue.
-            </p>
-          </div>
-          <DoorOpen size={20} className="text-[#E87524]" />
-        </div>
+              <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                Choose your battlefield<span className="text-orange-500">.</span>
+              </h1>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {[
-            ...MODES,
-            {
-              id: "online",
-              title: "Online Mode",
-              description:
-                "Enter a competitive arena with a live-style chart, match leaderboard, virtual trading and instant results.",
-              detail: "Competitive matchmaking",
-              icon: Swords,
-              status: "Demo Ready",
-            },
-          ].map((mode) => {
-            const Icon = mode.icon;
-            const selected = selectedMode === mode.id;
-            const comingSoon = mode.id === "tournament";
+              <p className="mt-2 text-xs text-zinc-500 sm:text-sm">
+                One market. Global rivals. Your next move.
+              </p>
+            </div>
 
-            return (
-              <article
-                key={mode.id}
-                className={`rounded-xl border bg-[#0d0d0d] p-5 transition ${
-                  selected
-                    ? "border-[#E87524]/45"
-                    : "border-white/8 hover:border-white/20"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E87524]/20 bg-[#E87524]/8">
-                    <Icon size={20} className="text-[#F59A55]" />
-                  </div>
-                  <span
-                    className={`rounded-full border px-2.5 py-1 text-[10px] ${
-                      comingSoon
-                        ? "border-white/10 text-zinc-500"
-                        : mode.id === "online"
-                          ? "border-[#E87524]/30 text-[#F59A55]"
-                          : "border-emerald-400/20 text-emerald-400"
-                    }`}
-                  >
-                    {mode.status}
-                  </span>
+            <div className="hidden shrink-0 text-right sm:block">
+              <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-600">
+                Arena status
+              </p>
+              <p className="mt-2 flex items-center justify-end gap-2 text-xs font-semibold text-zinc-300">
+                <span className="live-dot" />
+                Systems online
+              </p>
+            </div>
+          </header>
+
+          <div className="rooms-layout">
+            <section className="globe-panel">
+              <div className="flex items-center justify-between gap-3 px-5 pt-5">
+                <div>
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                    The world is your arena
+                  </p>
+                  <p className="mt-1.5 text-sm font-semibold text-zinc-100">
+                    Global battle map
+                  </p>
                 </div>
 
-                <p className="mt-5 text-[10px] uppercase tracking-wider text-zinc-600">
-                  {mode.detail}
-                </p>
-                <h3 className="mt-1 text-base font-semibold text-white">
-                  {mode.title}
-                </h3>
-                <p className="mt-2 min-h-10 text-xs leading-5 text-zinc-400">
-                  {mode.description}
-                </p>
+                <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/20 px-2.5 py-1.5 text-[9px] text-zinc-400">
+                  <Globe2 size={12} />
+                  3D VIEW
+                </span>
+              </div>
 
-                {comingSoon ? (
-                  <div className="mt-5 flex items-center gap-2 rounded-lg border border-white/8 bg-white/2 px-3 py-3 text-xs text-zinc-500">
-                    <Clock3 size={14} />
-                    This mode is on the roadmap.
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => startMode(mode.id)}
-                    className={`mt-5 flex w-full items-center justify-between rounded-lg border px-4 py-3 text-xs font-medium transition ${
-                      selected
-                        ? "border-[#E87524]/40 bg-[#E87524]/10 text-[#F59A55]"
-                        : "border-white/10 text-zinc-300 hover:border-[#E87524]/40 hover:text-white"
-                    }`}
-                  >
-                    {mode.id === "online"
-                      ? "Open online lobby"
-                      : coinId
-                        ? "Continue with selected coin"
-                        : "Open chart to begin"}
-                    <ArrowRight size={15} />
-                  </button>
-                )}
-              </article>
-            );
-          })}
-        </div>
-      </section>
+              <CyberGlobe
+                activeMode={hoveredMode}
+                rotation={rotation}
+                setRotation={setRotation}
+                zoom={zoom}
+                setZoom={setZoom}
+              />
+            </section>
 
-      {!coinId && (
-        <section className="flex flex-col justify-between gap-4 rounded-xl border border-white/8 bg-[#0d0d0d] p-5 sm:flex-row sm:items-center">
-          <div>
-            <p className="text-sm font-medium text-white">
-              Choose a market before starting practice
-            </p>
-            <p className="mt-1 text-xs leading-5 text-zinc-500">
-              Select a coin first, then configure your virtual practice session.
-              Online Mode currently uses a simulated BTC/USD chart.
-            </p>
+            <section className="flex min-w-0 flex-col justify-center">
+              <div className="mb-4 flex items-end justify-between gap-3">
+                <div>
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                    Select your mode
+                  </p>
+                  <h2 className="mt-1.5 text-lg font-semibold text-white">
+                    Enter the arena
+                  </h2>
+                </div>
+
+                <span className="pb-1 text-[10px] text-zinc-600">
+                  04 MODES
+                </span>
+              </div>
+
+              <div className="mode-list">
+                {MODES.map((mode) => (
+                  <ModeCard
+                    key={mode.id}
+                    mode={mode}
+                    active={hoveredMode === mode.id}
+                    onHover={setHoveredMode}
+                    onClick={() => enterMode(mode.id)}
+                  />
+                ))}
+              </div>
+            </section>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate("/dashboard/markets")}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#E87524] px-4 py-3 text-xs font-semibold text-black transition hover:bg-[#F59A55]"
-          >
-            Explore markets <ArrowRight size={14} />
-          </button>
-        </section>
+
+          <section className="mx-6 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-orange-500/15 bg-orange-500/[0.035] px-5 py-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="live-dot" />
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-300">
+                  Global activity
+                </p>
+              </div>
+
+              <p className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                2,410{" "}
+                <span className="text-xs font-medium text-zinc-500 sm:text-sm">
+                  traders battling globally
+                </span>
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-zinc-500">
+              <span className="text-base">🇮🇳</span>
+              <Swords size={14} className="text-orange-400" />
+              <span className="text-base">🇬🇧</span>
+              <span className="ml-1">Global duels</span>
+            </div>
+          </section>
+
+          <GlobalFeed />
+
+          <p className="px-6 pb-5 text-center text-[9px] leading-4 text-zinc-700">
+            Concept preview · Country flags, player counts, battle routes and
+            activity feed are simulated. No live player locations are shown.
+          </p>
+        </div>
       )}
-    </main>
+    </div>
   );
 }
