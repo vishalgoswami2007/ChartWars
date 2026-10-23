@@ -10,10 +10,12 @@ export default function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
 
-  const hideMarketOverview =
-    location.pathname === "/dashboard/learn" ||
-    location.pathname.startsWith("/dashboard/learn/") ||
-    location.pathname === "/dashboard/news";
+  const isHomePage = location.pathname === "/dashboard";
+  const isMarketsPage =
+    location.pathname === "/dashboard/markets" ||
+    location.pathname.startsWith("/dashboard/markets/");
+
+  const showMarketOverview = isHomePage || isMarketsPage;
 
   return (
     <div className="min-h-screen bg-[#050505] text-white">
@@ -25,7 +27,7 @@ export default function Dashboard() {
       <div className="min-h-screen lg:pl-65">
         <Navbar onMenuClick={() => setIsSidebarOpen(true)} />
 
-        {!hideMarketOverview && <LiveTickerRow />}
+        {showMarketOverview && <LiveTickerRow />}
 
         <Outlet />
       </div>
