@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import {  useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -26,7 +26,7 @@ const MODES = [
     icon: Swords,
     accent: "#f97316",
     description: "Enter the global arena.",
-    players: "2,410",
+    players: "21",
   },
   {
     id: "friends",
@@ -35,7 +35,7 @@ const MODES = [
     icon: Users,
     accent: "#38bdf8",
     description: "Challenge your circle.",
-    players: "824",
+    players: "6",
   },
   {
     id: "blind",
@@ -44,7 +44,7 @@ const MODES = [
     icon: EyeOff,
     accent: "#a78bfa",
     description: "Trade without the clues.",
-    players: "316",
+    players: "3",
   },
   {
     id: "coaches",
@@ -53,35 +53,81 @@ const MODES = [
     icon: Bot,
     accent: "#34d399",
     description: "Sharpen your strategy.",
-    players: "592",
+    players: "2",
   },
 ];
 
-const BATTLES = [
-  { flagA: "🇮🇳", nameA: "Trader_A", flagB: "🇬🇧", nameB: "ChartFox" },
-  { flagA: "🇺🇸", nameA: "BullRunner", flagB: "🇯🇵", nameB: "Kaito_X" },
-  { flagA: "🇩🇪", nameA: "AlphaWolf", flagB: "🇮🇳", nameB: "Vikram_7" },
-  { flagA: "🇧🇷", nameA: "CryptoLeo", flagB: "🇺🇸", nameB: "NovaTrade" },
-];
-
 const COUNTRIES = [
-  { id: "india", flag: "🇮🇳", name: "India", x: 27, y: 40 },
-  { id: "switzerland", flag: "🇨🇭", name: "Switzerland", x: 52, y: 27 },
-  { id: "uae", flag: "🇦🇪", name: "UAE", x: 58, y: 43 },
-  { id: "canada", flag: "🇨🇦", name: "Canada", x: 29, y: 25 },
-  { id: "singapore", flag: "🇸🇬", name: "Singapore", x: 66, y: 58 },
-  { id: "portugal", flag: "🇵🇹", name: "Portugal", x: 43, y: 34 },
-  { id: "uk", flag: "🇬🇧", name: "United Kingdom", x: 46, y: 28 },
-  { id: "usa", flag: "🇺🇸", name: "United States", x: 22, y: 47 },
-  { id: "japan", flag: "🇯🇵", name: "Japan", x: 75, y: 39 },
-  { id: "brazil", flag: "🇧🇷", name: "Brazil", x: 38, y: 67 },
-  { id: "germany", flag: "🇩🇪", name: "Germany", x: 51, y: 32 },
-  { id: "australia", flag: "🇦🇺", name: "Australia", x: 74, y: 72 },
+  { id: "india", code: "in", name: "India", x: 67, y: 47 },
+  { id: "switzerland", code: "ch", name: "Switzerland", x: 49, y: 33 },
+  { id: "uae", code: "ae", name: "United Arab Emirates", x: 58, y: 45 },
+  { id: "canada", code: "ca", name: "Canada", x: 27, y: 27 },
+  { id: "singapore", code: "sg", name: "Singapore", x: 68, y: 61 },
+  { id: "portugal", code: "pt", name: "Portugal", x: 43, y: 39 },
+  { id: "uk", code: "gb", name: "United Kingdom", x: 47, y: 30 },
+  { id: "usa", code: "us", name: "United States", x: 28, y: 43 },
+  { id: "japan", code: "jp", name: "Japan", x: 79, y: 42 },
+  { id: "brazil", code: "br", name: "Brazil", x: 37, y: 68 },
+  { id: "germany", code: "de", name: "Germany", x: 52, y: 34 },
+  { id: "australia", code: "au", name: "Australia", x: 77, y: 75 },
 ];
 
+const BATTLES = [
+  {
+    codeA: "in",
+    nameA: "Trader_A",
+    codeB: "gb",
+    nameB: "ChartFox",
+  },
+  {
+    codeA: "us",
+    nameA: "BullRunner",
+    codeB: "jp",
+    nameB: "Kaito_X",
+  },
+  {
+    codeA: "de",
+    nameA: "AlphaWolf",
+    codeB: "in",
+    nameB: "Vikram_7",
+  },
+  {
+    codeA: "br",
+    nameA: "CryptoLeo",
+    codeB: "us",
+    nameB: "NovaTrade",
+  },
+];
 
+const ACTIVITY_COUNTRIES = [
+  { code: "in", name: "India" },
+  { code: "ch", name: "Switzerland" },
+  { code: "ae", name: "United Arab Emirates" },
+  { code: "ca", name: "Canada" },
+  { code: "sg", name: "Singapore" },
+  { code: "pt", name: "Portugal" },
+];
 
-function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
+function CountryFlag({ code, name, className = "" }) {
+  return (
+    <img
+      src={`https://flagcdn.io/${code.toLowerCase()}.svg`}
+      alt={`${name} flag`}
+      className={className}
+      loading="lazy"
+      decoding="async"
+      draggable="false"
+    />
+  );
+}
+
+function CyberGlobe({
+  activeMode,
+  rotation,
+  setRotation,
+  zoom,
+  setZoom,
+}) {
   const [dragging, setDragging] = useState(false);
   const [lastX, setLastX] = useState(0);
   const [hoveredCountry, setHoveredCountry] = useState(null);
@@ -94,6 +140,10 @@ function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
         : activeMode === "friends"
           ? "friends"
           : "online";
+
+  const selectedCountry = COUNTRIES.find(
+    (country) => country.id === hoveredCountry,
+  );
 
   const handlePointerDown = (event) => {
     if (event.target.closest("button")) return;
@@ -144,7 +194,9 @@ function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
 
         <div
           className="globe-sphere"
-          style={{ transform: `rotate(${rotation}deg) scale(${zoom})` }}
+          style={{
+            transform: `rotate(${rotation}deg) scale(${zoom})`,
+          }}
         >
           <div className="globe-grid globe-grid-one" />
           <div className="globe-grid globe-grid-two" />
@@ -162,14 +214,20 @@ function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
           aria-hidden="true"
         >
           <defs>
-            <linearGradient id="global-route-gradient">
+            <linearGradient
+              id="global-route-gradient"
+              x1="0%"
+              y1="0%"
+              x2="100%"
+              y2="100%"
+            >
               <stop offset="0%" stopColor="#f97316" stopOpacity=".25" />
               <stop offset="55%" stopColor="#fb923c" />
               <stop offset="100%" stopColor="#38bdf8" stopOpacity=".8" />
             </linearGradient>
 
             <filter id="global-route-glow">
-              <feGaussianBlur stdDeviation=".65" result="blur" />
+              <feGaussianBlur stdDeviation=".35" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
@@ -181,7 +239,8 @@ function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
             const centerX = 50;
             const centerY = 50;
             const midX = (centerX + country.x) / 2;
-            const midY = Math.min(centerY, country.y) - 9 - (index % 3) * 2;
+            const midY =
+              Math.min(centerY, country.y) - 8 - (index % 3) * 2;
 
             return (
               <g key={country.id}>
@@ -189,7 +248,7 @@ function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
                   d={`M ${centerX} ${centerY} Q ${midX} ${midY} ${country.x} ${country.y}`}
                   fill="none"
                   stroke="url(#global-route-gradient)"
-                  strokeWidth={hoveredCountry === country.id ? "0.65" : "0.32"}
+                  strokeWidth={hoveredCountry === country.id ? "0.6" : "0.28"}
                   strokeDasharray="1.2 1.2"
                   filter="url(#global-route-glow)"
                   className="country-route"
@@ -199,7 +258,7 @@ function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
                 <circle
                   cx={country.x}
                   cy={country.y}
-                  r={hoveredCountry === country.id ? "1.15" : ".65"}
+                  r={hoveredCountry === country.id ? "1.1" : ".55"}
                   fill="#fb923c"
                   className="country-route-point"
                 />
@@ -212,7 +271,9 @@ function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
           <button
             key={country.id}
             type="button"
-            className={`country-flag ${hoveredCountry === country.id ? "country-flag-active" : ""}`}
+            className={`country-flag ${
+              hoveredCountry === country.id ? "country-flag-active" : ""
+            }`}
             style={{
               left: `${country.x}%`,
               top: `${country.y}%`,
@@ -225,8 +286,14 @@ function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
             title={country.name}
             aria-label={`${country.name} simulated battle location`}
           >
-            <span>{country.flag}</span>
-            <span className="country-flag-swords">⚔️</span>
+            <CountryFlag
+              code={country.code}
+              name={country.name}
+              className="country-flag-image"
+            />
+            <span className="country-flag-swords" aria-hidden="true">
+              ⚔
+            </span>
           </button>
         ))}
 
@@ -238,19 +305,21 @@ function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
           <span className="chartwars-hub-name">CHARTWARS</span>
           <span className="chartwars-hub-status">
             <span className="live-dot" />
-            GLOBAL HUB
+            DEMO HUB
           </span>
         </div>
       </div>
 
-      {hoveredCountry && (
+      {selectedCountry && (
         <div className="country-hover-label">
-          {COUNTRIES.find((country) => country.id === hoveredCountry)?.flag}
-          <span>
-            {COUNTRIES.find((country) => country.id === hoveredCountry)?.name}
-          </span>
+          <CountryFlag
+            code={selectedCountry.code}
+            name={selectedCountry.name}
+            className="hover-country-flag"
+          />
+          <span>{selectedCountry.name}</span>
           <Swords size={13} className="text-orange-400" />
-          <span className="text-orange-300">Battle route</span>
+          <span className="text-orange-300">Demo route</span>
         </div>
       )}
 
@@ -276,7 +345,7 @@ function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
         <button
           type="button"
           onClick={() => {
-            setRotation(0);
+            setRotation(-15);
             setZoom(1);
           }}
           aria-label="Reset globe view"
@@ -298,23 +367,22 @@ function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
                 ? "AI TRAINING GRID"
                 : activeMode === "friends"
                   ? "SOCIAL BATTLE ZONE"
-                  : "GLOBAL ARENA ACTIVE"}
+                  : "GLOBAL ARENA PREVIEW"}
           </p>
         </div>
 
         <div className="text-right">
           <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500">
-            Connected countries
+            Demo locations
           </p>
           <p className="mt-1 text-xs font-semibold text-orange-400">
-            12 LOCATIONS
+            {COUNTRIES.length} LOCATIONS
           </p>
         </div>
       </div>
     </div>
   );
 }
-
 
 function ModeCard({ mode, active, onHover, onClick }) {
   const Icon = mode.icon;
@@ -341,7 +409,7 @@ function ModeCard({ mode, active, onHover, onClick }) {
         />
       </div>
 
-      <div className="mt-5">
+      <div className="mode-card-copy">
         <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
           {mode.subtitle}
         </p>
@@ -353,13 +421,13 @@ function ModeCard({ mode, active, onHover, onClick }) {
         <p className="mt-1.5 text-xs text-zinc-500">{mode.description}</p>
       </div>
 
-      <div className="mt-5 flex items-center justify-between border-t border-white/[0.07] pt-3">
+      <div className="mode-card-footer">
         <span className="flex items-center gap-1.5 text-[10px] text-zinc-500">
           <span
             className="h-1.5 w-1.5 rounded-full"
             style={{ backgroundColor: mode.accent }}
           />
-          {mode.players} active
+          {mode.players} demo
         </span>
 
         <span className="flex items-center gap-1 text-[10px] font-semibold text-zinc-300">
@@ -385,28 +453,34 @@ function GlobalFeed() {
 
   return (
     <div className="global-feed">
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="feed-heading">
         <span className="live-dot" />
         <span className="text-[9px] font-bold uppercase tracking-[0.17em] text-zinc-400">
-          Live feed
+          Demo feed
         </span>
       </div>
 
       <div className="feed-battle" key={feedIndex}>
-        <span className="text-base">{battle.flagA}</span>
+        <CountryFlag
+          code={battle.codeA}
+          name={battle.nameA}
+          className="feed-flag"
+        />
         <span className="feed-player">{battle.nameA}</span>
-        <span className="text-[10px] text-zinc-600">VS</span>
+        <span className="text-[10px] font-bold text-zinc-600">VS</span>
         <span className="feed-player">{battle.nameB}</span>
-        <span className="text-base">{battle.flagB}</span>
+        <CountryFlag
+          code={battle.codeB}
+          name={battle.nameB}
+          className="feed-flag"
+        />
         <Swords size={13} className="text-orange-400" />
         <span className="text-[9px] font-semibold uppercase tracking-wider text-orange-400">
-          LIVE
+          DEMO
         </span>
       </div>
 
-      <span className="hidden shrink-0 text-[9px] text-zinc-600 sm:block">
-        SIMULATED MATCHES
-      </span>
+      <span className="feed-disclaimer">SIMULATED MATCHES</span>
     </div>
   );
 }
@@ -505,11 +579,12 @@ function ModeEntry({ mode, onBack, onFindMatch }) {
 }
 
 export default function RoomPage() {
-
   const [searchParams, setSearchParams] = useSearchParams();
 
   const selectedMode = searchParams.get("mode");
   const activeMode = MODES.find((mode) => mode.id === selectedMode);
+  const stage = searchParams.get("stage");
+
   const [hoveredMode, setHoveredMode] = useState(null);
   const [rotation, setRotation] = useState(-15);
   const [zoom, setZoom] = useState(1);
@@ -539,29 +614,16 @@ export default function RoomPage() {
   };
 
   const handlePrimaryAction = () => {
-    // The nested screens are UI prototypes for now.
-    // Connect real matchmaking and room creation when the API is ready.
     if (activeMode?.id === "online") {
       setSearchParams({ mode: "online", stage: "matchmaking" });
-      return;
-    }
-
-    if (activeMode?.id === "friends") {
+    } else if (activeMode?.id === "friends") {
       setSearchParams({ mode: "friends", stage: "create" });
-      return;
-    }
-
-    if (activeMode?.id === "blind") {
+    } else if (activeMode?.id === "blind") {
       setSearchParams({ mode: "blind", stage: "challenge" });
-      return;
-    }
-
-    if (activeMode?.id === "coaches") {
+    } else if (activeMode?.id === "coaches") {
       setSearchParams({ mode: "coaches", stage: "training" });
     }
   };
-
-  const stage = searchParams.get("stage");
 
   return (
     <div className="rooms-page relative min-h-full overflow-hidden rounded-2xl">
@@ -711,8 +773,8 @@ export default function RoomPage() {
             inset -22px -8px 42px rgba(0,0,0,.9),
             inset 6px 4px 20px rgba(120,220,255,.09),
             0 0 0 1px rgba(125,211,252,.2),
-            0 0 36px color-mix(in srgb, var(--globe-accent) 22%, transparent);
-          transition: transform .18s ease-out, filter .5s ease, background .5s ease;
+            0 0 36px rgba(249,115,22,.12);
+          transition: transform .18s ease-out, filter .5s ease;
           will-change: transform;
         }
 
@@ -720,13 +782,8 @@ export default function RoomPage() {
           filter: grayscale(.82) hue-rotate(35deg) brightness(.67);
         }
 
-        .theme-coaches .globe-sphere {
-          filter: hue-rotate(35deg) saturate(.85);
-        }
-
-        .theme-friends .globe-sphere {
-          filter: hue-rotate(25deg) saturate(.8);
-        }
+        .theme-coaches .globe-sphere { filter: hue-rotate(35deg) saturate(.85); }
+        .theme-friends .globe-sphere { filter: hue-rotate(25deg) saturate(.8); }
 
         .globe-grid {
           position: absolute;
@@ -798,62 +855,156 @@ export default function RoomPage() {
           border-radius: 50%;
           background: linear-gradient(115deg, rgba(255,255,255,.13), transparent 28%, transparent 70%, rgba(0,0,0,.5));
           box-shadow: inset -18px -5px 32px rgba(0,0,0,.65);
-        }
-
-        .globe-routes {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          overflow: visible;
-        }
-
-        .route-line { animation: routeFlow 4s linear infinite; }
-        .route-two { animation-delay: -1.2s; }
-        .route-three { animation-delay: -2.2s; }
-
-        .globe-flag {
-          position: absolute;
-          z-index: 3;
-          display: grid;
-          width: 34px;
-          height: 34px;
-          place-items: center;
-          border: 1px solid rgba(255,255,255,.28);
-          border-radius: 50%;
-          background: rgba(12,12,12,.9);
-          font-size: 17px;
-          box-shadow: 0 0 0 4px rgba(249,115,22,.07), 0 0 24px var(--globe-accent);
-          animation: flagPulse 2s ease-in-out infinite;
           pointer-events: none;
         }
 
-        .flag-india { left: 18%; top: 35%; }
-        .flag-uk { right: 18%; top: 32%; animation-delay: -.7s; }
-        .flag-usa { left: 33%; bottom: 20%; animation-delay: -1.1s; }
-        .flag-japan { right: 19%; bottom: 27%; animation-delay: -1.5s; }
-
-        .globe-center-mark {
+        .global-route-map {
           position: absolute;
-          bottom: 9%;
+          inset: 0;
+          z-index: 2;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          overflow: hidden;
+        }
+
+        .country-route {
+          animation: routeFlow 4s linear infinite;
+        }
+
+        .country-route-point {
+          filter: drop-shadow(0 0 2px rgba(251,146,60,.8));
+          transition: r .2s ease;
+        }
+
+        .country-flag {
+          position: absolute;
+          z-index: 4;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 2px;
+          width: 39px;
+          height: 32px;
+          padding: 4px;
+          border: 1px solid rgba(255,255,255,.28);
+          border-radius: 9px;
+          background: rgba(12,12,12,.94);
+          box-shadow: 0 0 0 3px rgba(249,115,22,.06), 0 0 15px rgba(249,115,22,.25);
+          transform: translate(-50%, -50%);
+          animation: flagPulse 2.8s ease-in-out infinite;
+          transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+          cursor: pointer;
+        }
+
+        .country-flag:hover,
+        .country-flag-active {
+          z-index: 6;
+          border-color: #fb923c;
+          background: #17100b;
+          box-shadow: 0 0 0 4px rgba(249,115,22,.13), 0 0 22px rgba(249,115,22,.45);
+        }
+
+        .country-flag-image {
+          display: block;
+          width: 25px;
+          height: 18px;
+          border-radius: 2px;
+          object-fit: cover;
+          user-select: none;
+          pointer-events: none;
+        }
+
+        .country-flag-swords {
+          color: #fdba74;
+          font-size: 10px;
+          line-height: 1;
+        }
+
+        .chartwars-hub {
+          position: absolute;
+          z-index: 3;
+          top: 50%;
           left: 50%;
-          display: grid;
-          width: 31px;
-          height: 31px;
-          place-items: center;
-          border: 1px solid rgba(255,255,255,.1);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          width: 110px;
+          height: 110px;
+          border: 1px solid rgba(249,115,22,.24);
           border-radius: 50%;
-          color: var(--globe-accent);
-          background: rgba(8,8,8,.85);
-          transform: translateX(-50%);
-          transition: color .4s ease;
+          background: radial-gradient(circle, rgba(25,14,7,.96), rgba(5,5,5,.91) 70%);
+          box-shadow: 0 0 35px rgba(249,115,22,.12), inset 0 0 25px rgba(249,115,22,.06);
+          transform: translate(-50%, -50%);
+          pointer-events: none;
+        }
+
+        .chartwars-hub-ring {
+          position: absolute;
+          inset: -8px;
+          border: 1px dashed rgba(249,115,22,.32);
+          border-radius: 50%;
+          animation: hubOrbit 18s linear infinite;
+        }
+
+        .chartwars-hub-icon {
+          display: grid;
+          width: 30px;
+          height: 30px;
+          place-items: center;
+          border-radius: 9px;
+          color: #fb923c;
+          background: rgba(249,115,22,.1);
+        }
+
+        .chartwars-hub-name {
+          color: #fafafa;
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: .12em;
+        }
+
+        .chartwars-hub-status {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          color: #a1a1aa;
+          font-size: 7px;
+          font-weight: 700;
+          letter-spacing: .12em;
+        }
+
+        .chartwars-hub-status .live-dot {
+          width: 5px;
+          height: 5px;
+        }
+
+        .country-hover-label {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          min-height: 30px;
+          padding: 0 12px;
+          color: #d4d4d8;
+          font-size: 10px;
+          animation: feedIn .2s ease;
+        }
+
+        .hover-country-flag {
+          width: 22px;
+          height: 15px;
+          border-radius: 2px;
+          object-fit: cover;
         }
 
         .globe-controls {
           display: flex;
           justify-content: center;
           gap: 7px;
-          margin-top: -8px;
+          margin-top: 4px;
         }
 
         .globe-controls button {
@@ -883,7 +1034,12 @@ export default function RoomPage() {
           border-top: 1px solid rgba(255,255,255,.07);
         }
 
-        .mode-list { display: flex; min-width: 0; flex-direction: column; gap: 11px; }
+        .mode-list {
+          display: flex;
+          min-width: 0;
+          flex-direction: column;
+          gap: 11px;
+        }
 
         .mode-card {
           position: relative;
@@ -912,14 +1068,16 @@ export default function RoomPage() {
           pointer-events: none;
         }
 
-        .mode-card:hover, .mode-card-active {
+        .mode-card:hover,
+        .mode-card-active {
           transform: translateY(-2px);
           border-color: color-mix(in srgb, var(--mode-accent) 42%, transparent);
           background: linear-gradient(125deg, color-mix(in srgb, var(--mode-accent) 8%, #111), rgba(255,255,255,.012));
           box-shadow: 0 10px 35px rgba(0,0,0,.15);
         }
 
-        .mode-card:hover::after, .mode-card-active::after { opacity: .12; }
+        .mode-card:hover::after,
+        .mode-card-active::after { opacity: .12; }
 
         .mode-icon {
           position: relative;
@@ -932,6 +1090,24 @@ export default function RoomPage() {
           border-radius: 12px;
           color: var(--mode-accent);
           background: color-mix(in srgb, var(--mode-accent) 10%, transparent);
+        }
+
+        .mode-card-copy,
+        .mode-card-footer {
+          position: relative;
+          z-index: 1;
+        }
+
+        .mode-card-copy { margin-top: 20px; }
+
+        .mode-card-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          margin-top: 20px;
+          padding-top: 12px;
+          border-top: 1px solid rgba(255,255,255,.07);
         }
 
         .mode-arrow { position: relative; z-index: 1; }
@@ -949,6 +1125,13 @@ export default function RoomPage() {
           background: rgba(255,255,255,.02);
         }
 
+        .feed-heading {
+          display: flex;
+          flex-shrink: 0;
+          align-items: center;
+          gap: 8px;
+        }
+
         .feed-battle {
           display: flex;
           min-width: 0;
@@ -959,6 +1142,15 @@ export default function RoomPage() {
           animation: feedIn .3s ease;
         }
 
+        .feed-flag {
+          display: block;
+          width: 23px;
+          height: 16px;
+          flex-shrink: 0;
+          border-radius: 2px;
+          object-fit: cover;
+        }
+
         .feed-player {
           max-width: 100px;
           overflow: hidden;
@@ -966,6 +1158,12 @@ export default function RoomPage() {
           font-size: 11px;
           text-overflow: ellipsis;
           white-space: nowrap;
+        }
+
+        .feed-disclaimer {
+          flex-shrink: 0;
+          color: #71717a;
+          font-size: 9px;
         }
 
         .mode-entry {
@@ -1003,11 +1201,17 @@ export default function RoomPage() {
         }
 
         @keyframes flagPulse {
-          0%, 100% { box-shadow: 0 0 0 3px rgba(249,115,22,.06), 0 0 16px var(--globe-accent); }
-          50% { box-shadow: 0 0 0 7px rgba(249,115,22,.035), 0 0 25px var(--globe-accent); }
+          0%, 100% { box-shadow: 0 0 0 3px rgba(249,115,22,.06), 0 0 12px rgba(249,115,22,.2); }
+          50% { box-shadow: 0 0 0 5px rgba(249,115,22,.035), 0 0 19px rgba(249,115,22,.32); }
         }
 
-        @keyframes routeFlow { to { stroke-dashoffset: -36; } }
+        @keyframes routeFlow {
+          to { stroke-dashoffset: -36; }
+        }
+
+        @keyframes hubOrbit {
+          to { transform: rotate(360deg); }
+        }
 
         @keyframes feedIn {
           from { opacity: 0; transform: translateY(5px); }
@@ -1032,7 +1236,7 @@ export default function RoomPage() {
 
         @media (max-width: 900px) {
           .rooms-layout { grid-template-columns: minmax(0, 1fr); }
-          .globe-panel { max-width: 680px; width: 100%; margin: 0 auto; }
+          .globe-panel { width: 100%; max-width: 680px; margin: 0 auto; }
           .mode-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .mode-card { padding: 15px; }
         }
@@ -1046,12 +1250,19 @@ export default function RoomPage() {
           .global-feed { flex-wrap: wrap; gap: 10px; margin: 0 15px 18px; padding: 12px; }
           .feed-battle { justify-content: flex-start; gap: 6px; }
           .feed-player { max-width: 70px; font-size: 10px; }
-          .globe-flag { width: 29px; height: 29px; font-size: 14px; }
+          .country-flag { width: 34px; height: 29px; padding: 3px; }
+          .country-flag-image { width: 22px; height: 16px; }
+          .chartwars-hub { width: 92px; height: 92px; }
+          .chartwars-hub-name { font-size: 8px; }
+          .chartwars-hub-status { font-size: 6px; }
           .mode-entry { min-height: 600px; padding: 18px; }
+          .feed-disclaimer { display: none; }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .rooms-page *, .rooms-page *::before, .rooms-page *::after {
+          .rooms-page *,
+          .rooms-page *::before,
+          .rooms-page *::after {
             animation-duration: .01ms !important;
             animation-iteration-count: 1 !important;
             scroll-behavior: auto !important;
@@ -1094,7 +1305,8 @@ export default function RoomPage() {
               </div>
 
               <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-                Choose your battlefield<span className="text-orange-500">.</span>
+                Choose your battlefield
+                <span className="text-orange-500">.</span>
               </h1>
 
               <p className="mt-2 text-xs text-zinc-500 sm:text-sm">
@@ -1108,7 +1320,7 @@ export default function RoomPage() {
               </p>
               <p className="mt-2 flex items-center justify-end gap-2 text-xs font-semibold text-zinc-300">
                 <span className="live-dot" />
-                Systems online
+                Demo systems
               </p>
             </div>
           </header>
@@ -1127,7 +1339,7 @@ export default function RoomPage() {
 
                 <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/20 px-2.5 py-1.5 text-[9px] text-zinc-400">
                   <Globe2 size={12} />
-                  3D VIEW
+                  3D-STYLE VIEW
                 </span>
               </div>
 
@@ -1179,44 +1391,58 @@ export default function RoomPage() {
                 </p>
               </div>
 
-              
-            <p className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xl font-semibold tracking-tight text-white sm:text-2xl">
+              <p className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xl font-semibold tracking-tight text-white sm:text-2xl">
                 <span className="text-orange-400">32</span>
                 <span className="text-xs font-semibold uppercase tracking-wider text-zinc-200 sm:text-sm">
-                  Traders live
+                  Demo traders
                 </span>
                 <span className="text-xs font-medium text-zinc-500">
                   across the global arena
                 </span>
-             </p>
+              </p>
             </div>
 
-        
-                <div className="flex flex-wrap items-center gap-2">
-                    {["🇮🇳", "🇨🇭", "🇦🇪", "🇨🇦", "🇸🇬", "🇵🇹"].map((flag) => (
-                      <span
-                        key={flag}
-                        className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/[0.035] text-base"
-                      >
-                        {flag}
-                      </span>
-                    ))}
-                    <span className="ml-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-orange-300">
-                      <Radio size={13} />
-                      Demo network
-                    </span>
-              </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {ACTIVITY_COUNTRIES.map((country) => (
+                <span
+                  key={country.code}
+                  title={country.name}
+                  className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.035]"
+                >
+                  <CountryFlag
+                    code={country.code}
+                    name={country.name}
+                    className="activity-flag"
+                  />
+                </span>
+              ))}
 
+              <span className="ml-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-orange-300">
+                <Radio size={13} />
+                Demo network
+              </span>
+            </div>
           </section>
 
           <GlobalFeed />
 
-          <p className="px-6 pb-5 text-center text-[9px] leading-4 text-zinc-700">
-            Concept preview · Country flags, player counts, battle routes and
-            activity feed are simulated. No live player locations are shown.
+          <p className="px-6 pb-5 text-center text-[9px] leading-4 text-zinc-600">
+            Concept preview · Flags, player counts, battle routes and activity
+            feed are simulated. Country markers are illustrative, not live
+            player locations.
           </p>
         </div>
       )}
+
+      <style>{`
+        .activity-flag {
+          display: block;
+          width: 24px;
+          height: 17px;
+          border-radius: 2px;
+          object-fit: cover;
+        }
+      `}</style>
     </div>
   );
 }
