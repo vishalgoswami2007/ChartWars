@@ -50,6 +50,7 @@ import CoinChartPage from "../pages/dashboard/markets/CoinChartPage";
 import RoomsPage from "../pages/dashboard/rooms/RoomPage";
 import NewsPage from "../pages/dashboard/NewsPage";
 import LearnPage from "../pages/dashboard/LearnPage";
+import FriendsPage from "../pages/dashboard/FriendsPage";
 
 export const router = createBrowserRouter([
   // Main website
@@ -98,9 +99,9 @@ export const router = createBrowserRouter([
         element: <RoomsPage />,
       },
       {
-        path: "friends",
+        path: "friendsPage",
         element: (
-          <DashboardPlaceholder
+          <FriendsPage
             eyebrow="YOUR NETWORK"
             title="Friends"
             description="Connect with other traders and prepare for practice sessions."
@@ -251,4 +252,5 @@ export const router = createBrowserRouter([
     path: "*",
     element: <NotFoundPage />,
   },
+  
 ]);

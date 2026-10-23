@@ -28,7 +28,7 @@ const navigation = [
     icon: ChartNoAxesCombined,
   },
   { label: "Rooms", path: "/dashboard/rooms", icon: DoorOpen, expandable: true },
-  { label: "Friends", path: "/dashboard/friends", icon: Users },
+  { label: "Friends", path: "/dashboard/friendsPage", icon: Users },
   { label: "Learn", path: "/dashboard/learn", icon: GraduationCap },
   { label: "News", path: "/dashboard/news", icon: Newspaper },
 ];
