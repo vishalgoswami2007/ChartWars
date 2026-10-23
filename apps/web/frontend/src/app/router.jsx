@@ -3,15 +3,15 @@ import { createBrowserRouter } from "react-router-dom";
 
 // Landing
 import LandingPage from "../pages/landing/LandingPage";
-import NotFoundPage from "../pages/NotFoundPage";
+import NotFoundPage from "../app/NotFoundPage";
 
 // Public feature pages
-import PracticeModesPage from "../pages/work/PracticeModesPage";
-import PerformanceAnalyticsPage from "../pages/work/PerformanceAnalyticsPage";
-import HowItWorksPage from "../pages/work/HowItsWork";
+import PracticeModesPage from "../pages/landing/sections/PracticeModes";
+import PerformanceAnalyticsPage from "../pages/landing/sections/PerformanceAnalytics";
+import HowItWorksPage from "../pages/landing/sections/HowItWorks";
 import MarketInsight from "../pages/Market/MarketInsight";
-import KnowledgeVault from "../pages/learn/KnowledgeVault";
-import Roadmap from "../pages/learn/Roadmap";
+import KnowledgeVault from "../pages/Knowledge/KnowledgeVault";
+import Roadmap from "../pages/roadmap/Roadmap";
 
 // Developer pages
 import DeveloperSandbox from "../pages/developer/DeveloperSandbox";
@@ -19,21 +19,21 @@ import TechnicalCollaboration from "../pages/developer/TechnicalCollaboration";
 import BusinessEnquiry from "../pages/developer/BusinessEnquiry";
 
 // Business pages
-import EnterpriseSolution from "../pages/business/EnterpriseSolution";
+import EnterpriseSolution from "../pages/business/EnterpriseSolutions";
 import Strategic from "../pages/business/Strategic";
 import BusinessContact from "../pages/business/BusinessContact";
 
 // Information pages
-import OurMission from "../pages/info/OurMission";
-import Contact from "../pages/info/Contact";
-import PrivacyPolicy from "../pages/info/PrivacyPolicy";
-import CookieSettings from "../pages/info/CookieSettings";
-import TermsOfUse from "../pages/info/TermsOfUse";
-import Accessibility from "../pages/info/Accessibility";
-import HelpCenter from "../pages/info/HelpCenter";
-import Cookie from "../pages/info/Cookie";
-import Security from "../pages/info/Security";
-import FAQ from "../pages/info/FAQ";
+import OurMission from "../pages/landing/footer/OurMission";
+import Contact from "../pages/landing/footer/Contact";
+import PrivacyPolicy from "../pages/landing/footer/PrivacyPolicy";
+import CookieSettings from "../pages/landing/footer/CookieSettings";
+import TermsOfUse from "../pages/landing/footer/TermsOfUse";
+import Accessibility from "../pages/landing/footer/Accessibility";
+import HelpCenter from "../pages/landing/footer/HelpCenter";
+import Cookie from "../pages/landing/footer/CookiePolicy";
+import Security from "../pages/landing/footer/Security";
+import FAQ from "../pages/landing/FAQ";
 
 // Authentication
 import Signup from "../pages/auth/Signup";
@@ -42,12 +42,12 @@ import ForgotPassword from "../pages/auth/ForgotPassword";
 import VerifyOtp from "../pages/auth/VerifyOtp";
 
 // Dashboard
-import Dashboard from "../pages/dashboard/Dashboard";
+import Dashboard from "../pages/Dashboard";
 import MainHome from "../pages/dashboard/MainHome";
 import DashboardPlaceholder from "../pages/dashboard/DashboardPlaceholder";
 import MarketsPage from "../pages/dashboard/MarketsPage";
 import CoinChartPage from "../pages/dashboard/markets/CoinChartPage";
-import RoomsPage from "../pages/dashboard/rooms/RoomsPage";
+import RoomsPage from "../pages/dashboard/rooms/RoomPage";
 import NewsPage from "../pages/dashboard/NewsPage";
 import LearnPage from "../pages/dashboard/LearnPage";
 
