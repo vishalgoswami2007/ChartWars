@@ -12,8 +12,8 @@ import {
   Radio,
   Shield,
   Swords,
-  Trophy,
   Zap,
+  Target
 } from "lucide-react";
 
 const marketPreview = [
@@ -218,7 +218,7 @@ function ModeModule({ mode, index, selected, onSelect }) {
             <span className="ai-core-dot" />
           </div>
         )}
-        
+
       </div>
 
       <div className="relative z-10">
@@ -251,164 +251,367 @@ function ModeModule({ mode, index, selected, onSelect }) {
 function MatchTimeline() {
   const [activeMatch, setActiveMatch] = useState(10);
 
-  const selectedMatch = demoMatches.find((match) => match.id === activeMatch);
+  const selectedMatch =
+    demoMatches.find((match) => match.id === activeMatch) ?? demoMatches[9];
+
+  const trajectoryPath =
+    "M 0 82 C 35 82 35 30 70 30 S 105 112 140 112 S 175 46 210 46 S 245 92 280 92 S 315 22 350 22 S 385 100 420 100 S 455 48 490 48 S 525 88 560 88 S 595 26 630 26 S 665 74 700 74 S 735 34 770 34 S 805 82 840 82";
+
+  const wavePoints = [
+    { id: 1, x: 70, y: 30 },
+    { id: 2, x: 140, y: 112 },
+    { id: 3, x: 210, y: 46 },
+    { id: 4, x: 280, y: 92 },
+    { id: 5, x: 350, y: 22 },
+    { id: 6, x: 420, y: 100 },
+    { id: 7, x: 490, y: 48 },
+    { id: 8, x: 560, y: 88 },
+    { id: 9, x: 630, y: 26 },
+    { id: 10, x: 770, y: 34 },
+  ];
+
+  const recentForm = demoMatches.slice(-10);
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-[#0b0b0d] p-5 sm:p-7">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-orange-400">
-            Match telemetry
-          </p>
-          <h2 className="mt-2 text-xl font-semibold text-white">
-            Your battle trajectory
-          </h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            An illustrative match timeline for the dashboard preview.
-          </p>
-        </div>
-        <span className="rounded-md border border-orange-400/20 bg-orange-400/6 px-2.5 py-1.5 text-xs text-orange-300">
-          DEMO DATA
-        </span>
-      </div>
+    <section className="combat-engine relative overflow-hidden rounded-2xl border border-white/10 p-4 sm:p-6 lg:p-7">
+      <div className="combat-ambient" />
 
-      <div className="mt-8 rounded-xl border border-white/[0.07] bg-black/30 p-4 sm:p-6">
-        <div className="mb-5 flex items-center justify-between gap-3">
+      <div className="relative z-10">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/8 pb-5">
           <div>
-            <p className="text-xs text-zinc-500">Illustrative rating curve</p>
-            <p className="mt-1 text-2xl font-semibold text-white">
-              <span className="text-orange-400">1,248</span>
-              <span className="ml-2 text-xs font-normal text-zinc-500">
-                sample ELO
-              </span>
+            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-orange-400 sm:text-xs">
+              <Target size={14} />
+              Combat System / 01
+            </div>
+
+            <h2 className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-2xl">
+              Combat Trajectory Engine
+            </h2>
+
+            <p className="mt-1 text-xs text-zinc-500 sm:text-sm">
+              Track your performance. Feel the momentum.
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-zinc-500">Recent form</p>
-            <p className="mt-1 text-sm font-semibold text-emerald-400">7W / 3L</p>
-          </div>
+
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 font-mono text-[10px] tracking-widest text-zinc-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
+            DEMO
+          </span>
         </div>
 
-        <div className="relative">
-          <div className="pointer-events-none absolute inset-0 flex flex-col justify-between">
-            <span className="border-t border-dashed border-white/[0.07]" />
-            <span className="border-t border-dashed border-white/[0.07]" />
-            <span className="border-t border-dashed border-white/[0.07]" />
-            <span className="border-t border-dashed border-white/[0.07]" />
+        <div className="mt-5 grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+          {/* POWER RATING */}
+          <div className="flex items-center gap-4 lg:flex-col lg:items-center lg:justify-center">
+            <div className="relative grid h-32 w-32 shrink-0 place-items-center sm:h-36 sm:w-36">
+              <svg
+                viewBox="0 0 144 144"
+                className="absolute inset-0 h-full w-full -rotate-90"
+                aria-hidden="true"
+              >
+                <circle
+                  cx="72"
+                  cy="72"
+                  r="59"
+                  fill="none"
+                  stroke="#27272a"
+                  strokeWidth="5"
+                />
+                <circle
+                  cx="72"
+                  cy="72"
+                  r="59"
+                  fill="none"
+                  stroke="#f59a55"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                  strokeDasharray="370.7"
+                  strokeDashoffset="92"
+                  className="combat-rating-ring"
+                />
+                <circle
+                  cx="72"
+                  cy="72"
+                  r="49"
+                  fill="none"
+                  stroke="#f59a55"
+                  strokeOpacity=".15"
+                  strokeWidth="1"
+                  strokeDasharray="3 5"
+                />
+              </svg>
+
+              <div className="relative text-center">
+                <p className="font-mono text-[10px] tracking-[0.22em] text-orange-400">
+                  ELO
+                </p>
+                <p className="mt-1 font-mono text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                  1,248
+                </p>
+                <p className="mt-1 font-mono text-[9px] tracking-widest text-zinc-500">
+                  TIER 02
+                </p>
+              </div>
+            </div>
+
+            <div className="lg:text-center">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                Core power unit
+              </p>
+              <p className="mt-1 font-mono text-xs text-zinc-300">
+                RATING INDEX
+              </p>
+            </div>
           </div>
 
-          <svg
-            viewBox="0 0 600 150"
-            role="img"
-            aria-label="Illustrative match rating line"
-            className="relative z-10 h-36 w-full overflow-visible"
-            preserveAspectRatio="none"
-          >
-            <defs>
-              <linearGradient id="trajectoryFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#e87524" stopOpacity="0.24" />
-                <stop offset="100%" stopColor="#e87524" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M 10 112 L 74 88 L 138 100 L 202 62 L 266 76 L 330 44 L 394 59 L 458 30 L 522 42 L 590 12 L 590 150 L 10 150 Z"
-              fill="url(#trajectoryFill)"
-            />
-            <path
-              d="M 10 112 L 74 88 L 138 100 L 202 62 L 266 76 L 330 44 L 394 59 L 458 30 L 522 42 L 590 12"
-              fill="none"
-              stroke="#e87524"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            {demoMatches.map((match, index) => {
-              const x = [10, 74, 138, 202, 266, 330, 394, 458, 522, 590][index];
-              const y = [112, 88, 100, 62, 76, 44, 59, 30, 42, 12][index];
-              const isWin = match.result === "win";
+          {/* RECENT FORM + WAVE */}
+          <div className="min-w-0">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                  Recent form
+                </p>
+                <p className="mt-1 text-[10px] text-zinc-600">
+                  LAST 10 MATCHES
+                </p>
+              </div>
 
-              return (
-                <g
-                  key={match.id}
-                  className="timeline-point"
-                  onMouseEnter={() => setActiveMatch(match.id)}
-                  onFocus={() => setActiveMatch(match.id)}
-                >
-                  <circle
-                    cx={x}
-                    cy={y}
-                    r="11"
-                    fill="transparent"
-                    stroke="transparent"
-                    tabIndex="0"
-                    role="button"
-                    aria-label={`Match ${match.id}: ${match.result}`}
-                    className="timeline-hit-area"
+              <div className="flex items-end gap-1.5" aria-label="Last ten demo matches">
+                {recentForm.map((match) => (
+                  <button
+                    key={match.id}
+                    type="button"
+                    title={`Match ${match.id}: ${match.result}`}
+                    aria-label={`Inspect match ${match.id}, ${match.result}`}
+                    onClick={() => setActiveMatch(match.id)}
+                    className={`combat-form-slot ${
+                      match.result === "win" ? "slot-win" : "slot-loss"
+                    } ${activeMatch === match.id ? "slot-active" : ""}`}
                   />
-                  <circle
-                    cx={x}
-                    cy={y}
-                    r={activeMatch === match.id ? 6 : 4}
-                    fill={isWin ? "#34d399" : "#f87171"}
-                    stroke="#09090b"
-                    strokeWidth="2"
-                    className="timeline-dot"
-                  />
-                </g>
-              );
-            })}
-          </svg>
-        </div>
+                ))}
+              </div>
+            </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-zinc-500">
-          <span className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
-            Win
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-red-400" />
-            Loss
-          </span>
-          <span className="ml-auto">Select a match point to inspect</span>
+            <div className="combat-wave-panel relative overflow-hidden rounded-xl border border-emerald-400/10 bg-[#050908]/90">
+              <div className="pointer-events-none absolute inset-0 combat-wave-grid" />
+
+              <svg
+                viewBox="0 0 840 140"
+                preserveAspectRatio="none"
+                role="img"
+                aria-label="Animated illustrative match trajectory with moving win and loss markers"
+                className="combat-wave relative z-10 h-40 w-full overflow-visible sm:h-48 lg:h-52"
+              >
+                <defs>
+                  <linearGradient id="combatWaveGradient" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#34d399" />
+                    <stop offset="48%" stopColor="#bbf7d0" />
+                    <stop offset="56%" stopColor="#f87171" />
+                    <stop offset="72%" stopColor="#34d399" />
+                    <stop offset="100%" stopColor="#4ade80" />
+                  </linearGradient>
+
+                  <linearGradient id="combatAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#34d399" stopOpacity=".19" />
+                    <stop offset="100%" stopColor="#34d399" stopOpacity="0" />
+                  </linearGradient>
+
+                  <filter id="combatOrbGlow" x="-200%" y="-200%" width="400%" height="400%">
+                    <feGaussianBlur stdDeviation="4" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+
+                {[30, 60, 90, 120].map((y) => (
+                  <line
+                    key={y}
+                    x1="0"
+                    x2="840"
+                    y1={y}
+                    y2={y}
+                    stroke="#ffffff"
+                    strokeOpacity=".07"
+                    strokeDasharray="3 7"
+                  />
+                ))}
+
+                <path
+                  d={`${trajectoryPath} L 840 140 L 0 140 Z`}
+                  fill="url(#combatAreaGradient)"
+                />
+
+                <path
+                  d={trajectoryPath}
+                  fill="none"
+                  stroke="#34d399"
+                  strokeOpacity=".17"
+                  strokeWidth="9"
+                  className="combat-wave-underlay"
+                />
+
+                <path
+                  d={trajectoryPath}
+                  fill="none"
+                  stroke="url(#combatWaveGradient)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  className="combat-wave-line"
+                />
+
+                {/* Four energy orbs continuously travel along the same curve. */}
+                {[
+                  { color: "#4ade80", delay: "0s", radius: 5 },
+                  { color: "#fb7185", delay: "-2.5s", radius: 4.5 },
+                  { color: "#4ade80", delay: "-5s", radius: 5 },
+                  { color: "#fb7185", delay: "-7.5s", radius: 4.5 },
+                ].map((orb, index) => (
+                  <g key={index} filter="url(#combatOrbGlow)">
+                    <circle r={orb.radius + 5} fill={orb.color} opacity=".13">
+                      <animateMotion
+                        dur="10s"
+                        begin={orb.delay}
+                        repeatCount="indefinite"
+                        rotate="auto"
+                        path={trajectoryPath}
+                      />
+                    </circle>
+                    <circle r={orb.radius} fill={orb.color}>
+                      <animateMotion
+                        dur="10s"
+                        begin={orb.delay}
+                        repeatCount="indefinite"
+                        rotate="auto"
+                        path={trajectoryPath}
+                      />
+                    </circle>
+                    <circle r="2" fill="#ffffff">
+                      <animateMotion
+                        dur="10s"
+                        begin={orb.delay}
+                        repeatCount="indefinite"
+                        rotate="auto"
+                        path={trajectoryPath}
+                      />
+                    </circle>
+                  </g>
+                ))}
+
+                {/* Selectable match inspection points */}
+                {wavePoints.map((point) => {
+                  const match = demoMatches.find((item) => item.id === point.id);
+                  const isWin = match?.result === "win";
+                  const isActive = activeMatch === point.id;
+
+                  return (
+                    <g
+                      key={point.id}
+                      className="combat-inspect-point"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Inspect match ${point.id}, ${match?.result}`}
+                      onMouseEnter={() => setActiveMatch(point.id)}
+                      onFocus={() => setActiveMatch(point.id)}
+                      onClick={() => setActiveMatch(point.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setActiveMatch(point.id);
+                        }
+                      }}
+                    >
+                      <circle
+                        cx={point.x}
+                        cy={point.y}
+                        r="12"
+                        fill="transparent"
+                      />
+                      <circle
+                        cx={point.x}
+                        cy={point.y}
+                        r={isActive ? 9 : 5}
+                        fill={isWin ? "#22c55e" : "#ef4444"}
+                        stroke={isActive ? "#ffffff" : "#09090b"}
+                        strokeWidth={isActive ? 2 : 1.5}
+                        className="combat-static-node"
+                      />
+                    </g>
+                  );
+                })}
+              </svg>
+
+              {/* Tactical inspection HUD */}
+              <div className="combat-hud absolute right-2 top-2 z-20 w-44 rounded-lg border border-white/10 bg-[#080b0b]/95 p-3 shadow-2xl sm:right-3 sm:top-3 sm:w-52">
+                <div className="flex items-center justify-between gap-2 border-b border-white/8 pb-2">
+                  <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-white">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        selectedMatch.result === "win"
+                          ? "bg-emerald-400"
+                          : "bg-red-400"
+                      }`}
+                    />
+                    MATCH {selectedMatch.id}
+                  </span>
+                  <span
+                    className={`font-mono text-[9px] ${
+                      selectedMatch.result === "win"
+                        ? "text-emerald-400"
+                        : "text-red-400"
+                    }`}
+                  >
+                    {selectedMatch.result.toUpperCase()}
+                  </span>
+                </div>
+
+                <div className="mt-2 space-y-2 font-mono text-[10px]">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-zinc-500">MODE</span>
+                    <span className="text-right text-zinc-200">
+                      {selectedMatch.mode}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-zinc-500">NET ELO</span>
+                    <span
+                      className={
+                        selectedMatch.result === "win"
+                          ? "text-emerald-400"
+                          : "text-red-400"
+                      }
+                    >
+                      {selectedMatch.score}
+                    </span>
+                  </div>
+                  <div className="truncate">
+                    <span className="text-zinc-500">RIVAL </span>
+                    <span className="text-zinc-300">
+                      {selectedMatch.opponent}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-3 text-[10px] font-mono text-zinc-500">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  WIN
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                  LOSS
+                </span>
+              </div>
+              <span className="text-[9px] text-zinc-600">
+                ILLUSTRATIVE MATCH DATA
+              </span>
+            </div>
+          </div>
         </div>
       </div>
-
-      {selectedMatch && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-white/8 bg-white/2 p-4">
-          <div className="flex items-center gap-3">
-            <div
-              className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                selectedMatch.result === "win"
-                  ? "bg-emerald-400/10 text-emerald-400"
-                  : "bg-red-400/10 text-red-400"
-              }`}
-            >
-              {selectedMatch.result === "win" ? (
-                <Trophy size={18} />
-              ) : (
-                <Swords size={18} />
-              )}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-white">
-                Match {selectedMatch.id} · {selectedMatch.mode}
-              </p>
-              <p className="mt-1 text-xs text-zinc-500">
-                {selectedMatch.opponent} · {selectedMatch.result.toUpperCase()}
-              </p>
-            </div>
-          </div>
-          <span
-            className={`text-sm font-semibold ${
-              selectedMatch.result === "win"
-                ? "text-emerald-400"
-                : "text-red-400"
-            }`}
-          >
-            {selectedMatch.score}
-          </span>
-        </div>
-      )}
     </section>
   );
 }
@@ -570,6 +773,167 @@ export default function MainHome() {
             background: #34d399;
             box-shadow: 0 0 12px rgba(52, 211, 153, 0.7);
           }
+
+                  .combat-engine {
+          background:
+            radial-gradient(ellipse at 68% 72%, rgba(16, 185, 129, 0.055), transparent 43%),
+            radial-gradient(ellipse at 12% 10%, rgba(232, 117, 36, 0.06), transparent 35%),
+            #08090a;
+        }
+
+        .combat-ambient {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          opacity: 0.35;
+          background-image:
+            linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+          background-size: 28px 28px;
+          mask-image: linear-gradient(to bottom, black, transparent 85%);
+        }
+
+        .combat-rating-ring {
+          filter: drop-shadow(0 0 5px rgba(245, 154, 85, 0.35));
+          animation: combat-rating-pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes combat-rating-pulse {
+          0%, 100% {
+            filter: drop-shadow(0 0 3px rgba(245, 154, 85, 0.25));
+          }
+          50% {
+            filter: drop-shadow(0 0 9px rgba(245, 154, 85, 0.6));
+          }
+        }
+
+        .combat-form-slot {
+          width: 9px;
+          height: 35px;
+          flex: 0 1 13px;
+          border-radius: 5px;
+          cursor: pointer;
+          transition: transform 180ms ease, box-shadow 180ms ease;
+        }
+
+        .combat-form-slot:hover {
+          transform: translateY(-3px);
+        }
+
+        .slot-win {
+          border: 1px solid rgba(52, 211, 153, 0.65);
+          background: linear-gradient(to top, #047857, #34d399);
+          box-shadow: 0 0 9px rgba(52, 211, 153, 0.17);
+        }
+
+        .slot-loss {
+          border: 1px solid rgba(248, 113, 113, 0.3);
+          background: repeating-linear-gradient(
+            0deg,
+            rgba(127, 29, 29, 0.28) 0 4px,
+            rgba(239, 68, 68, 0.07) 4px 7px
+          );
+        }
+
+        .slot-active {
+          transform: translateY(-3px);
+          box-shadow: 0 0 13px currentColor;
+        }
+
+        .combat-wave-panel {
+          isolation: isolate;
+        }
+
+        .combat-wave-grid {
+          background-image:
+            linear-gradient(rgba(52, 211, 153, 0.035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(52, 211, 153, 0.035) 1px, transparent 1px);
+          background-size: 22px 22px;
+        }
+
+        .combat-wave {
+          overflow: hidden;
+        }
+
+        .combat-wave-line {
+          stroke-dasharray: 1400;
+          stroke-dashoffset: 0;
+          animation: combat-wave-flow 8s linear infinite;
+        }
+
+        .combat-wave-underlay {
+          filter: blur(5px);
+          animation: combat-wave-breathe 3s ease-in-out infinite;
+        }
+
+        @keyframes combat-wave-flow {
+          to {
+            stroke-dashoffset: -1400;
+          }
+        }
+
+        @keyframes combat-wave-breathe {
+          0%, 100% {
+            opacity: 0.5;
+          }
+          50% {
+            opacity: 1;
+          }
+        }
+
+        .combat-inspect-point {
+          cursor: crosshair;
+          outline: none;
+        }
+
+        .combat-inspect-point:focus-visible circle:last-child {
+          stroke: white;
+          stroke-width: 3;
+        }
+
+        .combat-static-node {
+          transition: r 160ms ease, stroke 160ms ease;
+          filter: drop-shadow(0 0 4px currentColor);
+        }
+
+        .combat-hud {
+          animation: combat-hud-enter 300ms ease-out both;
+        }
+
+        @keyframes combat-hud-enter {
+          from {
+            opacity: 0;
+            transform: translateX(8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        @media (max-width: 480px) {
+          .combat-form-slot {
+            height: 28px;
+          }
+
+          .combat-hud {
+            transform-origin: top right;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .combat-rating-ring,
+          .combat-wave-line,
+          .combat-wave-underlay,
+          .combat-hud {
+            animation: none !important;
+          }
+
+          .combat-form-slot,
+          .combat-static-node {
+            transition: none !important;
+          }
+        }
 
       `}</style>
 
