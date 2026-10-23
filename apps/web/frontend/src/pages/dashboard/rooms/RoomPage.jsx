@@ -64,20 +64,27 @@ const BATTLES = [
   { flagA: "🇧🇷", nameA: "CryptoLeo", flagB: "🇺🇸", nameB: "NovaTrade" },
 ];
 
-function GlobeFlag({ flag, className = "" }) {
-  return (
-    <span
-      className={`globe-flag ${className}`}
-      aria-label="Active battle location"
-    >
-      {flag}
-    </span>
-  );
-}
+const COUNTRIES = [
+  { id: "india", flag: "🇮🇳", name: "India", x: 27, y: 40 },
+  { id: "switzerland", flag: "🇨🇭", name: "Switzerland", x: 52, y: 27 },
+  { id: "uae", flag: "🇦🇪", name: "UAE", x: 58, y: 43 },
+  { id: "canada", flag: "🇨🇦", name: "Canada", x: 29, y: 25 },
+  { id: "singapore", flag: "🇸🇬", name: "Singapore", x: 66, y: 58 },
+  { id: "portugal", flag: "🇵🇹", name: "Portugal", x: 43, y: 34 },
+  { id: "uk", flag: "🇬🇧", name: "United Kingdom", x: 46, y: 28 },
+  { id: "usa", flag: "🇺🇸", name: "United States", x: 22, y: 47 },
+  { id: "japan", flag: "🇯🇵", name: "Japan", x: 75, y: 39 },
+  { id: "brazil", flag: "🇧🇷", name: "Brazil", x: 38, y: 67 },
+  { id: "germany", flag: "🇩🇪", name: "Germany", x: 51, y: 32 },
+  { id: "australia", flag: "🇦🇺", name: "Australia", x: 74, y: 72 },
+];
+
+
 
 function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
   const [dragging, setDragging] = useState(false);
   const [lastX, setLastX] = useState(0);
+  const [hoveredCountry, setHoveredCountry] = useState(null);
 
   const theme =
     activeMode === "blind"
@@ -89,6 +96,8 @@ function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
           : "online";
 
   const handlePointerDown = (event) => {
+    if (event.target.closest("button")) return;
+
     setDragging(true);
     setLastX(event.clientX);
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -102,9 +111,7 @@ function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
     setLastX(event.clientX);
   };
 
-  const handlePointerUp = () => {
-    setDragging(false);
-  };
+  const handlePointerUp = () => setDragging(false);
 
   return (
     <div className={`globe-scene theme-${theme}`}>
@@ -128,8 +135,8 @@ function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        role="img"
-        aria-label="Interactive cyber globe with country flags and animated battle routes"
+        role="group"
+        aria-label="Interactive ChartWars global battle globe"
       >
         <div className="globe-aura" />
         <div className="globe-orbit orbit-one" />
@@ -137,9 +144,7 @@ function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
 
         <div
           className="globe-sphere"
-          style={{
-            transform: `rotate(${rotation}deg) scale(${zoom})`,
-          }}
+          style={{ transform: `rotate(${rotation}deg) scale(${zoom})` }}
         >
           <div className="globe-grid globe-grid-one" />
           <div className="globe-grid globe-grid-two" />
@@ -148,67 +153,106 @@ function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
           <div className="globe-land land-three" />
           <div className="globe-land land-four" />
           <div className="globe-shine" />
-
-          <svg
-            className="globe-routes"
-            viewBox="0 0 400 400"
-            fill="none"
-            aria-hidden="true"
-          >
-            <defs>
-              <linearGradient id="route-gradient">
-                <stop offset="0%" stopColor="#f97316" stopOpacity="0.15" />
-                <stop offset="50%" stopColor="#fb923c" />
-                <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.5" />
-              </linearGradient>
-              <filter id="route-glow">
-                <feGaussianBlur stdDeviation="2.8" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-
-            <path
-              d="M 91 147 Q 174 30 273 139"
-              stroke="url(#route-gradient)"
-              strokeWidth="1.8"
-              strokeDasharray="4 5"
-              filter="url(#route-glow)"
-              className="route-line route-one"
-            />
-            <path
-              d="M 91 147 Q 68 234 191 273"
-              stroke="url(#route-gradient)"
-              strokeWidth="1.5"
-              strokeDasharray="4 5"
-              filter="url(#route-glow)"
-              className="route-line route-two"
-            />
-            <path
-              d="M 191 273 Q 313 255 273 139"
-              stroke="url(#route-gradient)"
-              strokeWidth="1.5"
-              strokeDasharray="4 5"
-              filter="url(#route-glow)"
-              className="route-line route-three"
-            />
-            <circle cx="91" cy="147" r="4" fill="#fb923c" />
-            <circle cx="273" cy="139" r="4" fill="#38bdf8" />
-            <circle cx="191" cy="273" r="4" fill="#fb923c" />
-          </svg>
         </div>
 
-        <GlobeFlag flag="🇮🇳" className="flag-india" />
-        <GlobeFlag flag="🇬🇧" className="flag-uk" />
-        <GlobeFlag flag="🇺🇸" className="flag-usa" />
-        <GlobeFlag flag="🇯🇵" className="flag-japan" />
+        <svg
+          className="global-route-map"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient id="global-route-gradient">
+              <stop offset="0%" stopColor="#f97316" stopOpacity=".25" />
+              <stop offset="55%" stopColor="#fb923c" />
+              <stop offset="100%" stopColor="#38bdf8" stopOpacity=".8" />
+            </linearGradient>
 
-        <div className="globe-center-mark">
-          <Globe2 size={17} />
+            <filter id="global-route-glow">
+              <feGaussianBlur stdDeviation=".65" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
+          {COUNTRIES.map((country, index) => {
+            const centerX = 50;
+            const centerY = 50;
+            const midX = (centerX + country.x) / 2;
+            const midY = Math.min(centerY, country.y) - 9 - (index % 3) * 2;
+
+            return (
+              <g key={country.id}>
+                <path
+                  d={`M ${centerX} ${centerY} Q ${midX} ${midY} ${country.x} ${country.y}`}
+                  fill="none"
+                  stroke="url(#global-route-gradient)"
+                  strokeWidth={hoveredCountry === country.id ? "0.65" : "0.32"}
+                  strokeDasharray="1.2 1.2"
+                  filter="url(#global-route-glow)"
+                  className="country-route"
+                  style={{ animationDelay: `${index * -0.35}s` }}
+                />
+
+                <circle
+                  cx={country.x}
+                  cy={country.y}
+                  r={hoveredCountry === country.id ? "1.15" : ".65"}
+                  fill="#fb923c"
+                  className="country-route-point"
+                />
+              </g>
+            );
+          })}
+        </svg>
+
+        {COUNTRIES.map((country, index) => (
+          <button
+            key={country.id}
+            type="button"
+            className={`country-flag ${hoveredCountry === country.id ? "country-flag-active" : ""}`}
+            style={{
+              left: `${country.x}%`,
+              top: `${country.y}%`,
+              animationDelay: `${index * -0.22}s`,
+            }}
+            onMouseEnter={() => setHoveredCountry(country.id)}
+            onMouseLeave={() => setHoveredCountry(null)}
+            onFocus={() => setHoveredCountry(country.id)}
+            onBlur={() => setHoveredCountry(null)}
+            title={country.name}
+            aria-label={`${country.name} simulated battle location`}
+          >
+            <span>{country.flag}</span>
+            <span className="country-flag-swords">⚔️</span>
+          </button>
+        ))}
+
+        <div className="chartwars-hub">
+          <div className="chartwars-hub-ring" />
+          <span className="chartwars-hub-icon">
+            <Swords size={17} />
+          </span>
+          <span className="chartwars-hub-name">CHARTWARS</span>
+          <span className="chartwars-hub-status">
+            <span className="live-dot" />
+            GLOBAL HUB
+          </span>
         </div>
       </div>
+
+      {hoveredCountry && (
+        <div className="country-hover-label">
+          {COUNTRIES.find((country) => country.id === hoveredCountry)?.flag}
+          <span>
+            {COUNTRIES.find((country) => country.id === hoveredCountry)?.name}
+          </span>
+          <Swords size={13} className="text-orange-400" />
+          <span className="text-orange-300">Battle route</span>
+        </div>
+      )}
 
       <div className="globe-controls">
         <button
@@ -260,14 +304,17 @@ function CyberGlobe({ activeMode, rotation, setRotation, zoom, setZoom }) {
 
         <div className="text-right">
           <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500">
-            Battle routes
+            Connected countries
           </p>
-          <p className="mt-1 text-xs font-semibold text-orange-400">03 ACTIVE</p>
+          <p className="mt-1 text-xs font-semibold text-orange-400">
+            12 LOCATIONS
+          </p>
         </div>
       </div>
     </div>
   );
 }
+
 
 function ModeCard({ mode, active, onHover, onClick }) {
   const Icon = mode.icon;
@@ -1132,20 +1179,34 @@ export default function RoomPage() {
                 </p>
               </div>
 
-              <p className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-2xl">
-                2,410{" "}
-                <span className="text-xs font-medium text-zinc-500 sm:text-sm">
-                  traders battling globally
+              
+            <p className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                <span className="text-orange-400">32</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-zinc-200 sm:text-sm">
+                  Traders live
                 </span>
-              </p>
+                <span className="text-xs font-medium text-zinc-500">
+                  across the global arena
+                </span>
+             </p>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-zinc-500">
-              <span className="text-base">🇮🇳</span>
-              <Swords size={14} className="text-orange-400" />
-              <span className="text-base">🇬🇧</span>
-              <span className="ml-1">Global duels</span>
-            </div>
+        
+                <div className="flex flex-wrap items-center gap-2">
+                    {["🇮🇳", "🇨🇭", "🇦🇪", "🇨🇦", "🇸🇬", "🇵🇹"].map((flag) => (
+                      <span
+                        key={flag}
+                        className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/[0.035] text-base"
+                      >
+                        {flag}
+                      </span>
+                    ))}
+                    <span className="ml-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-orange-300">
+                      <Radio size={13} />
+                      Demo network
+                    </span>
+              </div>
+
           </section>
 
           <GlobalFeed />
