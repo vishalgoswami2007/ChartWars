@@ -52,6 +52,14 @@ import NewsPage from "../pages/dashboard/NewsPage";
 import LearnPage from "../pages/dashboard/LearnPage";
 import FriendsPage from "../pages/dashboard/FriendsPage";
 
+const friendsElement = (
+  <FriendsPage
+    eyebrow="YOUR NETWORK"
+    title="Friends"
+    description="Discover traders, manage friend requests, and connect for practice sessions."
+  />
+);
+
 export const router = createBrowserRouter([
   // Main website
   {
@@ -98,16 +106,19 @@ export const router = createBrowserRouter([
         path: "rooms",
         element: <RoomsPage />,
       },
+
+      // Friends workspace and friend requests
+      {
+        path: "friends",
+        element: friendsElement,
+      },
+
+      // Legacy URL retained to avoid breaking existing links
       {
         path: "friendsPage",
-        element: (
-          <FriendsPage
-            eyebrow="YOUR NETWORK"
-            title="Friends"
-            description="Connect with other traders and prepare for practice sessions."
-          />
-        ),
+        element: friendsElement,
       },
+
       {
         path: "learn",
         element: <LearnPage />,
@@ -252,5 +263,4 @@ export const router = createBrowserRouter([
     path: "*",
     element: <NotFoundPage />,
   },
-  
 ]);
