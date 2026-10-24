@@ -1,0 +1,630 @@
+/* -------------------------------------------------------------------------- */
+/* ChartWars Live Match — HUD styles only                                    */
+/* Every custom class is prefixed with lv-.                                   */
+/* -------------------------------------------------------------------------- */
+
+.lv-root {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  font-variant-numeric: tabular-nums;
+  background-image:
+    radial-gradient(ellipse at 50% 100%, rgba(249, 115, 22, 0.075), transparent 44%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.008), transparent 40%);
+}
+
+.lv-grid {
+  z-index: -1;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.075) 0.6px, transparent 0.6px);
+  background-size: 18px 18px;
+  opacity: 0.18;
+  mask-image: linear-gradient(to bottom, black, transparent 85%);
+}
+
+.lv-workspace {
+  flex: 1;
+  overflow: hidden;
+}
+
+.lv-main-column,
+.lv-side-panel {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(249, 115, 22, 0.24) transparent;
+}
+
+.lv-main-column {
+  overflow: hidden;
+}
+
+.lv-side-panel {
+  overscroll-behavior: contain;
+}
+
+.lv-panel {
+  position: relative;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  background: rgba(11, 11, 11, 0.88);
+  padding: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+}
+
+.lv-corner {
+  position: absolute;
+  z-index: 2;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
+
+.lv-corner-tl {
+  top: -1px;
+  left: -1px;
+  border-top: 1px solid rgba(249, 115, 22, 0.75);
+  border-left: 1px solid rgba(249, 115, 22, 0.75);
+}
+
+.lv-corner-br {
+  right: -1px;
+  bottom: -1px;
+  border-right: 1px solid rgba(249, 115, 22, 0.6);
+  border-bottom: 1px solid rgba(249, 115, 22, 0.6);
+}
+
+.lv-button,
+.lv-toolbar-button,
+.lv-risk-chip,
+.lv-step-button,
+.lv-preset-button,
+.lv-order-button,
+.lv-close-position,
+.lv-emote-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex-shrink: 0;
+  border-radius: 0;
+  transition:
+    color 150ms ease,
+    border-color 150ms ease,
+    background-color 150ms ease,
+    opacity 150ms ease;
+}
+
+.lv-button:focus-visible,
+.lv-toolbar-button:focus-visible,
+.lv-risk-chip:focus-visible,
+.lv-step-button:focus-visible,
+.lv-preset-button:focus-visible,
+.lv-order-button:focus-visible,
+.lv-close-position:focus-visible,
+.lv-emote-button:focus-visible,
+.lv-number-input:focus-visible {
+  outline: 2px solid #fb923c;
+  outline-offset: 2px;
+}
+
+.lv-duel-strip {
+  flex-shrink: 0;
+}
+
+.lv-player-panel {
+  min-height: 118px;
+  padding: 12px;
+}
+
+.lv-pnl-value {
+  animation: lv-pnl-appear 220ms ease-out;
+}
+
+.lv-timer-block {
+  min-width: 96px;
+}
+
+.lv-timer-ring {
+  --lv-progress: 100%;
+  position: relative;
+  display: grid;
+  width: 92px;
+  height: 92px;
+  place-items: center;
+  flex-shrink: 0;
+  background: conic-gradient(
+    from -90deg,
+    #f97316 0,
+    #f97316 var(--lv-progress),
+    rgba(255, 255, 255, 0.09) var(--lv-progress),
+    rgba(255, 255, 255, 0.09) 100%
+  );
+  clip-path: polygon(
+    0 0,
+    42% 0,
+    50% 5%,
+    58% 0,
+    100% 0,
+    100% 42%,
+    95% 50%,
+    100% 58%,
+    100% 100%,
+    58% 100%,
+    50% 95%,
+    42% 100%,
+    0 100%,
+    0 58%,
+    5% 50%,
+    0 42%
+  );
+}
+
+.lv-timer-inner {
+  display: flex;
+  width: calc(100% - 5px);
+  height: calc(100% - 5px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #090909;
+}
+
+.lv-timer-critical {
+  background: conic-gradient(
+    from -90deg,
+    #f87171 0,
+    #f87171 var(--lv-progress),
+    rgba(248, 113, 113, 0.12) var(--lv-progress),
+    rgba(248, 113, 113, 0.12) 100%
+  );
+  animation: lv-timer-pulse 800ms ease-in-out infinite alternate;
+}
+
+.lv-timer-critical .lv-timer-inner {
+  color: #fca5a5;
+}
+
+.lv-demo-label {
+  background: rgba(251, 191, 36, 0.045);
+}
+
+.lv-demo-notice {
+  flex-shrink: 0;
+}
+
+.lv-chart-panel {
+  overflow: hidden;
+}
+
+.lv-chart-wrap {
+  width: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 55% 0%, rgba(249, 115, 22, 0.035), transparent 65%),
+    rgba(0, 0, 0, 0.16);
+}
+
+.lv-chart-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.lv-live-price-tag {
+  pointer-events: none;
+  box-shadow: 0 3px 16px rgba(0, 0, 0, 0.35);
+}
+
+.lv-toolbar-button {
+  min-height: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 4px 7px;
+  color: #a1a1aa;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.lv-toolbar-button:hover {
+  border-color: rgba(249, 115, 22, 0.35);
+  color: #f4f4f5;
+}
+
+.lv-toolbar-button.is-active {
+  border-color: rgba(249, 115, 22, 0.4);
+  background: rgba(249, 115, 22, 0.08);
+  color: #fdba74;
+}
+
+.lv-risk-chip {
+  min-height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.025);
+  color: #a1a1aa;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+}
+
+.lv-risk-chip:hover {
+  border-color: rgba(249, 115, 22, 0.35);
+  color: #fff;
+}
+
+.lv-risk-chip.is-active {
+  border-color: rgba(249, 115, 22, 0.65);
+  background: rgba(249, 115, 22, 0.1);
+  color: #fdba74;
+}
+
+.lv-number-input {
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 7px 9px;
+  color: #f4f4f5;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  outline: none;
+  transition: border-color 150ms ease;
+}
+
+.lv-number-input::placeholder {
+  color: #52525b;
+}
+
+.lv-number-input:focus {
+  border-color: rgba(249, 115, 22, 0.65);
+}
+
+.lv-number-input::-webkit-inner-spin-button,
+.lv-number-input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.lv-number-input {
+  appearance: textfield;
+}
+
+.lv-step-button {
+  width: 31px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.025);
+  color: #a1a1aa;
+}
+
+.lv-step-button:hover {
+  border-color: rgba(249, 115, 22, 0.4);
+  color: #fdba74;
+}
+
+.lv-preset-button {
+  min-height: 23px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 4px 7px;
+  color: #a1a1aa;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.lv-preset-button:hover {
+  border-color: rgba(249, 115, 22, 0.4);
+  color: #fdba74;
+}
+
+.lv-order-button {
+  min-height: 40px;
+  border: 1px solid transparent;
+  padding: 8px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.lv-order-button.is-buy {
+  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(52, 211, 153, 0.12);
+  color: #6ee7b7;
+}
+
+.lv-order-button.is-buy:hover:not(:disabled) {
+  background: rgba(52, 211, 153, 0.2);
+}
+
+.lv-order-button.is-sell {
+  border-color: rgba(248, 113, 113, 0.35);
+  background: rgba(248, 113, 113, 0.12);
+  color: #fca5a5;
+}
+
+.lv-order-button.is-sell:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.2);
+}
+
+.lv-order-button:disabled {
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.045);
+  background: rgba(255, 255, 255, 0.018);
+  color: #52525b;
+  opacity: 0.72;
+}
+
+.lv-close-position {
+  min-height: 34px;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  background: rgba(249, 115, 22, 0.07);
+  padding: 7px 10px;
+  color: #fdba74;
+  font-size: 10px;
+}
+
+.lv-close-position:hover {
+  background: rgba(249, 115, 22, 0.14);
+}
+
+.lv-drawdown-track {
+  height: 5px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.lv-drawdown-fill {
+  height: 100%;
+  background: #34d399;
+  transition:
+    width 180ms linear,
+    background-color 180ms ease;
+}
+
+.lv-drawdown-fill.is-warning {
+  background: #fb923c;
+}
+
+.lv-drawdown-fill.is-danger {
+  background: #f87171;
+}
+
+.lv-emote-row {
+  flex-shrink: 0;
+  min-height: 34px;
+}
+
+.lv-emote-button {
+  width: 35px;
+  height: 31px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.025);
+  color: #e4e4e7;
+  font-size: 13px;
+}
+
+.lv-emote-button:hover:not(:disabled) {
+  border-color: rgba(249, 115, 22, 0.45);
+  background: rgba(249, 115, 22, 0.07);
+  transform: translateY(-1px);
+}
+
+.lv-emote-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.lv-emote-bubble {
+  position: absolute;
+  z-index: 10;
+  top: 5px;
+  left: 50%;
+  display: grid;
+  min-width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(249, 115, 22, 0.32);
+  background: #17110d;
+  box-shadow: 0 4px 22px rgba(0, 0, 0, 0.45);
+  font-size: 18px;
+  pointer-events: none;
+  animation: lv-emote-float 2.5s ease-out forwards;
+}
+
+.lv-emote-opponent {
+  right: 2px;
+  left: auto;
+}
+
+.lv-overlay {
+  overscroll-behavior: contain;
+  backdrop-filter: blur(10px);
+}
+
+.lv-dialog,
+.lv-result-panel {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(249, 115, 22, 0.055), transparent 60%),
+    #0b0b0b;
+  box-shadow: 0 24px 90px rgba(0, 0, 0, 0.55);
+}
+
+.lv-countdown-number {
+  animation: lv-countdown-pop 850ms ease-out both;
+}
+
+.lv-result-panel {
+  overflow: hidden;
+}
+
+.lv-result-panel::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(249, 115, 22, 0.7), transparent);
+  content: "";
+  pointer-events: none;
+}
+
+@keyframes lv-pnl-appear {
+  0% {
+    opacity: 0.6;
+    transform: translateY(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lv-timer-pulse {
+  from {
+    filter: drop-shadow(0 0 0 rgba(248, 113, 113, 0));
+  }
+  to {
+    filter: drop-shadow(0 0 9px rgba(248, 113, 113, 0.38));
+  }
+}
+
+@keyframes lv-countdown-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes lv-emote-float {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 12px) scale(0.82);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  78% {
+    opacity: 1;
+    transform: translate(-50%, -20px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -30px) scale(0.92);
+  }
+}
+
+@media (min-width: 1024px) {
+  .lv-workspace {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .lv-main-column {
+    height: 100%;
+  }
+
+  .lv-side-panel {
+    min-height: 0;
+    padding-right: 2px;
+  }
+
+  .lv-chart-panel {
+    min-height: 0;
+  }
+
+  .lv-chart-wrap {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 1023px) {
+  .lv-root {
+    min-height: 100dvh;
+    height: auto;
+    overflow: visible;
+  }
+
+  .lv-workspace {
+    flex: initial;
+    overflow: visible;
+  }
+
+  .lv-main-column {
+    overflow: visible;
+  }
+
+  .lv-side-panel {
+    overflow: visible;
+  }
+
+  .lv-chart-panel {
+    min-height: 390px;
+  }
+
+  .lv-chart-wrap {
+    min-height: 280px;
+  }
+
+  .lv-player-panel {
+    min-height: 106px;
+  }
+}
+
+@media (max-width: 480px) {
+  .lv-panel {
+    padding: 10px;
+  }
+
+  .lv-player-panel {
+    min-height: 96px;
+    padding: 9px;
+  }
+
+  .lv-timer-block {
+    min-width: 78px;
+  }
+
+  .lv-timer-ring {
+    width: 76px;
+    height: 76px;
+  }
+
+  .lv-timer-inner span:first-child {
+    font-size: 21px;
+  }
+
+  .lv-duel-strip {
+    gap: 6px;
+  }
+
+  .lv-chart-panel {
+    min-height: 350px;
+  }
+
+  .lv-chart-wrap {
+    min-height: 250px;
+  }
+
+  .lv-emote-button {
+    width: 31px;
+    height: 29px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lv-root *,
+  .lv-root *::before,
+  .lv-root *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
