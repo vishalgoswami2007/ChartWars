@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronDown, RefreshCw, Search } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { fetchMarkets } from "../../../../services/cryptoMarketAPI";
 import "./OnlineMode.css";
@@ -625,6 +626,7 @@ export default function OnlineMode() {
           </p>
         </div>
 
+      <Link to="/matchMaking">
         <button
           type="button"
           onClick={startMatchmaking}
@@ -632,6 +634,7 @@ export default function OnlineMode() {
         >
           [ Initialize enemy matchmaking ]
         </button>
+      </Link>
       </footer>
     </main>
   );

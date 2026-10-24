@@ -1,0 +1,148 @@
+/* Matchmaking: radar animation. Layout lives in Tailwind classes. */
+
+.mm-root {
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(249, 115, 22, 0.13), transparent 60%),
+    radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px) 0 0 / 26px 26px,
+    #050505;
+}
+
+.mm-radar {
+  position: relative;
+  overflow: hidden;
+  border-radius: 9999px;
+  border: 1px solid rgba(249, 115, 22, 0.55);
+  background: radial-gradient(circle, rgba(249, 115, 22, 0.07), rgba(0, 0, 0, 0.55) 70%);
+  box-shadow: 0 0 40px rgba(249, 115, 22, 0.18), inset 0 0 40px rgba(0, 0, 0, 0.6);
+}
+
+/* Rotating sweep: bright edge points up at 0 degrees, so blips use angle/360 of the turn as delay */
+.mm-sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: conic-gradient(
+    from 0deg,
+    rgba(249, 115, 22, 0) 0deg 240deg,
+    rgba(249, 115, 22, 0.08) 290deg,
+    rgba(249, 115, 22, 0.5) 360deg
+  );
+  animation: mm-spin 3s linear infinite;
+}
+.mm-sweep::after {
+  content: "";
+  position: absolute;
+  left: calc(50% - 1px);
+  top: 0;
+  width: 2px;
+  height: 50%;
+  background: linear-gradient(#fdba74, rgba(249, 115, 22, 0));
+}
+@keyframes mm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Decorative dots that light up as the sweep passes them */
+.mm-blip {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 9999px;
+  background: #fb923c;
+  box-shadow: 0 0 10px #f97316;
+  opacity: 0;
+  animation: mm-blip 3s linear infinite;
+}
+@keyframes mm-blip {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  3% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  55% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Expanding ring from the centre */
+.mm-ping {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  border-radius: 9999px;
+  border: 1px solid #f97316;
+  animation: mm-ping 2.2s ease-out infinite;
+}
+@keyframes mm-ping {
+  from {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(4.5);
+    opacity: 0;
+  }
+}
+
+/* Match found: one bright flash */
+.mm-flash {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(253, 186, 116, 0.75), transparent 70%);
+  animation: mm-flash 0.7s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes mm-flash {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.is-found .mm-ping {
+  animation-play-state: paused;
+  opacity: 0.4;
+}
+
+/* Static neon frame around a flag */
+.mm-ring-static {
+  display: inline-flex;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fdba74, #f97316 55%, #7c2d12);
+}
+.mm-ring-static > * {
+  border-radius: 8px;
+}
+
+/* Main button pulse */
+.mm-cta {
+  position: relative;
+  box-shadow: 0 0 24px rgba(249, 115, 22, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-sweep,
+  .mm-blip,
+  .mm-ping,
+  .mm-flash {
+    animation: none;
+  }
+  .mm-blip {
+    opacity: 0.6;
+  }
+}
