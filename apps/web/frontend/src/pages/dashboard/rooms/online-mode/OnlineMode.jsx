@@ -290,7 +290,7 @@ function Rules() {
 
 function Sparkline({ values = [], up }) {
   const points = values.filter(Number.isFinite);
-  if (points.length < 2) return <div className="h-10 w-full" aria-hidden="true" />;
+  if (points.length < 2) return <div className="size-full" aria-hidden="true" />;
 
   const step = Math.max(1, Math.floor(points.length / 40));
   const sample = points.filter((_, i) => i % step === 0);
@@ -302,7 +302,7 @@ function Sparkline({ values = [], up }) {
     .join(" ");
 
   return (
-    <svg viewBox="0 0 100 32" preserveAspectRatio="none" className="h-10 w-full" aria-hidden="true">
+    <svg viewBox="0 0 100 32" preserveAspectRatio="none" className="size-full" aria-hidden="true">
       <path
         d={d}
         fill="none"
@@ -315,7 +315,6 @@ function Sparkline({ values = [], up }) {
     </svg>
   );
 }
-
 function AssetCard({ asset, coin, active, flash, onSelect }) {
   const change = coin?.price_change_percentage_24h;
   const weekUp = (coin?.price_change_percentage_7d_in_currency ?? change ?? 0) >= 0;
@@ -326,28 +325,30 @@ function AssetCard({ asset, coin, active, flash, onSelect }) {
       role="radio"
       aria-checked={active}
       onClick={() => onSelect(asset.id)}
-      className={`ow-asset flex flex-col justify-between border p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
+      className={`ow-asset flex min-h-26 min-w-0 flex-col gap-1 border p-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
         active ? "is-active" : "border-white/10"
       }`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <span className="block font-mono text-sm font-bold text-white">{asset.symbol}</span>
-          <span className="block text-[10px] text-zinc-500">{asset.name}</span>
-        </div>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="truncate font-mono text-sm font-bold text-white">
+          {asset.symbol}
+          <span className="ml-1.5 hidden text-[10px] font-normal text-zinc-500 xl:inline">{asset.name}</span>
+        </span>
         {change != null && (
-          <span className={`font-mono text-[11px] ${change >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+          <span className={`shrink-0 font-mono text-[11px] ${change >= 0 ? "text-emerald-400" : "text-red-400"}`}>
             {change >= 0 ? "+" : ""}
             {change.toFixed(2)}%
           </span>
         )}
       </div>
 
-      <Sparkline values={coin?.sparkline_in_7d?.price} up={weekUp} />
+      <div className="min-h-6 flex-1">
+        <Sparkline values={coin?.sparkline_in_7d?.price} up={weekUp} />
+      </div>
 
       <span
         key={`${asset.id}-${coin?.current_price}`}
-        className={`font-mono text-base font-semibold tabular-nums text-zinc-100 ${
+        className={`truncate font-mono text-sm font-semibold tabular-nums text-zinc-100 ${
           flash === "up" ? "ow-flash-up" : flash === "down" ? "ow-flash-down" : ""
         }`}
       >
@@ -363,7 +364,7 @@ const RING_LENGTH = 2 * Math.PI * 30;
 
 function PlayerSwitch({ value, onChange }) {
   return (
-    <div role="radiogroup" aria-label="Players" className="flex flex-col gap-2">
+    <div role="radiogroup" aria-label="Players" className="flex gap-2">
       {PLAYER_MODES.map((mode) => {
         const active = value === mode.id;
         return (
@@ -404,7 +405,7 @@ function TimerGauge({ minutes, active, onSelect }) {
       aria-checked={active}
       aria-label={`${minutes} minute match`}
       onClick={() => onSelect(minutes)}
-      className={`ow-gauge ${active ? "is-active" : ""} flex size-24 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400`}
+      className={`ow-gauge ${active ? "is-active" : ""} flex size-20 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400`}
     >
       <svg viewBox="0 0 72 72" className="absolute inset-0 size-full -rotate-90" aria-hidden="true">
         <circle cx="36" cy="36" r="30" fill="rgba(0,0,0,0.5)" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
@@ -421,7 +422,7 @@ function TimerGauge({ minutes, active, onSelect }) {
       </svg>
       {active && <span key={minutes} className="ow-lock-ring" aria-hidden="true" />}
       <span className="relative text-center">
-        <span className={`block font-mono text-2xl font-bold ${active ? "text-orange-300" : "text-zinc-200"}`}>
+        <span className={`block font-mono text-xl font-bold ${active ? "text-orange-300" : "text-zinc-200"}`}>
           {minutes}
         </span>
         <span className="block font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-500">min</span>
@@ -544,7 +545,7 @@ export default function OnlineMode() {
         </div>
 
         {/* Right sector */}
-        <div className="flex min-h-0 flex-col gap-4">
+        <div className="flex min-h-64 flex-col gap-4">
           <Panel index="03" title="Market symbol" className="flex min-h-0 flex-1 flex-col">
             {status === "error" ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
