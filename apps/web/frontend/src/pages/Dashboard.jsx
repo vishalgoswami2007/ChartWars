@@ -29,28 +29,23 @@ export default function Dashboard() {
     location.search
   ).get("mode");
 
-  const isFullScreenRoom =
+  const isOnlineModeRoute = location.pathname.startsWith(
+    "/dashboard/rooms/online"
+  );
+
+  const isSelectedRoomMode =
     location.pathname === "/dashboard/rooms" &&
     FULLSCREEN_ROOM_MODES.includes(selectedMode);
 
-    const isOnlineModeRoute = location.pathname.startsWith(
-        "/dashboard/rooms/online"
-      );
+  const isFullScreenRoom =
+    isOnlineModeRoute || isSelectedRoomMode;
 
-      if (isOnlineModeRoute) {
-        return (
-          <main className="min-h-dvh w-full overflow-x-hidden bg-[#050505] text-white">
-            <Outlet />
-          </main>
-        );
-      }
-
-  // Full-screen room mode: no dashboard sidebar or navbar.
+  // Full-screen room: hide dashboard sidebar and navbar.
   if (isFullScreenRoom) {
     return (
-      <main className="min-h-dvh w-full overflow-x-hidden overflow-y-auto bg-[#050505] text-white">
-         <Outlet />
-    </main>
+      <main className="h-dvh w-full overflow-hidden bg-[#050505] text-white">
+        <Outlet />
+      </main>
     );
   }
 

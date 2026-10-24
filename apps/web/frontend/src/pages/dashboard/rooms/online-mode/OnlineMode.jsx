@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronDown, RefreshCw, Search } from "lucide-react";
-import { Link } from "react-router-dom";
+
 
 import { fetchMarkets } from "../../../../services/cryptoMarketAPI";
 import "./OnlineMode.css";
@@ -448,6 +448,10 @@ export default function OnlineMode() {
   const previousPrices = useRef({});
   const flashTimer = useRef(null);
 
+    const handleFindOpponent = () => {
+     startMatchmaking();
+    };
+
   // Real prices from CoinGecko: on mount, then every 60 seconds.
   useEffect(() => {
     let alive = true;
@@ -508,12 +512,17 @@ export default function OnlineMode() {
   const formatLabel = players === 2 ? "1v1" : `${players} players`;
 
   const startMatchmaking = () => {
-    // Replace this with the queue id your backend returns.
-    const queueId = `q_${Math.floor(1000 + Math.random() * 9000)}`;
-    navigate(`${ROUTES.searching}?queueId=${queueId}`, {
-      state: { country, symbol, minutes, players },
-    });
-  };
+  const queueId = `q_${Math.floor(1000 + Math.random() * 9000)}`;
+
+  navigate(`${ROUTES.searching}?queueId=${queueId}`, {
+    state: {
+      country,
+      symbol,
+      minutes,
+      players,
+    },
+  });
+};
 
   return (
     <main className="ow-root flex h-dvh flex-col overflow-hidden text-zinc-100 max-lg:h-auto max-lg:min-h-dvh max-lg:overflow-y-auto">
@@ -626,15 +635,17 @@ export default function OnlineMode() {
           </p>
         </div>
 
-      <Link to="/matchMaking">
+
+       
         <button
-          type="button"
-          onClick={startMatchmaking}
-          className="ow-cta border border-orange-400 bg-orange-500 px-6 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.2em] text-black transition hover:bg-orange-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-        >
-          [ Initialize enemy matchmaking ]
+             type="button"
+             onClick={handleFindOpponent}
+             className="ow-cta inline-flex min-h-15 items-center justify-center border border-orange-500 bg-orange-500 px-8 py-4 text-sm font-bold uppercase tracking-[0.18em] text-black transition-all duration-200 hover:bg-orange-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+       >
+            INITIALIZE ENEMY MATCHMAKING
         </button>
-      </Link>
+
+
       </footer>
     </main>
   );
