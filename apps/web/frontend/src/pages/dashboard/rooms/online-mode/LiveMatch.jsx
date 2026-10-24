@@ -516,9 +516,15 @@ export default function Live() {
   const [matchStartedAt, setMatchStartedAt] = useState(null);
   const [now, setNow] = useState(0);
 
-            useEffect(() => {
-            setNow(Date.now());
-            }, []);
+        useEffect(() => {
+        const updateTime = () => setNow(Date.now());
+
+        updateTime();
+        const intervalId = setInterval(updateTime, 1000);
+
+        return () => clearInterval(intervalId);
+        }, []);
+        
   const [matchEnded, setMatchEnded] = useState(false);
   const [endReason, setEndReason] = useState("");
   const [showForfeitConfirm, setShowForfeitConfirm] = useState(false);
