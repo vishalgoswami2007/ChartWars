@@ -52,6 +52,7 @@ import NewsPage from "../pages/dashboard/NewsPage";
 import LearnPage from "../pages/dashboard/LearnPage";
 import FriendsPage from "../pages/dashboard/FriendsPage";
 import LeaderboardPage from "../pages/dashboard/LeaderboardPage";
+import OnlineMode from "../pages/dashboard/rooms/online-mode/OnlineMode";
 
 const friendsElement = (
   <FriendsPage
@@ -106,6 +107,22 @@ export const router = createBrowserRouter([
       {
         path: "rooms",
         element: <RoomsPage />,
+      },
+      {
+        path: "rooms/online",
+        element: <OnlineMode />,
+      },
+      {
+        path: "rooms/online/searching",
+        element: <OnlineMode />,
+      },
+      {
+        path: "rooms/online/match-found",
+        element: <OnlineMode />,
+      },
+      {
+        path: "rooms/online/live",
+        element: <OnlineMode />,
       },
 
       // Friends workspace and friend requests

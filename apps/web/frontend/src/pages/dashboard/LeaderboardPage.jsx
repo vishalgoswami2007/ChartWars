@@ -5,8 +5,6 @@ import {
   Medal,
   Search,
   TrendingUp,
-  Trophy,
-  Users,
   Wallet,
 } from "lucide-react";
 
@@ -125,30 +123,7 @@ export default function LeaderboardPage() {
   return (
     <main className="min-h-screen bg-[#050505] px-4 py-6 text-white sm:px-6 sm:py-8 xl:px-9">
       <div className="mx-auto w-full max-w-7xl space-y-7">
-        <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#e87524]/25 bg-[#e87524]/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#f59a55]">
-              <Trophy size={13} />
-              ChartWars rankings
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Global <span className="text-[#e87524]">Leaderboard</span>
-            </h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">
-              Earn your place. Improve your rating. Compete with traders around the world.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#101010] px-4 py-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#e87524]/10 text-[#f59a55]">
-              <Users size={20} />
-            </div>
-            <div>
-              <p className="text-xs text-zinc-500">Ranking scope</p>
-              <p className="mt-0.5 text-sm font-semibold">Global · All players</p>
-            </div>
-          </div>
-        </header>
+        
 
         <section className="rounded-2xl border border-white/10 bg-[#0b0b0c] p-4 sm:p-6">
           <div className="mb-6 flex items-center justify-between gap-3">

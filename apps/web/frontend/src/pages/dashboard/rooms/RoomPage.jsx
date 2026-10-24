@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import OnlineMode from "./online-mode/OnlineMode";
+import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -99,6 +100,7 @@ const BATTLES = [
     nameB: "NovaTrade",
   },
 ];
+
 
 const ACTIVITY_COUNTRIES = [
   { code: "in", name: "India" },
@@ -590,6 +592,8 @@ export default function RoomPage() {
   const [zoom, setZoom] = useState(1);
   const [transitioning, setTransitioning] = useState(false);
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     if (!transitioning) return undefined;
 
@@ -601,7 +605,13 @@ export default function RoomPage() {
   }, [transitioning]);
 
   const enterMode = (modeId) => {
-    setTransitioning(true);
+
+      if (modeId === "online") {
+       navigate("/dashboard/rooms/online");
+      return;
+  }
+   
+ setTransitioning(true);
 
     window.setTimeout(() => {
       setSearchParams({ mode: modeId });
