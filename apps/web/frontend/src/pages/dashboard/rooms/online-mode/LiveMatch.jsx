@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 
 import { fetchMarkets } from "../../../../services/cryptoMarketAPI";
-import "./Live.css";
+
 
 /* -------------------------------------------------------------------------- */
 /* Configuration                                                              */
@@ -487,6 +487,8 @@ function Metric({ label, value, tone = "normal" }) {
 }
 
 
+
+
 /* -------------------------------------------------------------------------- */
 /* Live match                                                                  */
 /* -------------------------------------------------------------------------- */
@@ -495,6 +497,7 @@ export default function Live() {
   const location = useLocation();
   const navigate = useNavigate();
   const setup = location.state;
+  const emoteIdRef = useRef(0);
 
   const validSetup =
     setup &&
@@ -511,7 +514,7 @@ export default function Live() {
 
   const feed = usePriceFeed(symbol, CANDLE_SECONDS);
 
-  const [chartReady, setChartReady] = useState(false);
+ const [chartReady] = useState(false);
   const [countdown, setCountdown] = useState(3);
   const [matchStartedAt, setMatchStartedAt] = useState(null);
   const [now, setNow] = useState(0);
@@ -540,7 +543,7 @@ export default function Live() {
   const [sideError, setSideError] = useState("");
   const [lastOrderMessage, setLastOrderMessage] = useState("");
   const [plannedRRs, setPlannedRRs] = useState([]);
-  const [drawdownBreached, setDrawdownBreached] = useState(false);
+  const drawdownBreached = endReason === "drawdown";
 
   const [opponentBalance, setOpponentBalance] = useState(STARTING_CAPITAL);
   const [opponentRealised, setOpponentRealised] = useState(0);
@@ -552,7 +555,7 @@ export default function Live() {
 
   const [showEma, setShowEma] = useState(false);
   const [showSma, setShowSma] = useState(false);
-  const [chartError, setChartError] = useState("");
+  const [chartError] = useState("");
   const [isTabHidden, setIsTabHidden] = useState(false);
 
   const chartContainerRef = useRef(null);
@@ -575,6 +578,8 @@ export default function Live() {
   const balanceRef = useRef(STARTING_CAPITAL);
   const opponentPositionRef = useRef(null);
   const opponentBalanceRef = useRef(STARTING_CAPITAL);
+  const [ruleViolations] = useState(0);
+  
 
   
 const currentPrice = Number.isFinite(feed.price)
@@ -981,18 +986,18 @@ useEffect(() => {
     };
   }, [matchStartedAt, matchEnded]);
 
-  /* Finish on time, or if the equity drawdown reaches the hard limit. */
+  
+  /* Finish on time or when the maximum drawdown is breached. */
   useEffect(() => {
     if (matchEnded || !matchStartedAt) return;
 
-    if (remainingSeconds <= 0) {
-      finishMatch("time");
+    if (drawdownPercent >= MAX_DRAWDOWN_PERCENT) {
+      finishMatch("drawdown");
       return;
     }
 
-    if (drawdownPercent >= MAX_DRAWDOWN_PERCENT) {
-      setDrawdownBreached(true);
-      finishMatch("drawdown");
+    if (remainingSeconds <= 0) {
+      finishMatch("time");
     }
   }, [
     matchEnded,
@@ -1001,6 +1006,7 @@ useEffect(() => {
     drawdownPercent,
     finishMatch,
   ]);
+
 
   /* Check user stop-loss and take-profit on every price update. */
   useEffect(() => {
@@ -1129,31 +1135,46 @@ useEffect(() => {
     };
   }, []);
 
-  const sendEmote = (emote) => {
-    if (matchEnded || countdown > 0 || emoteCooldown) return;
+  
 
-    setUserEmote({ emote, id: Date.now() });
-    setEmoteCooldown(true);
+const sendEmote = (emote) => {
+  if (matchEnded || countdown > 0 || emoteCooldown) return;
 
-    cooldownTimerRef.current = window.setTimeout(() => {
-      setEmoteCooldown(false);
-    }, EMOTE_COOLDOWN_MS);
-  };
+  emoteIdRef.current += 1;
 
+  setUserEmote({
+    emote,
+    id: emoteIdRef.current,
+  });
+
+  setEmoteCooldown(true);
+
+  cooldownTimerRef.current = window.setTimeout(() => {
+    setEmoteCooldown(false);
+  }, EMOTE_COOLDOWN_MS);
+};
+
+
+
+  
   /* Create and destroy the chart instance safely. */
   useEffect(() => {
     const container = chartContainerRef.current;
 
-    if (!container || !feed.candles.length) return undefined;
+    if (!container || feed.candles.length === 0) {
+      return undefined;
+    }
 
     let chart;
     let candleSeries;
     let emaSeries;
     let smaSeries;
     let resizeObserver;
+    let cancelled = false;
 
     try {
       const createChart = LightweightCharts.createChart;
+
       if (typeof createChart !== "function") {
         throw new Error("Lightweight Charts is unavailable.");
       }
@@ -1208,7 +1229,10 @@ useEffect(() => {
         wickDownColor: "#f87171",
       };
 
-      if (typeof chart.addSeries === "function" && LightweightCharts.CandlestickSeries) {
+      if (
+        typeof chart.addSeries === "function" &&
+        LightweightCharts.CandlestickSeries
+      ) {
         candleSeries = chart.addSeries(
           LightweightCharts.CandlestickSeries,
           candleOptions,
@@ -1219,7 +1243,10 @@ useEffect(() => {
         throw new Error("Unsupported Lightweight Charts API version.");
       }
 
-      if (typeof chart.addSeries === "function" && LightweightCharts.LineSeries) {
+      if (
+        typeof chart.addSeries === "function" &&
+        LightweightCharts.LineSeries
+      ) {
         emaSeries = chart.addSeries(LightweightCharts.LineSeries, {
           color: "#f97316",
           lineWidth: 1,
@@ -1249,17 +1276,13 @@ useEffect(() => {
         });
       }
 
-      chartRef.current = chart;
-      candleSeriesRef.current = candleSeries;
-      emaSeriesRef.current = emaSeries;
-      smaSeriesRef.current = smaSeries;
-
       candleSeries.setData(feed.candles);
       chart.timeScale().fitContent();
 
       resizeObserver = new ResizeObserver((entries) => {
         const entry = entries[0];
-        if (!entry || !chart) return;
+
+        if (!entry || !chart || cancelled) return;
 
         chart.applyOptions({
           width: Math.max(1, Math.floor(entry.contentRect.width)),
@@ -1268,23 +1291,36 @@ useEffect(() => {
       });
 
       resizeObserver.observe(container);
-      setChartError("");
-      setChartReady(true);
+
+      chartRef.current = chart;
+      candleSeriesRef.current = candleSeries;
+      emaSeriesRef.current = emaSeries;
+      smaSeriesRef.current = smaSeries;
+
+      // Chart status is updated after initialization outside render.
+      // Keep the effect responsible for creating and cleaning up the chart.
     } catch (error) {
-      setChartError(error instanceof Error ? error.message : "Unable to load chart.");
-      setChartReady(false);
+      chart?.remove();
+
+      if (!cancelled) {
+        console.error("Chart initialization failed:", error);
+      }
     }
 
     return () => {
+      cancelled = true;
       resizeObserver?.disconnect();
       chart?.remove();
 
       if (chartRef.current === chart) chartRef.current = null;
-      if (candleSeriesRef.current === candleSeries) candleSeriesRef.current = null;
+      if (candleSeriesRef.current === candleSeries) {
+        candleSeriesRef.current = null;
+      }
       if (emaSeriesRef.current === emaSeries) emaSeriesRef.current = null;
       if (smaSeriesRef.current === smaSeries) smaSeriesRef.current = null;
     };
-  }, [feed.candles.length > 0]);
+  }, [feed.candles.length]);
+
 
   useEffect(() => {
     const candleSeries = candleSeriesRef.current;
@@ -1402,15 +1438,26 @@ useEffect(() => {
     navigate(ROUTES.setup);
   };
 
-  const userWon = userScore.total > opponentScore.total;
-  const isDraw = userScore.total === opponentScore.total;
-  const resultLabel = drawdownBreached
-    ? "FORFEIT"
+   const isForfeit = endReason === "forfeit";
+   const isDrawdownLoss = endReason === "drawdown";
+
+  const userWon =
+    !isForfeit &&
+    !isDrawdownLoss &&
+    userScore.total > opponentScore.total;
+
+  const isDraw =
+    !isForfeit &&
+    !isDrawdownLoss &&
+    userScore.total === opponentScore.total;
+
+  const resultLabel = isForfeit || isDrawdownLoss
+    ? "LOSS"
     : isDraw
       ? "DRAW"
       : userWon
         ? "VICTORY"
-        : "MATCH COMPLETE";
+        : "LOSS";
 
   if (!validSetup) return null;
 
@@ -1596,7 +1643,7 @@ useEffect(() => {
               </div>
             </div>
 
-            <div className="lv-chart-wrap relative min-h-52 flex-1">
+            <div className="lv-chart-wrap lv-chart-frame relative">
               <div
                 ref={chartContainerRef}
                 className="lv-chart-canvas absolute inset-0"
@@ -2028,12 +2075,18 @@ useEffect(() => {
               }`}>
                 {resultLabel}
               </h1>
-              <p className="mt-2 text-center text-xs text-zinc-500">
+           <p className="mt-2 text-center text-xs text-zinc-500">
                 {endReason === "forfeit"
-                  ? "You forfeited the match."
+                  ? "You forfeited the match. Your opponent wins."
                   : endReason === "drawdown"
-                    ? "The 3% maximum drawdown limit was breached."
-                    : "The timer has ended."}
+                    ? "You breached the 3% maximum drawdown limit. Match lost."
+                    : endReason === "time"
+                      ? isDraw
+                        ? "Time is up. The match ended in a draw."
+                        : userWon
+                          ? "Time is up. You won on final score."
+                          : "Time is up. Your opponent won on final score."
+                      : "The match has ended."}
               </p>
 
               <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -2106,7 +2159,7 @@ useEffect(() => {
               </div>
 
               <p className="mt-4 text-center font-mono text-[10px] text-amber-200">
-                Demo: {userWon ? "+" : "−"}{Math.round(Math.random() * 100)} rating preview
+                Demo match · virtual rating is not updated
               </p>
 
               <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
