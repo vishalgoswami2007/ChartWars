@@ -4,7 +4,7 @@ import * as LWC from "lightweight-charts";
 import { AlertCircle, Check, LogOut, Maximize2, Minus, Plus, RefreshCw, X } from "lucide-react";
 
 import { fetchMarkets } from "../../../../services/cryptoMarketAPI";
-import "./Live.css";
+
 
 /* ---------- Config: change values here ---------- */
 
