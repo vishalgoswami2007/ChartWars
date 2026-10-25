@@ -1,2189 +1,1288 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import * as LightweightCharts from "lightweight-charts";
-import {
-  Activity,
-  ArrowLeft,
-  Check,
-  CircleHelp,
-  Flag,
-  Maximize2,
-  Minus,
-  Plus,
-  RotateCcw,
-  ShieldAlert,
-  TrendingDown,
-  TrendingUp,
-  X,
-} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import * as LWC from "lightweight-charts";
+import { AlertCircle, Check, LogOut, Maximize2, Minus, Plus, RefreshCw, X } from "lucide-react";
 
 import { fetchMarkets } from "../../../../services/cryptoMarketAPI";
+import "./Live.css";
 
+/* ---------- Config: change values here ---------- */
 
-/* -------------------------------------------------------------------------- */
-/* Configuration                                                              */
-/* -------------------------------------------------------------------------- */
+const ROUTES = { setup: "/dashboard/rooms/online", home: "/dashboard" };
 
+// No backend yet: opponent and price movement are simulated and labelled as such.
 const DEMO_MODE = true;
-const OPPONENT_PNL = "live"; // "live" | "hidden"
+// "live" shows the opponent's P&L during the match, "hidden" shows it only after the match.
+const OPPONENT_PNL = "live";
 
-const ROUTES = {
-  setup: "/dashboard/rooms/online",
-  home: "/dashboard",
-};
-
-const STARTING_CAPITAL = 10_000;
-const MAX_RISK_PERCENT = 1;
+const PROFILE = { rating: 1200 };
+const START_CAPITAL = 10000;
 const MAX_TRADES = 10;
-const MAX_DRAWDOWN_PERCENT = 3;
-const SLIPPAGE_PERCENT = 0.01;
+const MAX_DRAWDOWN = 0.03;
+const MAX_LEVERAGE = 5;
+const SLIPPAGE = 0.0001;
+const RISK_OPTIONS = [0.0025, 0.005, 0.01];
+const TP_OPTIONS = [null, 1, 2, 3];
+const STOP_PRESETS = [
+  { label: "Tight", pct: 0.1 },
+  { label: "Normal", pct: 0.25 },
+  { label: "Wide", pct: 0.5 },
+];
+const STOP_MIN = 0.02;
+const STOP_MAX = 5;
+const STOP_STEP = 0.05;
+
 const CANDLE_SECONDS = 5;
-const PRICE_TICK_MS = 1000;
-const EMOTE_COOLDOWN_MS = 3000;
-const EMOTE_LIFETIME_MS = 2500;
+const HISTORY_CANDLES = 120;
+const MAX_CANDLES = 600;
+const TICK_MS = 1000;
+const VOL = 0.0005;
+const STALL_MS = 5000;
+const START_COUNTDOWN = 3;
 
-const RISK_OPTIONS = [0.25, 0.5, 1];
 const EMOTES = ["GG", "🔥", "😮", "😬", "👏", "😎"];
+const EMOTE_COOLDOWN_MS = 3000;
 
-const SYMBOL_NAMES = {
-  bitcoin: "BTC",
-  ethereum: "ETH",
-  solana: "SOL",
-  binancecoin: "BNB",
-  ripple: "XRP",
-  dogecoin: "DOGE",
-  "the-open-network": "TON",
-  "avalanche-2": "AVAX",
-  "chainlink": "LINK",
-  "matic-network": "POL",
+const SCORE = { rr: 40, consistency: 30, profit: 30, rrCap: 3, profitTargetPct: 2, penalty: 25 };
+const BOT = { fast: 5, slow: 15, stopFrac: 0.0025, tpMult: 2, riskFrac: 0.005, cooldownMs: 10000 };
+
+const SYMBOLS = { bitcoin: "BTC", ethereum: "ETH", solana: "SOL", dogecoin: "DOGE", ripple: "XRP", binancecoin: "BNB" };
+const FALLBACK_PRICES = { bitcoin: 80700, ethereum: 2377, solana: 102, dogecoin: 0.078, ripple: 1.29, binancecoin: 738 };
+
+const REASONS = {
+  time: "Time is up",
+  forfeit: "You forfeited the match",
+  "drawdown-you": "You breached the 3% max drawdown",
+  "drawdown-bot": "The opponent breached the max drawdown",
 };
 
-const DEFAULT_PRICE = 100;
+/* ---------- Helpers ---------- */
 
-const clamp = (value, min, max) =>
-  Math.min(max, Math.max(min, Number.isFinite(Number(value)) ? Number(value) : min));
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const pad = (n) => String(n).padStart(2, "0");
+const gauss = () => Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(2 * Math.PI * Math.random());
 
-const safeNumber = (value, fallback = 0) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
+const moneyFmt = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+const priceHi = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const priceLo = new Intl.NumberFormat("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 6 });
+
+const fmtPrice = (v) => (Number.isFinite(v) ? (v < 1 ? priceLo : priceHi).format(v) : "—");
+const fmtMoney = (v, signed = false) =>
+  Number.isFinite(v) ? `${signed && v > 0 ? "+" : ""}${moneyFmt.format(v)}` : "—";
+const fmtPct = (v) => (Number.isFinite(v) ? `${v > 0 ? "+" : ""}${v.toFixed(2)}%` : "—");
+const fmtSize = (v) => (Number.isFinite(v) ? v.toFixed(v < 1 ? 6 : v < 100 ? 4 : 2) : "—");
+const clock = (ms) => {
+  const s = Math.ceil(ms / 1000);
+  return `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
 };
+const tone = (v) => (v > 0 ? "text-emerald-400" : v < 0 ? "text-red-400" : "text-zinc-300");
 
-const formatMoney = (value, digits = 2) => {
-  if (!Number.isFinite(value)) return "—";
-
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(value);
-};
-
-const formatPrice = (value) => {
-  if (!Number.isFinite(value) || value <= 0) return "—";
-
-  const digits = value < 0.01 ? 6 : value < 1 ? 4 : value < 100 ? 3 : 2;
-
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(value);
-};
-
-const formatPercent = (value, digits = 2) => {
-  if (!Number.isFinite(value)) return "—";
-  return `${value > 0 ? "+" : ""}${value.toFixed(digits)}%`;
-};
-
-const formatClock = (seconds) => {
-  const total = Math.max(0, Math.ceil(safeNumber(seconds)));
-  const minutes = Math.floor(total / 60);
-  const remainder = total % 60;
-
-  return `${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
-};
-
-const getSymbolLabel = (symbol) => {
-  if (!symbol) return "ASSET";
-  return SYMBOL_NAMES[symbol] || symbol.replace(/-/g, " ").toUpperCase();
-};
-
-const getCountryName = (code) => {
-  if (!code) return "Unknown country";
-
-  try {
-    return new Intl.DisplayNames(["en"], { type: "region" }).of(
-      String(code).toUpperCase(),
-    ) || String(code).toUpperCase();
-  } catch {
-    return String(code).toUpperCase();
-  }
-};
-
-const getMarketPrice = (payload, symbol) => {
-  const rows = Array.isArray(payload)
-    ? payload
-    : payload?.data || payload?.coins || payload?.markets || [];
-
-  if (Array.isArray(rows)) {
-    const match = rows.find(
-      (item) =>
-        item?.id === symbol ||
-        item?.coinId === symbol ||
-        item?.symbol?.toLowerCase() === symbol?.toLowerCase(),
-    );
-
-    const price = safeNumber(
-      match?.current_price ??
-        match?.currentPrice ??
-        match?.price ??
-        match?.market_data?.current_price?.usd,
-      NaN,
-    );
-
-    if (Number.isFinite(price) && price > 0) return price;
-  }
-
-  if (!Array.isArray(payload) && payload && typeof payload === "object") {
-    const match = payload[symbol];
-    const price = safeNumber(
-      match?.current_price ?? match?.currentPrice ?? match?.price,
-      NaN,
-    );
-
-    if (Number.isFinite(price) && price > 0) return price;
-  }
-
-  return null;
-};
-
-const createCandle = (time, open, close, volatility = 0.001) => {
-  const spread = Math.max(Math.abs(close) * volatility, 0.000001);
-
-  return {
-    time,
-    open,
-    high: Math.max(open, close) + Math.random() * spread,
-    low: Math.max(0.000001, Math.min(open, close) - Math.random() * spread),
-    close,
-  };
-};
-
-const makeHistory = (basePrice, count = 120) => {
-  const now = Math.floor(Date.now() / 1000);
-  const start = now - count * CANDLE_SECONDS;
-  let previous = basePrice;
-
-  return Array.from({ length: count }, (_, index) => {
-    const open = previous;
-    const change = (Math.random() - 0.5) * basePrice * 0.006;
-    const close = Math.max(0.000001, open + change);
-    const candle = createCandle(
-      start + index * CANDLE_SECONDS,
-      open,
-      close,
-      0.002,
-    );
-
-    previous = close;
-    return candle;
+function emaSeries(values, period) {
+  const k = 2 / (period + 1);
+  const out = [];
+  let prev = 0;
+  values.forEach((v, i) => {
+    prev = i === 0 ? v : v * k + prev * (1 - k);
+    out.push(prev);
   });
-};
-
-const calcEma = (candles, period) => {
-  const multiplier = 2 / (period + 1);
-  let ema = null;
-
-  return candles.map((candle) => {
-    ema = ema === null
-      ? candle.close
-      : candle.close * multiplier + ema * (1 - multiplier);
-
-    return { time: candle.time, value: ema };
-  });
-};
-
-const calcSma = (candles, period) =>
-  candles
-    .map((candle, index) => {
-      if (index + 1 < period) return null;
-
-      const slice = candles.slice(index + 1 - period, index + 1);
-      const value = slice.reduce((sum, item) => sum + item.close, 0) / period;
-
-      return { time: candle.time, value };
-    })
-    .filter(Boolean);
-
-const calculatePositionPnl = (position, price) => {
-  if (!position || !Number.isFinite(price)) return 0;
-
-  const direction = position.side === "BUY" ? 1 : -1;
-  return (price - position.entry) * position.size * direction;
-};
-
-const computeScore = ({
-  pnl,
-  startingCapital,
-  closedTrades,
-  plannedRRs,
-  ruleViolations,
-  drawdownBreached,
-}) => {
-  const wins = closedTrades.filter((trade) => trade.pnl > 0).length;
-  const winRate = closedTrades.length ? wins / closedTrades.length : 0;
-  const averageRR = plannedRRs.length
-    ? plannedRRs.reduce((sum, rr) => sum + rr, 0) / plannedRRs.length
-    : 0;
-
-  const riskRewardPoints = (clamp(averageRR, 0, 3) / 3) * 40;
-  const compliance = clamp(1 - ruleViolations / MAX_TRADES, 0, 1);
-  const consistencyPoints = (winRate * 0.7 + compliance * 0.3) * 30;
-  const profitPercent = (pnl / startingCapital) * 100;
-  const profitPoints = (clamp(profitPercent, 0, 10) / 10) * 30;
-  const penalty = drawdownBreached ? 25 : 0;
-
-  return {
-    total: Math.round(
-      clamp(riskRewardPoints + consistencyPoints + profitPoints - penalty, 0, 100),
-    ),
-    riskReward: Math.round(riskRewardPoints),
-    consistency: Math.round(consistencyPoints),
-    profit: Math.round(profitPoints),
-    penalty,
-    winRate: winRate * 100,
-    averageRR,
-    profitPercent,
-  };
-};
-
-/* -------------------------------------------------------------------------- */
-/* Simulated price feed                                                        */
-/* -------------------------------------------------------------------------- */
-
-function usePriceFeed(symbol, candleSeconds) {
-  const [feed, setFeed] = useState({
-    candles: [],
-    price: null,
-    status: "loading",
-    isFallback: false,
-    error: "",
-  });
-
-  const seedRef = useRef(0);
-
-  const loadHistory = useCallback(async () => {
-    setFeed((current) => ({
-      ...current,
-      status: "loading",
-      error: "",
-    }));
-
-    try {
-      const response = await fetchMarkets();
-      const fetchedPrice = getMarketPrice(response, symbol);
-      const base = fetchedPrice || DEFAULT_PRICE;
-      const candles = makeHistory(base);
-
-      seedRef.current = base;
-
-      setFeed({
-        candles,
-        price: candles[candles.length - 1]?.close ?? base,
-        status: "connected",
-        isFallback: !fetchedPrice,
-        error: "",
-      });
-    } catch {
-      const fallback = seedRef.current || DEFAULT_PRICE;
-      const candles = makeHistory(fallback);
-
-      setFeed({
-        candles,
-        price: candles[candles.length - 1]?.close ?? fallback,
-        status: "demo",
-        isFallback: true,
-        error: "",
-      });
-    }
-  }, [symbol]);
-
-  useEffect(() => {
-    let mounted = true;
-    let timerId;
-
-    const start = async () => {
-      try {
-        const response = await fetchMarkets();
-        if (!mounted) return;
-
-        const fetchedPrice = getMarketPrice(response, symbol);
-        const base = fetchedPrice || DEFAULT_PRICE;
-        const candles = makeHistory(base);
-
-        seedRef.current = base;
-
-        setFeed({
-          candles,
-          price: candles[candles.length - 1]?.close ?? base,
-          status: "connected",
-          isFallback: !fetchedPrice,
-          error: "",
-        });
-      } catch {
-        if (!mounted) return;
-
-        const base = seedRef.current || DEFAULT_PRICE;
-        const candles = makeHistory(base);
-
-        setFeed({
-          candles,
-          price: candles[candles.length - 1]?.close ?? base,
-          status: "demo",
-          isFallback: true,
-          error: "",
-        });
-      }
-
-      if (!mounted) return;
-
-      timerId = window.setInterval(() => {
-        if (!mounted) return;
-
-        setFeed((current) => {
-          if (!current.candles.length || !Number.isFinite(current.price)) {
-            return current;
-          }
-
-          const previousPrice = current.price;
-          const volatility = Math.max(previousPrice * 0.0007, 0.000001);
-          const nextPrice = Math.max(
-            0.000001,
-            previousPrice + (Math.random() - 0.49) * volatility,
-          );
-
-          const now = Math.floor(Date.now() / 1000);
-          const bucket = Math.floor(now / candleSeconds) * candleSeconds;
-          const candles = [...current.candles];
-          const last = candles[candles.length - 1];
-
-          if (last.time === bucket) {
-            candles[candles.length - 1] = {
-              ...last,
-              high: Math.max(last.high, nextPrice),
-              low: Math.min(last.low, nextPrice),
-              close: nextPrice,
-            };
-          } else {
-            candles.push({
-              time: bucket,
-              open: last.close,
-              high: Math.max(last.close, nextPrice),
-              low: Math.min(last.close, nextPrice),
-              close: nextPrice,
-            });
-          }
-
-          if (candles.length > 240) candles.shift();
-
-          return {
-            ...current,
-            candles,
-            price: nextPrice,
-            status: "connected",
-          };
-        });
-      }, PRICE_TICK_MS);
-
-      // TODO(backend): Replace the simulated interval with a WebSocket market feed.
-    };
-
-    void start();
-
-    return () => {
-      mounted = false;
-      if (timerId) window.clearInterval(timerId);
-    };
-  }, [symbol, candleSeconds]);
-
-  return {
-    ...feed,
-    retry: loadHistory,
-  };
+  return out;
 }
 
-/* -------------------------------------------------------------------------- */
-/* Small presentational helpers                                                */
-/* -------------------------------------------------------------------------- */
+function smaSeries(values, period) {
+  const out = [];
+  let sum = 0;
+  values.forEach((v, i) => {
+    sum += v;
+    if (i >= period) sum -= values[i - period];
+    out.push(i >= period - 1 ? sum / period : null);
+  });
+  return out;
+}
 
-function CornerPanel({ children, className = "", title, right }) {
+/* ---------- Order engine (pure functions) ---------- */
+
+const newAccount = () => ({ balance: START_CAPITAL, position: null, trades: [], opened: 0 });
+
+const pnlOf = (pos, price) => (pos.side === "buy" ? (price - pos.entry) * pos.size : (pos.entry - price) * pos.size);
+
+const equityOf = (acct, price) =>
+  acct.balance + (acct.position && Number.isFinite(price) ? pnlOf(acct.position, price) : 0);
+
+const drawdownOf = (equity) => Math.max(0, (START_CAPITAL - equity) / START_CAPITAL);
+
+function computeOrder({ balance, price, side, stopFrac, riskFrac, tpMult }) {
+  if (!Number.isFinite(price) || !(stopFrac > 0) || !(balance > 0)) return null;
+  const entry = side === "buy" ? price * (1 + SLIPPAGE) : price * (1 - SLIPPAGE);
+  const dist = entry * stopFrac;
+  const stop = side === "buy" ? entry - dist : entry + dist;
+  let size = (balance * riskFrac) / dist;
+  const maxSize = (balance * MAX_LEVERAGE) / entry;
+  const capped = size > maxSize;
+  if (capped) size = maxSize;
+  const tp = tpMult ? (side === "buy" ? entry + dist * tpMult : entry - dist * tpMult) : null;
+  return { side, entry, stop, tp, size, riskAmount: size * dist, notional: size * entry, capped, tpMult: tpMult ?? null };
+}
+
+const openPosition = (acct, order, now) => ({ ...acct, opened: acct.opened + 1, position: { ...order, openedAt: now } });
+
+function closePosition(acct, exit, reason, now) {
+  const pos = acct.position;
+  if (!pos) return acct;
+  const pnl = pnlOf(pos, exit);
+  const trade = {
+    id: acct.opened,
+    side: pos.side,
+    entry: pos.entry,
+    exit,
+    size: pos.size,
+    pnl,
+    riskAmount: pos.riskAmount,
+    tpMult: pos.tpMult,
+    reason,
+    closedAt: now,
+  };
+  return { ...acct, balance: acct.balance + pnl, position: null, trades: [...acct.trades, trade] };
+}
+
+function marketExit(acct, price, reason, now) {
+  const pos = acct.position;
+  if (!pos) return acct;
+  const exit = pos.side === "buy" ? price * (1 - SLIPPAGE) : price * (1 + SLIPPAGE);
+  return closePosition(acct, exit, reason, now);
+}
+
+function checkExits(acct, price, now) {
+  const pos = acct.position;
+  if (!pos) return acct;
+  const long = pos.side === "buy";
+  if (long ? price <= pos.stop : price >= pos.stop) return closePosition(acct, price, "stop-loss", now);
+  if (pos.tp && (long ? price >= pos.tp : price <= pos.tp)) return closePosition(acct, pos.tp, "take-profit", now);
+  return acct;
+}
+
+function getBlockers({ phase, acct, price, stopPct }) {
+  const out = [];
+  if (phase === "ended") out.push("Match ended");
+  else if (phase !== "running") out.push("Match has not started");
+  if (!Number.isFinite(price)) out.push("Waiting for price");
+  if (!(stopPct >= STOP_MIN && stopPct <= STOP_MAX)) out.push(`Set a stop-loss between ${STOP_MIN}% and ${STOP_MAX}%`);
+  if (acct.position) out.push("Close your open position first");
+  if (acct.opened >= MAX_TRADES) out.push(`Trade limit reached (${MAX_TRADES})`);
+  return out;
+}
+
+/** Simulated opponent: EMA cross on completed candles. It never sees future prices. */
+function botStep(acct, candles, price, now, evalRef) {
+  if (acct.position || acct.opened >= MAX_TRADES) return acct;
+  const lastClosed = acct.trades[acct.trades.length - 1]?.closedAt ?? 0;
+  if (now - lastClosed < BOT.cooldownMs || candles.length < BOT.slow + 3) return acct;
+
+  const done = candles.slice(0, -1);
+  const stamp = done[done.length - 1].time;
+  if (evalRef.current === stamp) return acct;
+  evalRef.current = stamp;
+
+  const closes = done.map((c) => c.close);
+  const fast = emaSeries(closes, BOT.fast);
+  const slow = emaSeries(closes, BOT.slow);
+  const i = closes.length - 1;
+  const up = fast[i - 1] <= slow[i - 1] && fast[i] > slow[i];
+  const down = fast[i - 1] >= slow[i - 1] && fast[i] < slow[i];
+  if (!up && !down) return acct;
+
+  const order = computeOrder({
+    balance: acct.balance,
+    price,
+    side: up ? "buy" : "sell",
+    stopFrac: BOT.stopFrac,
+    riskFrac: BOT.riskFrac,
+    tpMult: BOT.tpMult,
+  });
+  return order ? openPosition(acct, order, now) : acct;
+}
+
+/* ---------- Scoring ---------- */
+
+function computeScore(acct, breach) {
+  const n = acct.trades.length;
+  const pnl = acct.balance - START_CAPITAL;
+  const pnlPct = (pnl / START_CAPITAL) * 100;
+  const penalty = breach ? SCORE.penalty : 0;
+  if (n === 0) return { n, pnl, pnlPct, winRate: 0, rr: 0, cons: 0, profit: 0, penalty, total: 0 };
+
+  const avgRR = acct.trades.reduce((sum, t) => sum + (t.tpMult ?? 1), 0) / n;
+  const wins = acct.trades.filter((t) => t.pnl > 0).length;
+  const blown = acct.trades.filter((t) => t.pnl < 0 && Math.abs(t.pnl) > t.riskAmount * 1.25).length;
+  const winRate = wins / n;
+  const rr = clamp(avgRR / SCORE.rrCap, 0, 1) * SCORE.rr;
+  const cons = (0.5 * winRate + 0.5 * (1 - blown / n)) * SCORE.consistency;
+  const profit = clamp(pnlPct / SCORE.profitTargetPct, 0, 1) * SCORE.profit;
+  return { n, pnl, pnlPct, winRate, rr, cons, profit, penalty, total: Math.max(0, rr + cons + profit - penalty) };
+}
+
+function buildResult(you, bot, reason) {
+  const s = computeScore(you, reason === "drawdown-you");
+  const b = computeScore(bot, reason === "drawdown-bot");
+
+  let outcome;
+  if (reason === "forfeit" || reason === "drawdown-you") outcome = "loss";
+  else if (reason === "drawdown-bot") outcome = "win";
+  else if (Math.abs(s.total - b.total) > 0.05) outcome = s.total > b.total ? "win" : "loss";
+  else outcome = s.pnl > b.pnl ? "win" : s.pnl < b.pnl ? "loss" : "draw";
+
+  const magnitude = Math.round(clamp(Math.abs(s.total - b.total) * 1.2 + 20, 10, 100));
+  const ratingDelta = outcome === "draw" ? 0 : outcome === "win" ? magnitude : -magnitude;
+
+  let why = "Higher score wins, not only higher profit.";
+  if (reason === "time") {
+    if (outcome === "win" && s.pnl < b.pnl) why = "You won with less profit: your risk-reward and consistency scored higher.";
+    else if (outcome === "loss" && s.pnl > b.pnl) why = "You made more profit, but the opponent scored higher on risk-reward and consistency.";
+  }
+  return { outcome, reasonText: REASONS[reason] ?? "", why, you: s, bot: b, ratingDelta };
+}
+
+/* ---------- Price feed (simulated) ---------- */
+
+function makeHistory(base) {
+  const closes = new Array(HISTORY_CANDLES);
+  closes[HISTORY_CANDLES - 1] = base;
+  const vol = VOL * Math.sqrt(CANDLE_SECONDS);
+  for (let i = HISTORY_CANDLES - 2; i >= 0; i -= 1) closes[i] = closes[i + 1] / (1 + gauss() * vol);
+
+  const t0 = Math.floor(Date.now() / 1000 / CANDLE_SECONDS) * CANDLE_SECONDS;
+  return closes.map((close, i) => {
+    const open = i === 0 ? close : closes[i - 1];
+    const spread = Math.abs(gauss()) * vol * 0.5;
+    return {
+      time: t0 - (HISTORY_CANDLES - i) * CANDLE_SECONDS,
+      open,
+      close,
+      high: Math.max(open, close) * (1 + spread),
+      low: Math.min(open, close) * (1 - spread),
+    };
+  });
+}
+
+/**
+ * Starts from the real CoinGecko price, then simulates movement tick by tick.
+ * TODO(backend): replace the interval below with a WebSocket price stream.
+ */
+function usePriceFeed(symbol, onTick) {
+  const [feed, setFeed] = useState({ status: "loading", candles: [], price: null, source: "demo" });
+  const [attempt, setAttempt] = useState(0);
+  const priceRef = useRef(null);
+  const candlesRef = useRef([]);
+  const lastTickRef = useRef(0);
+  const driftRef = useRef(0);
+  const onTickRef = useRef(onTick);
+
+  useEffect(() => {
+    onTickRef.current = onTick;
+  });
+
+  const build = useCallback((base, source, status) => {
+    const candles = makeHistory(base);
+    candlesRef.current = candles;
+    priceRef.current = candles[candles.length - 1].close;
+    lastTickRef.current = Date.now();
+    setFeed({ status, candles: candles.slice(), price: priceRef.current, source });
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let alive = true;
+
+    fetchMarkets({ page: 1, perPage: 30, signal: controller.signal })
+      .then((data) => {
+        if (!alive) return;
+        const coin = data.find((c) => c.id === symbol);
+        if (!coin || !Number.isFinite(coin.current_price)) throw new Error("Price not found");
+        build(coin.current_price, "coingecko", "ok");
+      })
+      .catch((err) => {
+        if (!alive || err.name === "AbortError") return;
+        setFeed((f) => ({ ...f, status: "error" }));
+      });
+
+    return () => {
+      alive = false;
+      controller.abort();
+    };
+  }, [symbol, attempt, build]);
+
+  const ready = feed.status === "ok" || feed.status === "fallback";
+
+  useEffect(() => {
+    if (!ready) return undefined;
+    let n = 0;
+    const id = setInterval(() => {
+      n += 1;
+      if (n % 15 === 1) driftRef.current = (Math.random() - 0.5) * 0.0006;
+      const prev = priceRef.current;
+      const next = Math.max(prev * (1 + driftRef.current + gauss() * VOL), prev * 0.5);
+      priceRef.current = next;
+      lastTickRef.current = Date.now();
+
+      const list = candlesRef.current;
+      const bucket = Math.floor(Date.now() / 1000 / CANDLE_SECONDS) * CANDLE_SECONDS;
+      const last = list[list.length - 1];
+      if (bucket > last.time) {
+        list.push({ time: bucket, open: last.close, high: Math.max(last.close, next), low: Math.min(last.close, next), close: next });
+      } else {
+        last.high = Math.max(last.high, next);
+        last.low = Math.min(last.low, next);
+        last.close = next;
+      }
+      if (list.length > MAX_CANDLES) list.splice(0, list.length - MAX_CANDLES);
+
+      setFeed((f) => ({ ...f, candles: list.slice(), price: next }));
+      onTickRef.current?.(next, list);
+    }, TICK_MS);
+    return () => clearInterval(id);
+  }, [ready]);
+
+  const retry = () => {
+    setFeed((f) => ({ ...f, status: "loading" }));
+    setAttempt((a) => a + 1);
+  };
+  const continueWithDemo = () => build(FALLBACK_PRICES[symbol] ?? 100, "demo", "fallback");
+
+  return { ...feed, ready, priceRef, lastTickRef, candlesRef, retry, continueWithDemo };
+}
+
+/* ---------- Small UI pieces ---------- */
+
+function FlagImg({ code, className = "h-7 w-10" }) {
+  const lower = String(code || "us").toLowerCase();
   return (
-    <section className={`lv-panel ${className}`}>
-      <span aria-hidden="true" className="lv-corner lv-corner-tl" />
-      <span aria-hidden="true" className="lv-corner lv-corner-br" />
+    <img
+      src={`https://flagcdn.com/w80/${lower}.png`}
+      srcSet={`https://flagcdn.com/w160/${lower}.png 2x`}
+      alt=""
+      className={`rounded-[3px] object-cover ${className}`}
+      onError={(event) => {
+        event.currentTarget.style.visibility = "hidden";
+      }}
+    />
+  );
+}
 
-      {(title || right) && (
-        <div className="mb-3 flex items-center justify-between gap-3">
-          {title && (
-            <h2 className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
-              {title}
-            </h2>
-          )}
+function Panel({ title, right, children, className = "" }) {
+  return (
+    <section className={`lv-panel p-3 ${className}`}>
+      {title && (
+        <h2 className="mb-2 flex items-center justify-between gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-400">
+          <span>{title}</span>
           {right}
-        </div>
+        </h2>
       )}
-
       {children}
     </section>
   );
 }
 
-function CountryFlag({ country, className = "" }) {
-  const [failed, setFailed] = useState(false);
-  const code = String(country || "").toLowerCase();
-
-  if (!code || failed) {
-    return (
-      <span
-        className={`flex size-8 items-center justify-center border border-white/10 bg-white/5 text-[10px] font-bold text-zinc-400 ${className}`}
-        aria-label={getCountryName(country)}
-      >
-        {code ? code.toUpperCase() : "??"}
+function DuelCard({ who, code, name, sub, pnl, pnlPct, hidden, emote }) {
+  const mirror = who === "opp";
+  return (
+    <div className={`lv-panel flex min-w-0 items-center gap-3 p-3 ${mirror ? "flex-row-reverse text-right" : ""}`}>
+      {emote && (
+        <span key={emote.key} className={`lv-bubble ${mirror ? "right-4" : "left-4"}`}>
+          {emote.text}
+        </span>
+      )}
+      <span className="lv-flag-ring shrink-0">
+        <span className="flex h-10 w-14 items-center justify-center bg-[#0b0b0b]">
+          <FlagImg code={code} className="h-7 w-10" />
+        </span>
       </span>
-    );
-  }
-
-  return (
-    <img
-      src={`https://flagcdn.com/w80/${code}.png`}
-      alt={`${getCountryName(country)} flag`}
-      className={`size-8 border border-white/10 object-cover ${className}`}
-      onError={() => setFailed(true)}
-    />
-  );
-}
-
-function Metric({ label, value, tone = "normal" }) {
-  const color = {
-    normal: "text-white",
-    positive: "text-emerald-300",
-    negative: "text-red-300",
-    orange: "text-orange-300",
-    muted: "text-zinc-500",
-  }[tone];
-
-  return (
-    <div className="flex items-center justify-between gap-3 py-1.5">
-      <span className="text-[10px] text-zinc-500">{label}</span>
-      <span className={`font-mono text-xs tabular-nums ${color}`}>{value}</span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-white">{name}</p>
+        <p className="truncate font-mono text-[11px] text-zinc-500">{sub}</p>
+      </div>
+      <div className={mirror ? "text-left" : "text-right"}>
+        <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-500">P&amp;L</p>
+        {hidden ? (
+          <p className="font-mono text-lg font-bold text-zinc-500">Trading...</p>
+        ) : (
+          <p
+            key={Math.round(pnl / 5)}
+            className={`font-mono text-2xl font-bold leading-7 tabular-nums ${tone(pnl)} ${
+              pnl > 0 ? "lv-flash-up" : pnl < 0 ? "lv-flash-down" : ""
+            }`}
+          >
+            {fmtMoney(pnl, true)}
+          </p>
+        )}
+        <p className={`font-mono text-[11px] ${hidden ? "text-zinc-600" : tone(pnl)}`}>{hidden ? "hidden" : fmtPct(pnlPct)}</p>
+      </div>
     </div>
   );
 }
 
+function TimerRing({ remaining, total, label }) {
+  const circumference = 2 * Math.PI * 44;
+  const fraction = total > 0 ? clamp(remaining / total, 0, 1) : 0;
+  const urgent = remaining > 0 && remaining <= 10000;
+  return (
+    <div role="timer" aria-label={`${clock(remaining)} left`} className={`relative size-28 shrink-0 text-orange-400 ${urgent ? "lv-urgent" : ""}`}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 size-full -rotate-90" aria-hidden="true">
+        <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
+        <circle
+          className="lv-ring-arc"
+          cx="50"
+          cy="50"
+          r="44"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - fraction)}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="lv-time font-mono text-2xl font-bold tabular-nums text-white">{clock(remaining)}</span>
+        <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-500">{label}</span>
+      </div>
+    </div>
+  );
+}
 
+/* ---------- Chart ---------- */
 
+function addSeries(chart, kind, options) {
+  if (typeof chart.addSeries === "function" && LWC[kind]) return chart.addSeries(LWC[kind], options); // v5
+  return kind === "CandlestickSeries" ? chart.addCandlestickSeries(options) : chart.addLineSeries(options); // v4
+}
 
-/* -------------------------------------------------------------------------- */
-/* Live match                                                                  */
-/* -------------------------------------------------------------------------- */
-
-export default function Live() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const setup = location.state;
-  const emoteIdRef = useRef(0);
-
-  const validSetup =
-    setup &&
-    typeof setup.symbol === "string" &&
-    [1, 3, 5].includes(Number(setup.minutes));
-
-  const symbol = validSetup ? setup.symbol : "bitcoin";
-  const symbolLabel = getSymbolLabel(symbol);
-  const matchMinutes = validSetup ? Number(setup.minutes) : 3;
-  const roomId = validSetup ? setup.roomId || "rm_demo" : "rm_demo";
-  const opponent = validSetup
-    ? setup.opponent || { country: "US", rating: 1000 }
-    : { country: "US", rating: 1000 };
-
-  const feed = usePriceFeed(symbol, CANDLE_SECONDS);
-
- const [chartReady] = useState(false);
-  const [countdown, setCountdown] = useState(3);
-  const [matchStartedAt, setMatchStartedAt] = useState(null);
-  const [now, setNow] = useState(0);
-
-        useEffect(() => {
-        const updateTime = () => setNow(Date.now());
-
-        updateTime();
-        const intervalId = setInterval(updateTime, 1000);
-
-        return () => clearInterval(intervalId);
-        }, []);
-        
-  const [matchEnded, setMatchEnded] = useState(false);
-  const [endReason, setEndReason] = useState("");
-  const [showForfeitConfirm, setShowForfeitConfirm] = useState(false);
-
-  const [balance, setBalance] = useState(STARTING_CAPITAL);
-  const [realisedPnl, setRealisedPnl] = useState(0);
-  const [position, setPosition] = useState(null);
-  const [tradeLog, setTradeLog] = useState([]);
-  const [tradesUsed, setTradesUsed] = useState(0);
-  const [riskPercent, setRiskPercent] = useState(0.5);
-  const [stopPrice, setStopPrice] = useState("");
-  const [takeProfitPrice, setTakeProfitPrice] = useState("");
-  const [sideError, setSideError] = useState("");
-  const [lastOrderMessage, setLastOrderMessage] = useState("");
-  const [plannedRRs, setPlannedRRs] = useState([]);
-  const drawdownBreached = endReason === "drawdown";
-
-  const [opponentBalance, setOpponentBalance] = useState(STARTING_CAPITAL);
-  const [opponentRealised, setOpponentRealised] = useState(0);
-  const [opponentPosition, setOpponentPosition] = useState(null);
-  const [opponentTrades, setOpponentTrades] = useState([]);
-  const [opponentLastEmote, setOpponentLastEmote] = useState(null);
-  const [userEmote, setUserEmote] = useState(null);
-  const [emoteCooldown, setEmoteCooldown] = useState(false);
-
-  const [showEma, setShowEma] = useState(false);
-  const [showSma, setShowSma] = useState(false);
-  const [chartError] = useState("");
-  const [isTabHidden, setIsTabHidden] = useState(false);
-
-  const chartContainerRef = useRef(null);
+function PriceChart({ candles, position, showEma, showSma, fitKey }) {
+  const boxRef = useRef(null);
   const chartRef = useRef(null);
-  const candleSeriesRef = useRef(null);
-  const emaSeriesRef = useRef(null);
-  const smaSeriesRef = useRef(null);
-  const entryLineRef = useRef(null);
-  const stopLineRef = useRef(null);
-  const targetLineRef = useRef(null);
-  const startedRef = useRef(false);
-  const orderLockRef = useRef(false);
-  const lastPriceRef = useRef(null);
-  const lastBotTradeRef = useRef(0);
-  const emoteTimerRef = useRef(null);
-  const cooldownTimerRef = useRef(null);
-  const startedAtRef = useRef(null);
-  const finalisedRef = useRef(false);
-  const positionRef = useRef(null);
-  const balanceRef = useRef(STARTING_CAPITAL);
-  const opponentPositionRef = useRef(null);
-  const opponentBalanceRef = useRef(STARTING_CAPITAL);
-  const [ruleViolations] = useState(0);
-  
+  const seriesRef = useRef(null);
+  const emaRef = useRef(null);
+  const smaRef = useRef(null);
+  const linesRef = useRef([]);
+  const initRef = useRef(false);
 
-  
-const currentPrice = Number.isFinite(feed.price)
-  ? feed.price
-  : null;
-
-useEffect(() => {
-  lastPriceRef.current = currentPrice;
-}, [currentPrice]);
-
-useEffect(() => {
-  positionRef.current = position;
-}, [position]);
-
-useEffect(() => {
-  balanceRef.current = balance;
-}, [balance]);
-
-useEffect(() => {
-  opponentPositionRef.current = opponentPosition;
-}, [opponentPosition]);
-
-useEffect(() => {
-  opponentBalanceRef.current = opponentBalance;
-}, [opponentBalance]);
-
-
-  const unrealisedPnl = calculatePositionPnl(position, currentPrice);
-  const equity = balance + unrealisedPnl;
-  const opponentUnrealised = calculatePositionPnl(opponentPosition, currentPrice);
-  const opponentPnl = opponentRealised + opponentUnrealised;
-  const userPnl = realisedPnl + unrealisedPnl;
-  const userPnlPercent = (userPnl / STARTING_CAPITAL) * 100;
-  const opponentPnlPercent = (opponentPnl / STARTING_CAPITAL) * 100;
-
-  const remainingSeconds = matchStartedAt
-    ? Math.max(
-        0,
-        matchMinutes * 60 - Math.floor((now - matchStartedAt) / 1000),
-      )
-    : matchMinutes * 60;
-
-  const timerProgress = remainingSeconds / (matchMinutes * 60);
-  const isCriticalTimer = matchStartedAt && remainingSeconds <= 10;
-  const drawdownPercent = Math.max(
-    0,
-    ((STARTING_CAPITAL - equity) / STARTING_CAPITAL) * 100,
-  );
-  const drawdownUsed = clamp(
-    (drawdownPercent / MAX_DRAWDOWN_PERCENT) * 100,
-    0,
-    100,
-  );
-
-  const plannedStop = safeNumber(stopPrice, NaN);
-  const plannedTarget = safeNumber(takeProfitPrice, NaN);
-  const stopIsValid =
-    currentPrice !== null &&
-    Number.isFinite(plannedStop) &&
-    plannedStop > 0 &&
-    plannedStop !== currentPrice;
-  const stopDistance = stopIsValid ? Math.abs(currentPrice - plannedStop) : 0;
-  const riskDollars = Math.max(0, balance * (riskPercent / 100));
-  const plannedSize = stopDistance > 0 ? riskDollars / stopDistance : 0;
-  const targetDistance = Number.isFinite(plannedTarget)
-    ? Math.abs(plannedTarget - currentPrice)
-    : 0;
-  const plannedRR = stopDistance > 0 && targetDistance > 0
-    ? targetDistance / stopDistance
-    : 0;
-
-  const stopSideValid = (side) => {
-    if (!stopIsValid) return false;
-    return side === "BUY" ? plannedStop < currentPrice : plannedStop > currentPrice;
-  };
-
-  const orderReason = !currentPrice
-    ? "Waiting for price feed"
-    : matchEnded
-      ? "Match has ended"
-      : countdown > 0
-        ? "Match starts shortly"
-        : position
-          ? "Close your open position first"
-          : tradesUsed >= MAX_TRADES
-            ? "Trade limit reached"
-            : !stopIsValid
-              ? "Set a valid stop-loss"
-              : "Ready to trade";
-
-  const userScore = useMemo(
-    () =>
-      computeScore({
-        pnl: userPnl,
-        startingCapital: STARTING_CAPITAL,
-        closedTrades: tradeLog,
-        plannedRRs,
-        ruleViolations,
-        drawdownBreached,
-      }),
-    [userPnl, tradeLog, plannedRRs, ruleViolations, drawdownBreached],
-  );
-
-  const opponentScore = useMemo(
-    () =>
-      computeScore({
-        pnl: opponentPnl,
-        startingCapital: STARTING_CAPITAL,
-        closedTrades: opponentTrades,
-        plannedRRs: opponentTrades.map((trade) => trade.rr || 0),
-        ruleViolations: 0,
-        drawdownBreached: false,
-      }),
-    [opponentPnl, opponentTrades],
-  );
-
-  const finishMatch = useCallback(
-    (reason) => {
-      if (finalisedRef.current) return;
-      finalisedRef.current = true;
-
-      const price = lastPriceRef.current;
-      const userOpen = positionRef.current;
-
-      if (userOpen && Number.isFinite(price)) {
-        const pnl = calculatePositionPnl(userOpen, price);
-        const nextBalance = balanceRef.current + pnl;
-
-        setTradeLog((current) => [
-          {
-            id: `${Date.now()}-final`,
-            side: userOpen.side,
-            pnl,
-            entry: userOpen.entry,
-            exit: price,
-            reason: reason === "forfeit" ? "forfeit" : "match end",
-            rr: userOpen.risk > 0 ? Math.abs(pnl) / userOpen.risk : 0,
-          },
-          ...current,
-        ].slice(0, 5));
-        setRealisedPnl((current) => current + pnl);
-        setBalance(nextBalance);
-        setPosition(null);
-        positionRef.current = null;
-        balanceRef.current = nextBalance;
-      }
-
-      const botOpen = opponentPositionRef.current;
-
-      if (botOpen && Number.isFinite(price)) {
-        const pnl = calculatePositionPnl(botOpen, price);
-        setOpponentRealised((current) => current + pnl);
-        setOpponentBalance((current) => current + pnl);
-        setOpponentTrades((current) => [
-          ...current,
-          {
-            id: `${Date.now()}-bot-final`,
-            side: botOpen.side,
-            pnl,
-            entry: botOpen.entry,
-            exit: price,
-            reason: "match end",
-            rr: botOpen.risk > 0 ? Math.abs(pnl) / botOpen.risk : 0,
-          },
-        ]);
-        setOpponentPosition(null);
-        opponentPositionRef.current = null;
-        opponentBalanceRef.current += pnl;
-      }
-
-      setEndReason(reason);
-      setMatchEnded(true);
-    },
-    [],
-  );
-
-  const closePosition = useCallback(
-    (reason = "manual") => {
-      if (matchEnded || !positionRef.current || !Number.isFinite(lastPriceRef.current)) {
-        return;
-      }
-
-      const open = positionRef.current;
-      const price = lastPriceRef.current;
-      const pnl = calculatePositionPnl(open, price);
-      const nextBalance = balanceRef.current + pnl;
-      const rr = open.risk > 0 ? Math.abs(pnl) / open.risk : 0;
-
-      setBalance(nextBalance);
-      setRealisedPnl((current) => current + pnl);
-      setPosition(null);
-      positionRef.current = null;
-      balanceRef.current = nextBalance;
-
-      setTradeLog((current) => [
-        {
-          id: `${Date.now()}-${current.length}`,
-          side: open.side,
-          pnl,
-          entry: open.entry,
-          exit: price,
-          reason,
-          rr,
-        },
-        ...current,
-      ].slice(0, 5));
-    },
-    [matchEnded],
-  );
-
-  const closeOpponentPosition = useCallback(
-    (reason = "manual") => {
-      const open = opponentPositionRef.current;
-      const price = lastPriceRef.current;
-
-      if (!open || !Number.isFinite(price)) return;
-
-      const pnl = calculatePositionPnl(open, price);
-      const nextBalance = opponentBalanceRef.current + pnl;
-
-      setOpponentBalance(nextBalance);
-      setOpponentRealised((current) => current + pnl);
-      setOpponentTrades((current) => [
-        {
-          id: `${Date.now()}-bot-${current.length}`,
-          side: open.side,
-          pnl,
-          entry: open.entry,
-          exit: price,
-          reason,
-          rr: open.risk > 0 ? Math.abs(pnl) / open.risk : 0,
-        },
-        ...current,
-      ]);
-      setOpponentPosition(null);
-      opponentPositionRef.current = null;
-      opponentBalanceRef.current = nextBalance;
-    },
-    [],
-  );
-
-  const placeOrder = useCallback(
-    (side) => {
-      if (orderLockRef.current) return;
-      orderLockRef.current = true;
-
-      try {
-        setSideError("");
-        setLastOrderMessage("");
-
-        if (matchEnded || countdown > 0) {
-          setSideError("Orders are unavailable until the match starts.");
-          return;
-        }
-
-        if (!Number.isFinite(lastPriceRef.current)) {
-          setSideError("Waiting for a valid market price.");
-          return;
-        }
-
-        if (positionRef.current) {
-          setSideError("Close your current position before opening another.");
-          return;
-        }
-
-        if (tradesUsed >= MAX_TRADES) {
-          setSideError("You have used all 10 trades for this match.");
-          return;
-        }
-
-        const entryPrice = lastPriceRef.current * (
-          side === "BUY"
-            ? 1 + SLIPPAGE_PERCENT / 100
-            : 1 - SLIPPAGE_PERCENT / 100
-        );
-        const stop = safeNumber(stopPrice, NaN);
-        const target = safeNumber(takeProfitPrice, NaN);
-
-        if (!Number.isFinite(stop) || stop <= 0) {
-          setSideError("Stop-loss is required.");
-          return;
-        }
-
-        if (side === "BUY" && stop >= entryPrice) {
-          setSideError("For Buy, stop-loss must be below the entry price.");
-          return;
-        }
-
-        if (side === "SELL" && stop <= entryPrice) {
-          setSideError("For Sell, stop-loss must be above the entry price.");
-          return;
-        }
-
-        if (riskPercent > MAX_RISK_PERCENT) {
-          setSideError("Risk cannot exceed 1% of the current balance.");
-          return;
-        }
-
-        const distance = Math.abs(entryPrice - stop);
-        const risk = balanceRef.current * (riskPercent / 100);
-        const size = risk / distance;
-
-        if (!Number.isFinite(size) || size <= 0) {
-          setSideError("The position size could not be calculated.");
-          return;
-        }
-
-        if (Number.isFinite(target)) {
-          if (side === "BUY" && target <= entryPrice) {
-            setSideError("For Buy, take-profit must be above entry.");
-            return;
-          }
-
-          if (side === "SELL" && target >= entryPrice) {
-            setSideError("For Sell, take-profit must be below entry.");
-            return;
-          }
-        }
-
-        const rr = Number.isFinite(target)
-          ? Math.abs(target - entryPrice) / distance
-          : 0;
-
-        const open = {
-          side,
-          entry: entryPrice,
-          stop,
-          target: Number.isFinite(target) ? target : null,
-          size,
-          risk,
-          rr,
-          openedAt: Date.now(),
-        };
-
-        setPosition(open);
-        positionRef.current = open;
-        setTradesUsed((current) => current + 1);
-        setPlannedRRs((current) => [...current, rr]);
-        setLastOrderMessage(
-          `${side} opened at ${formatPrice(entryPrice)}. Slippage included.`,
-        );
-      } finally {
-        orderLockRef.current = false;
-      }
-    },
-    [
-      matchEnded,
-      countdown,
-      tradesUsed,
-      stopPrice,
-      takeProfitPrice,
-      riskPercent,
-    ],
-  );
-
-  const closeUserPosition = useCallback(() => {
-    closePosition("manual");
-  }, [closePosition]);
-
-  /* Redirect if this page was opened without the match setup state. */
   useEffect(() => {
-    if (!validSetup) {
-      navigate(ROUTES.setup, { replace: true });
-    }
-  }, [validSetup, navigate]);
+    const el = boxRef.current;
+    if (!el) return undefined;
 
-  /* Countdown overlay, then begin the match using a timestamp. */
-  useEffect(() => {
-    if (!validSetup || feed.status === "loading" || startedRef.current) return undefined;
+    const chart = LWC.createChart(el, {
+      width: el.clientWidth,
+      height: el.clientHeight,
+      layout: {
+        background: { type: "solid", color: "transparent" },
+        textColor: "#a1a1aa",
+        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+        fontSize: 11,
+      },
+      grid: { vertLines: { color: "rgba(255,255,255,0.04)" }, horzLines: { color: "rgba(255,255,255,0.04)" } },
+      crosshair: {
+        mode: LWC.CrosshairMode.Normal,
+        vertLine: { color: "rgba(249,115,22,0.6)", labelBackgroundColor: "#f97316" },
+        horzLine: { color: "rgba(249,115,22,0.6)", labelBackgroundColor: "#f97316" },
+      },
+      rightPriceScale: { borderColor: "rgba(255,255,255,0.08)" },
+      timeScale: { borderColor: "rgba(255,255,255,0.08)", timeVisible: true, secondsVisible: true },
+    });
 
-    const startTimer = window.setTimeout(() => {
-      setCountdown((current) => Math.max(0, current - 1));
-    }, 1000);
+    const lineOptions = { visible: false, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false };
+    seriesRef.current = addSeries(chart, "CandlestickSeries", {
+      upColor: "#34d399",
+      downColor: "#f87171",
+      borderVisible: false,
+      wickUpColor: "#34d399",
+      wickDownColor: "#f87171",
+    });
+    emaRef.current = addSeries(chart, "LineSeries", { ...lineOptions, color: "#fb923c", lineWidth: 2 });
+    smaRef.current = addSeries(chart, "LineSeries", { ...lineOptions, color: "#e4e4e7", lineWidth: 1 });
+    chartRef.current = chart;
 
-    if (countdown === 0 && !startedRef.current) {
-      startedRef.current = true;
-      const start = Date.now();
-      startedAtRef.current = start;
-      setMatchStartedAt(start);
-      setNow(start);
-    }
-
-    return () => window.clearTimeout(startTimer);
-  }, [validSetup, feed.status, countdown]);
-
-  /* Keep time correct even when the browser tab is backgrounded. */
-  useEffect(() => {
-    if (!matchStartedAt || matchEnded) return undefined;
-
-    const intervalId = window.setInterval(() => {
-      setNow(Date.now());
-    }, 200);
-
-    const handleVisibility = () => {
-      setIsTabHidden(document.hidden);
-      setNow(Date.now());
-    };
-
-    document.addEventListener("visibilitychange", handleVisibility);
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) chart.applyOptions({ width, height });
+    });
+    observer.observe(el);
 
     return () => {
-      window.clearInterval(intervalId);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [matchStartedAt, matchEnded]);
-
-  
-  /* Finish on time or when the maximum drawdown is breached. */
-  useEffect(() => {
-    if (matchEnded || !matchStartedAt) return;
-
-    if (drawdownPercent >= MAX_DRAWDOWN_PERCENT) {
-      finishMatch("drawdown");
-      return;
-    }
-
-    if (remainingSeconds <= 0) {
-      finishMatch("time");
-    }
-  }, [
-    matchEnded,
-    matchStartedAt,
-    remainingSeconds,
-    drawdownPercent,
-    finishMatch,
-  ]);
-
-
-  /* Check user stop-loss and take-profit on every price update. */
-  useEffect(() => {
-    if (!position || matchEnded || currentPrice === null || !matchStartedAt) return;
-
-    if (
-      (position.side === "BUY" && currentPrice <= position.stop) ||
-      (position.side === "SELL" && currentPrice >= position.stop)
-    ) {
-      closePosition("stop-loss");
-      return;
-    }
-
-    if (
-      position.target !== null &&
-      ((position.side === "BUY" && currentPrice >= position.target) ||
-        (position.side === "SELL" && currentPrice <= position.target))
-    ) {
-      closePosition("take-profit");
-    }
-  }, [currentPrice, position, matchEnded, matchStartedAt, closePosition]);
-
-  /* Simple bot: trades only using current and previous observed prices. */
-  useEffect(() => {
-    if (
-      !DEMO_MODE ||
-      !matchStartedAt ||
-      matchEnded ||
-      countdown > 0 ||
-      currentPrice === null
-    ) {
-      return;
-    }
-
-    const lastBotAction = lastBotTradeRef.current;
-
-    if (Date.now() - lastBotAction < 9000) return;
-
-    if (opponentPositionRef.current) {
-      const open = opponentPositionRef.current;
-      const pnl = calculatePositionPnl(open, currentPrice);
-
-      if (
-        pnl >= open.risk * 1.2 ||
-        pnl <= -open.risk ||
-        Date.now() - open.openedAt > 18000
-      ) {
-        closeOpponentPosition(pnl <= -open.risk ? "stop-loss" : "manual");
-        lastBotTradeRef.current = Date.now();
-      }
-      return;
-    }
-
-    if (Math.random() > 0.18) return;
-
-    const side = Math.random() > 0.5 ? "BUY" : "SELL";
-    const risk = opponentBalanceRef.current * 0.005;
-    const stopDistance = currentPrice * 0.003;
-    const entry = currentPrice * (
-      side === "BUY"
-        ? 1 + SLIPPAGE_PERCENT / 100
-        : 1 - SLIPPAGE_PERCENT / 100
-    );
-
-    const open = {
-      side,
-      entry,
-      stop: side === "BUY" ? entry - stopDistance : entry + stopDistance,
-      target: side === "BUY" ? entry + stopDistance * 1.5 : entry - stopDistance * 1.5,
-      size: risk / stopDistance,
-      risk,
-      rr: 1.5,
-      openedAt: Date.now(),
-    };
-
-    setOpponentPosition(open);
-    opponentPositionRef.current = open;
-    lastBotTradeRef.current = Date.now();
-  }, [
-    currentPrice,
-    matchStartedAt,
-    matchEnded,
-    countdown,
-    closeOpponentPosition,
-  ]);
-
-  useEffect(() => {
-    if (!DEMO_MODE || !matchStartedAt || matchEnded) return undefined;
-
-    const intervalId = window.setInterval(() => {
-      if (Math.random() > 0.65) {
-        const emote = EMOTES[Math.floor(Math.random() * EMOTES.length)];
-        setOpponentLastEmote({ emote, id: Date.now() });
-      }
-    }, 6500);
-
-    return () => window.clearInterval(intervalId);
-  }, [matchStartedAt, matchEnded]);
-
-  useEffect(() => {
-    if (!opponentLastEmote) return undefined;
-
-    const timeoutId = window.setTimeout(() => {
-      setOpponentLastEmote(null);
-    }, EMOTE_LIFETIME_MS);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [opponentLastEmote]);
-
-  useEffect(() => {
-    if (!userEmote) return undefined;
-
-    emoteTimerRef.current = window.setTimeout(() => {
-      setUserEmote(null);
-    }, EMOTE_LIFETIME_MS);
-
-    return () => {
-      if (emoteTimerRef.current) window.clearTimeout(emoteTimerRef.current);
-    };
-  }, [userEmote]);
-
-  useEffect(() => {
-    return () => {
-      if (emoteTimerRef.current) window.clearTimeout(emoteTimerRef.current);
-      if (cooldownTimerRef.current) window.clearTimeout(cooldownTimerRef.current);
+      observer.disconnect();
+      chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
+      emaRef.current = null;
+      smaRef.current = null;
+      linesRef.current = [];
+      initRef.current = false;
     };
   }, []);
 
-  
-
-const sendEmote = (emote) => {
-  if (matchEnded || countdown > 0 || emoteCooldown) return;
-
-  emoteIdRef.current += 1;
-
-  setUserEmote({
-    emote,
-    id: emoteIdRef.current,
-  });
-
-  setEmoteCooldown(true);
-
-  cooldownTimerRef.current = window.setTimeout(() => {
-    setEmoteCooldown(false);
-  }, EMOTE_COOLDOWN_MS);
-};
-
-
-
-  
-  /* Create and destroy the chart instance safely. */
   useEffect(() => {
-    const container = chartContainerRef.current;
+    const series = seriesRef.current;
+    if (!series || candles.length === 0) return;
 
-    if (!container || feed.candles.length === 0) {
-      return undefined;
+    if (!initRef.current) {
+      const p = candles[candles.length - 1].close;
+      series.applyOptions({ priceFormat: { type: "price", precision: p < 1 ? 6 : 2, minMove: p < 1 ? 0.000001 : 0.01 } });
+      series.setData(candles);
+      chartRef.current?.timeScale().fitContent();
+      initRef.current = true;
+    } else {
+      series.update(candles[candles.length - 1]);
     }
 
-    let chart;
-    let candleSeries;
-    let emaSeries;
-    let smaSeries;
-    let resizeObserver;
-    let cancelled = false;
-
-    try {
-      const createChart = LightweightCharts.createChart;
-
-      if (typeof createChart !== "function") {
-        throw new Error("Lightweight Charts is unavailable.");
-      }
-
-      chart = createChart(container, {
-        autoSize: false,
-        width: container.clientWidth || 640,
-        height: container.clientHeight || 360,
-        layout: {
-          background: { type: "solid", color: "rgba(0,0,0,0)" },
-          textColor: "#8b8b8b",
-          fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-          fontSize: 10,
-        },
-        grid: {
-          vertLines: { color: "rgba(255,255,255,0.035)" },
-          horzLines: { color: "rgba(255,255,255,0.045)" },
-        },
-        crosshair: {
-          mode: LightweightCharts.CrosshairMode?.Normal ?? 0,
-          vertLine: {
-            color: "#f97316",
-            width: 1,
-            style: LightweightCharts.LineStyle?.Dashed ?? 2,
-            labelBackgroundColor: "#f97316",
-          },
-          horzLine: {
-            color: "#f97316",
-            labelBackgroundColor: "#f97316",
-          },
-        },
-        rightPriceScale: {
-          borderColor: "rgba(255,255,255,0.08)",
-          scaleMargins: { top: 0.12, bottom: 0.12 },
-        },
-        timeScale: {
-          borderColor: "rgba(255,255,255,0.08)",
-          timeVisible: true,
-          secondsVisible: false,
-          rightOffset: 3,
-        },
-        handleScroll: true,
-        handleScale: true,
-      });
-
-      const candleOptions = {
-        upColor: "#34d399",
-        downColor: "#f87171",
-        borderUpColor: "#34d399",
-        borderDownColor: "#f87171",
-        wickUpColor: "#34d399",
-        wickDownColor: "#f87171",
-      };
-
-      if (
-        typeof chart.addSeries === "function" &&
-        LightweightCharts.CandlestickSeries
-      ) {
-        candleSeries = chart.addSeries(
-          LightweightCharts.CandlestickSeries,
-          candleOptions,
-        );
-      } else if (typeof chart.addCandlestickSeries === "function") {
-        candleSeries = chart.addCandlestickSeries(candleOptions);
-      } else {
-        throw new Error("Unsupported Lightweight Charts API version.");
-      }
-
-      if (
-        typeof chart.addSeries === "function" &&
-        LightweightCharts.LineSeries
-      ) {
-        emaSeries = chart.addSeries(LightweightCharts.LineSeries, {
-          color: "#f97316",
-          lineWidth: 1,
-          priceLineVisible: false,
-          lastValueVisible: false,
-        });
-
-        smaSeries = chart.addSeries(LightweightCharts.LineSeries, {
-          color: "#60a5fa",
-          lineWidth: 1,
-          priceLineVisible: false,
-          lastValueVisible: false,
-        });
-      } else if (typeof chart.addLineSeries === "function") {
-        emaSeries = chart.addLineSeries({
-          color: "#f97316",
-          lineWidth: 1,
-          priceLineVisible: false,
-          lastValueVisible: false,
-        });
-
-        smaSeries = chart.addLineSeries({
-          color: "#60a5fa",
-          lineWidth: 1,
-          priceLineVisible: false,
-          lastValueVisible: false,
-        });
-      }
-
-      candleSeries.setData(feed.candles);
-      chart.timeScale().fitContent();
-
-      resizeObserver = new ResizeObserver((entries) => {
-        const entry = entries[0];
-
-        if (!entry || !chart || cancelled) return;
-
-        chart.applyOptions({
-          width: Math.max(1, Math.floor(entry.contentRect.width)),
-          height: Math.max(1, Math.floor(entry.contentRect.height)),
-        });
-      });
-
-      resizeObserver.observe(container);
-
-      chartRef.current = chart;
-      candleSeriesRef.current = candleSeries;
-      emaSeriesRef.current = emaSeries;
-      smaSeriesRef.current = smaSeries;
-
-      // Chart status is updated after initialization outside render.
-      // Keep the effect responsible for creating and cleaning up the chart.
-    } catch (error) {
-      chart?.remove();
-
-      if (!cancelled) {
-        console.error("Chart initialization failed:", error);
-      }
-    }
-
-    return () => {
-      cancelled = true;
-      resizeObserver?.disconnect();
-      chart?.remove();
-
-      if (chartRef.current === chart) chartRef.current = null;
-      if (candleSeriesRef.current === candleSeries) {
-        candleSeriesRef.current = null;
-      }
-      if (emaSeriesRef.current === emaSeries) emaSeriesRef.current = null;
-      if (smaSeriesRef.current === smaSeries) smaSeriesRef.current = null;
-    };
-  }, [feed.candles.length]);
-
+    const closes = candles.map((c) => c.close);
+    const toLine = (values) =>
+      candles.map((c, i) => ({ time: c.time, value: values[i] })).filter((d) => d.value != null);
+    emaRef.current?.setData(toLine(emaSeries(closes, 20)));
+    smaRef.current?.setData(toLine(smaSeries(closes, 50)));
+  }, [candles]);
 
   useEffect(() => {
-    const candleSeries = candleSeriesRef.current;
-    if (!candleSeries || !feed.candles.length) return;
-
-    candleSeries.setData(feed.candles);
-
-    const chart = chartRef.current;
-    if (chart && feed.candles.length === 1) chart.timeScale().fitContent();
-  }, [feed.candles]);
+    emaRef.current?.applyOptions({ visible: showEma });
+  }, [showEma]);
 
   useEffect(() => {
-    if (emaSeriesRef.current && feed.candles.length) {
-      emaSeriesRef.current.setData(showEma ? calcEma(feed.candles, 20) : []);
-    }
+    smaRef.current?.applyOptions({ visible: showSma });
+  }, [showSma]);
 
-    if (smaSeriesRef.current && feed.candles.length) {
-      smaSeriesRef.current.setData(showSma ? calcSma(feed.candles, 50) : []);
-    }
-  }, [feed.candles, showEma, showSma, chartReady]);
-
-  /* Update price lines for the user's open position. */
   useEffect(() => {
-    const series = candleSeriesRef.current;
+    const series = seriesRef.current;
     if (!series) return;
-
-    [entryLineRef.current, stopLineRef.current, targetLineRef.current]
-      .forEach((line) => {
-        if (line) {
-          try {
-            series.removePriceLine(line);
-          } catch {
-            // The chart may have been disposed during a StrictMode remount.
-          }
-        }
-      });
-
-    entryLineRef.current = null;
-    stopLineRef.current = null;
-    targetLineRef.current = null;
-
+    for (const line of linesRef.current) {
+      try {
+        series.removePriceLine(line);
+      } catch {
+        // The chart was already disposed.
+      }
+    }
+    linesRef.current = [];
     if (!position) return;
 
-    try {
-      entryLineRef.current = series.createPriceLine({
-        price: position.entry,
-        color: "#f97316",
+    const make = (price, color, title, dashed) =>
+      series.createPriceLine({
+        price,
+        color,
         lineWidth: 1,
-        lineStyle: LightweightCharts.LineStyle?.Solid ?? 0,
+        lineStyle: dashed ? LWC.LineStyle.Dashed : LWC.LineStyle.Solid,
         axisLabelVisible: true,
-        title: "ENTRY",
+        title,
       });
-
-      stopLineRef.current = series.createPriceLine({
-        price: position.stop,
-        color: "#f87171",
-        lineWidth: 1,
-        lineStyle: LightweightCharts.LineStyle?.Dashed ?? 2,
-        axisLabelVisible: true,
-        title: "STOP",
-      });
-
-      if (position.target !== null) {
-        targetLineRef.current = series.createPriceLine({
-          price: position.target,
-          color: "#34d399",
-          lineWidth: 1,
-          lineStyle: LightweightCharts.LineStyle?.Dashed ?? 2,
-          axisLabelVisible: true,
-          title: "TARGET",
-        });
-      }
-    } catch {
-      // A disposed chart is recreated by the chart lifecycle effect.
-    }
-  }, [position, chartReady]);
+    linesRef.current.push(make(position.entry, "#f97316", "ENTRY", false), make(position.stop, "#f87171", "SL", true));
+    if (position.tp) linesRef.current.push(make(position.tp, "#34d399", "TP", true));
+  }, [position]);
 
   useEffect(() => {
-    const handleKeys = (event) => {
-      const target = event.target;
-      const isTyping =
-        target instanceof HTMLElement &&
-        (target.isContentEditable ||
-          ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
-
-      if (isTyping || event.altKey || event.ctrlKey || event.metaKey) return;
-
-      const key = event.key.toLowerCase();
-
-      if (key === "b") placeOrder("BUY");
-      if (key === "s") placeOrder("SELL");
-      if (key === "x") closeUserPosition();
-    };
-
-    window.addEventListener("keydown", handleKeys);
-
-    return () => window.removeEventListener("keydown", handleKeys);
-  }, [placeOrder, closeUserPosition]);
-
-  const applyStopPreset = (preset) => {
-    if (!currentPrice) return;
-
-    const percent = {
-      tight: 0.15,
-      normal: 0.3,
-      wide: 0.5,
-    }[preset];
-
-    const distance = currentPrice * (percent / 100);
-    setStopPrice((currentPrice - distance).toFixed(currentPrice < 1 ? 6 : 4));
-    setSideError("");
-  };
-
-  const resetToSetup = () => {
-    navigate(ROUTES.setup);
-  };
-
-   const isForfeit = endReason === "forfeit";
-   const isDrawdownLoss = endReason === "drawdown";
-
-  const userWon =
-    !isForfeit &&
-    !isDrawdownLoss &&
-    userScore.total > opponentScore.total;
-
-  const isDraw =
-    !isForfeit &&
-    !isDrawdownLoss &&
-    userScore.total === opponentScore.total;
-
-  const resultLabel = isForfeit || isDrawdownLoss
-    ? "LOSS"
-    : isDraw
-      ? "DRAW"
-      : userWon
-        ? "VICTORY"
-        : "LOSS";
-
-  if (!validSetup) return null;
+    if (fitKey > 0) chartRef.current?.timeScale().fitContent();
+  }, [fitKey]);
 
   return (
-    <main className="lv-root h-dvh w-full overflow-hidden bg-[#050505] text-white">
-      <div className="lv-grid pointer-events-none absolute inset-0" aria-hidden="true" />
+    <div className="relative min-h-0 flex-1">
+      <div ref={boxRef} className="absolute inset-0" />
+    </div>
+  );
+}
 
-      <header className="relative z-10 flex min-h-13 items-center justify-between gap-3 border-b border-white/8 bg-[#080808]/95 px-3 sm:px-5">
+/* ---------- Right panel ---------- */
+
+function Meter({ value }) {
+  const used = clamp(value / MAX_DRAWDOWN, 0, 1);
+  const color = used < 0.5 ? "bg-emerald-400" : used < 0.8 ? "bg-orange-400" : "bg-red-500";
+  return (
+    <div>
+      <div className="flex justify-between font-mono text-[10px] text-zinc-500">
+        <span>Drawdown</span>
+        <span className={used >= 0.8 ? "text-red-400" : ""}>
+          {(value * 100).toFixed(2)}% / {(MAX_DRAWDOWN * 100).toFixed(2)}%
+        </span>
+      </div>
+      <div className="mt-1 h-1.5 bg-white/8">
+        <div className={`lv-dd ${color} h-full`} style={{ width: `${used * 100}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function AccountPanel({ acct, price }) {
+  const equity = equityOf(acct, price);
+  const realised = acct.balance - START_CAPITAL;
+  const unrealised = acct.position ? pnlOf(acct.position, price) : 0;
+  const cell = (label, value, colored) => (
+    <div>
+      <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-500">{label}</p>
+      <p className={`font-mono text-sm font-semibold tabular-nums ${colored ? tone(value) : "text-white"}`}>
+        {colored ? fmtMoney(value, true) : fmtMoney(value)}
+      </p>
+    </div>
+  );
+  return (
+    <Panel title="Account" className="shrink-0">
+      <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+        {cell("Balance", acct.balance)}
+        {cell("Equity", equity)}
+        {cell("Realised", realised, true)}
+        {cell("Unrealised", unrealised, true)}
+      </div>
+      <div className="mt-3">
+        <Meter value={drawdownOf(equity)} />
+      </div>
+    </Panel>
+  );
+}
+
+function Ticket({ symbol, phase, acct, price, buy, sell, riskIdx, setRiskIdx, stopText, setStopText, tp, setTp, onTrade }) {
+  const stopPct = parseFloat(stopText);
+  const blockers = getBlockers({ phase, acct, price, stopPct });
+  const blocked = blockers.length > 0;
+
+  const step = (delta) => {
+    const base = Number.isFinite(stopPct) ? stopPct : STOP_PRESETS[1].pct;
+    setStopText(String(clamp(Math.round((base + delta) * 100) / 100, STOP_MIN, STOP_MAX)));
+  };
+
+  const chip = (active) =>
+    `border px-2.5 py-1.5 font-mono text-[11px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
+      active ? "border-orange-500 bg-orange-500/15 text-orange-300" : "border-white/10 text-zinc-400 hover:text-white"
+    }`;
+  const label = "mb-1 font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-500";
+
+  return (
+    <Panel title="Order ticket" className="shrink-0">
+      <p className={label}>Risk per trade</p>
+      <div className="flex gap-1.5">
+        {RISK_OPTIONS.map((r, i) => (
+          <button key={r} type="button" aria-pressed={riskIdx === i} onClick={() => setRiskIdx(i)} className={chip(riskIdx === i)}>
+            {(r * 100).toFixed(2).replace(/\.?0+$/, "")}%
+          </button>
+        ))}
+      </div>
+
+      <p className={`${label} mt-2.5`}>Stop-loss distance (required)</p>
+      <div className="flex items-center gap-1.5">
+        <button type="button" aria-label="Tighter stop-loss" onClick={() => step(-STOP_STEP)} className={chip(false)}>
+          <Minus size={12} />
+        </button>
+        <div className="flex h-8 flex-1 items-center border border-white/10 bg-black/40 px-2">
+          <input
+            value={stopText}
+            onChange={(event) => setStopText(event.target.value)}
+            inputMode="decimal"
+            aria-label="Stop-loss distance in percent"
+            className="w-full bg-transparent font-mono text-sm text-white outline-none"
+          />
+          <span className="font-mono text-xs text-zinc-500">%</span>
+        </div>
+        <button type="button" aria-label="Wider stop-loss" onClick={() => step(STOP_STEP)} className={chip(false)}>
+          <Plus size={12} />
+        </button>
+      </div>
+      <div className="mt-1.5 flex gap-1.5">
+        {STOP_PRESETS.map((p) => (
+          <button key={p.label} type="button" onClick={() => setStopText(String(p.pct))} className={`${chip(stopPct === p.pct)} flex-1`}>
+            {p.label} {p.pct}%
+          </button>
+        ))}
+      </div>
+
+      <p className={`${label} mt-2.5`}>Take-profit (optional)</p>
+      <div className="flex gap-1.5">
+        {TP_OPTIONS.map((m) => (
+          <button key={m ?? "none"} type="button" aria-pressed={tp === m} onClick={() => setTp(m)} className={`${chip(tp === m)} flex-1`}>
+            {m ? `${m}R` : "None"}
+          </button>
+        ))}
+      </div>
+
+      <dl className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-[11px]">
+        <div className="flex justify-between"><dt className="text-zinc-500">Size</dt><dd className="text-zinc-200">{buy ? `${fmtSize(buy.size)} ${symbol}` : "—"}</dd></div>
+        <div className="flex justify-between"><dt className="text-zinc-500">Risk</dt><dd className="text-zinc-200">{buy ? fmtMoney(buy.riskAmount) : "—"}</dd></div>
+        <div className="flex justify-between"><dt className="text-zinc-500">R:R</dt><dd className="text-zinc-200">{tp ? `1 : ${tp}` : "—"}</dd></div>
+        <div className="flex justify-between"><dt className="text-zinc-500">Leverage</dt><dd className={buy?.capped ? "text-orange-300" : "text-zinc-200"}>{buy ? `${(buy.notional / acct.balance).toFixed(1)}x${buy.capped ? " cap" : ""}` : "—"}</dd></div>
+        <div className="flex justify-between"><dt className="text-zinc-500">Buy stop</dt><dd className="text-red-300">{buy ? fmtPrice(buy.stop) : "—"}</dd></div>
+        <div className="flex justify-between"><dt className="text-zinc-500">Sell stop</dt><dd className="text-red-300">{sell ? fmtPrice(sell.stop) : "—"}</dd></div>
+      </dl>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <button
           type="button"
-          onClick={() => setShowForfeitConfirm(true)}
-          className="lv-button inline-flex items-center gap-2 border border-red-400/20 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-red-300 transition hover:border-red-400/50 hover:bg-red-400/5 focus-visible:outline-2  focus-visible:outline-orange-400"
+          disabled={blocked}
+          onClick={() => onTrade("buy")}
+          className="lv-buy h-11 bg-emerald-500 font-mono text-sm font-bold tracking-widest text-black transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 disabled:cursor-not-allowed disabled:opacity-35"
         >
-          <Flag size={13} />
-          Forfeit
+          BUY <span className="ml-1 text-[10px] font-normal opacity-70">[B]</span>
         </button>
+        <button
+          type="button"
+          disabled={blocked}
+          onClick={() => onTrade("sell")}
+          className="lv-sell h-11 bg-red-500 font-mono text-sm font-bold tracking-widest text-black transition hover:bg-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300 disabled:cursor-not-allowed disabled:opacity-35"
+        >
+          SELL <span className="ml-1 text-[10px] font-normal opacity-70">[S]</span>
+        </button>
+      </div>
+      <p className={`mt-1.5 min-h-4 font-mono text-[10px] ${blocked ? "text-amber-300" : "text-zinc-600"}`}>
+        {blocked ? blockers[0] : "Market order. Fills with small simulated slippage."}
+      </p>
+    </Panel>
+  );
+}
 
-        <div className="min-w-0 text-center">
-          <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500">
-            Online mode / Live match
-          </p>
-          <p className="truncate font-mono text-[10px] text-zinc-300">
-            ROOM {roomId}
-          </p>
+function PositionPanel({ acct, price, symbol, onClose, canClose }) {
+  const pos = acct.position;
+  if (!pos) {
+    return (
+      <Panel title="Open position" className="shrink-0">
+        <p className="font-mono text-[11px] text-zinc-500">No open position. One position at a time.</p>
+      </Panel>
+    );
+  }
+  const pnl = pnlOf(pos, price);
+  return (
+    <Panel
+      title="Open position"
+      className="shrink-0"
+      right={<span className={`px-1.5 py-0.5 text-[10px] ${pos.side === "buy" ? "bg-emerald-500/20 text-emerald-300" : "bg-red-500/20 text-red-300"}`}>{pos.side.toUpperCase()}</span>}
+    >
+      <div className="flex items-end justify-between">
+        <p className={`font-mono text-xl font-bold tabular-nums ${tone(pnl)}`}>{fmtMoney(pnl, true)}</p>
+        <button
+          type="button"
+          disabled={!canClose}
+          onClick={onClose}
+          className="border border-white/15 px-3 py-1.5 font-mono text-[11px] text-zinc-200 transition hover:border-orange-500/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 disabled:opacity-40"
+        >
+          Close [X]
+        </button>
+      </div>
+      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-[11px]">
+        <div className="flex justify-between"><dt className="text-zinc-500">Size</dt><dd className="text-zinc-200">{fmtSize(pos.size)} {symbol}</dd></div>
+        <div className="flex justify-between"><dt className="text-zinc-500">Now</dt><dd className="text-zinc-200">{fmtPrice(price)}</dd></div>
+        <div className="flex justify-between"><dt className="text-zinc-500">Entry</dt><dd className="text-zinc-200">{fmtPrice(pos.entry)}</dd></div>
+        <div className="flex justify-between"><dt className="text-zinc-500">SL</dt><dd className="text-red-300">{fmtPrice(pos.stop)}</dd></div>
+        <div className="flex justify-between"><dt className="text-zinc-500">TP</dt><dd className="text-emerald-300">{pos.tp ? fmtPrice(pos.tp) : "—"}</dd></div>
+      </dl>
+    </Panel>
+  );
+}
+
+function RulesLog({ tab, setTab, rules, trades }) {
+  const tabClass = (active) =>
+    `border-b-2 px-2 pb-1 font-mono text-[10px] uppercase tracking-[0.2em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
+      active ? "border-orange-500 text-orange-300" : "border-transparent text-zinc-500 hover:text-zinc-300"
+    }`;
+  const recent = trades.slice(-5).reverse();
+  return (
+    <Panel className="shrink-0">
+      <div className="mb-2 flex gap-3" role="tablist">
+        <button type="button" role="tab" aria-selected={tab === "rules"} onClick={() => setTab("rules")} className={tabClass(tab === "rules")}>Rules</button>
+        <button type="button" role="tab" aria-selected={tab === "log"} onClick={() => setTab("log")} className={tabClass(tab === "log")}>Trade log</button>
+      </div>
+      {tab === "rules" ? (
+        <ul className="space-y-1.5">
+          {rules.map((rule) => (
+            <li key={rule.label} className="flex items-center gap-2 font-mono text-[11px]">
+              {rule.ok ? <Check size={13} className="shrink-0 text-emerald-400" /> : <X size={13} className="shrink-0 text-red-400" />}
+              <span className="text-zinc-300">{rule.label}</span>
+              <span className={`ml-auto ${rule.ok ? "text-zinc-500" : "text-red-300"}`}>{rule.note}</span>
+            </li>
+          ))}
+        </ul>
+      ) : recent.length === 0 ? (
+        <p className="font-mono text-[11px] text-zinc-500">No closed trades yet.</p>
+      ) : (
+        <ul className="space-y-1">
+          {recent.map((t) => (
+            <li key={t.id} className="flex items-center gap-2 font-mono text-[11px]">
+              <span className={t.side === "buy" ? "text-emerald-300" : "text-red-300"}>{t.side.toUpperCase()}</span>
+              <span className="text-zinc-500">{t.reason}</span>
+              <span className={`ml-auto tabular-nums ${tone(t.pnl)}`}>{fmtMoney(t.pnl, true)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
+  );
+}
+
+/* ---------- Overlays ---------- */
+
+function StartOverlay({ feed, count }) {
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      {feed.status === "loading" && (
+        <div role="status" className="text-center">
+          <RefreshCw size={26} className="mx-auto animate-spin text-orange-500" />
+          <p className="mt-4 font-mono text-xs uppercase tracking-[0.25em] text-zinc-300">Loading market data</p>
+        </div>
+      )}
+      {feed.status === "error" && (
+        <div role="alert" className="lv-panel max-w-sm p-6 text-center">
+          <AlertCircle size={22} className="mx-auto text-red-400" />
+          <p className="mt-3 text-sm text-zinc-200">Could not load the market price.</p>
+          <p className="mt-1 text-xs text-zinc-500">Retry, or continue with a clearly labelled demo price.</p>
+          <div className="mt-4 flex justify-center gap-2">
+            <button type="button" onClick={feed.retry} className="border border-orange-400 bg-orange-500 px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider text-black">Retry</button>
+            <button type="button" onClick={feed.continueWithDemo} className="border border-white/15 px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-zinc-200">Use demo price</button>
+          </div>
+        </div>
+      )}
+      {feed.ready && (
+        <div className="text-center" role="status">
+          <p className="font-mono text-xs uppercase tracking-[0.35em] text-orange-400">Match starts in</p>
+          <p key={count} className="lv-count font-mono text-9xl font-bold text-white">{count}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TradeTable({ title, trades }) {
+  return (
+    <div>
+      <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">{title}</p>
+      {trades.length === 0 ? (
+        <p className="font-mono text-[11px] text-zinc-600">No trades</p>
+      ) : (
+        <ul className="space-y-1">
+          {trades.slice(-6).map((t) => (
+            <li key={t.id} className="flex items-center gap-2 font-mono text-[11px]">
+              <span className={t.side === "buy" ? "text-emerald-300" : "text-red-300"}>{t.side.toUpperCase()}</span>
+              <span className="text-zinc-500">{fmtPrice(t.entry)} to {fmtPrice(t.exit)}</span>
+              <span className={`ml-auto tabular-nums ${tone(t.pnl)}`}>{fmtMoney(t.pnl, true)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ScoreColumn({ title, score, winner }) {
+  const row = (label, value) => (
+    <div className="flex justify-between font-mono text-[11px]">
+      <span className="text-zinc-500">{label}</span>
+      <span className="text-zinc-200">{value}</span>
+    </div>
+  );
+  return (
+    <div className={`border p-3 ${winner ? "border-orange-500/60 bg-orange-500/6" : "border-white/10"}`}>
+      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">{title}</p>
+      <p className={`mt-1 font-mono text-xl font-bold ${tone(score.pnl)}`}>{fmtMoney(score.pnl, true)}</p>
+      <p className="mb-2 font-mono text-[11px] text-zinc-500">{fmtPct(score.pnlPct)} · {score.n} trades · {Math.round(score.winRate * 100)}% wins</p>
+      <div className="space-y-0.5 border-t border-white/10 pt-2">
+        {row(`R:R (of ${SCORE.rr})`, score.rr.toFixed(1))}
+        {row(`Consistency (of ${SCORE.consistency})`, score.cons.toFixed(1))}
+        {row(`Profit (of ${SCORE.profit})`, score.profit.toFixed(1))}
+        {score.penalty > 0 && row("Breach penalty", `-${score.penalty}`)}
+        <div className="flex justify-between border-t border-white/10 pt-1 font-mono text-sm font-bold">
+          <span className="text-zinc-300">Score</span>
+          <span className="text-orange-300">{score.total.toFixed(1)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResultOverlay({ result, you, bot, onAgain, onHome, againRef }) {
+  const title = result.outcome === "win" ? "Victory" : result.outcome === "loss" ? "Defeat" : "Draw";
+  const color = result.outcome === "win" ? "text-emerald-400" : result.outcome === "loss" ? "text-red-400" : "text-zinc-200";
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/85 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Match result">
+      <div className="lv-panel lv-pop my-auto w-full max-w-2xl p-5">
+        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-zinc-500">{result.reasonText}</p>
+        <h2 className={`mt-1 font-mono text-4xl font-bold tracking-widest ${color}`}>{title.toUpperCase()}</h2>
+        <p className="mt-2 text-sm leading-6 text-zinc-400">{result.why}</p>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <ScoreColumn title="You" score={result.you} winner={result.outcome === "win"} />
+          <ScoreColumn title="Unknown trader" score={result.bot} winner={result.outcome === "loss"} />
         </div>
 
+        <p className="mt-3 border-l-2 border-orange-500/60 pl-3 font-mono text-[11px] leading-5 text-zinc-400">
+          Score = R:R {SCORE.rr} + Consistency {SCORE.consistency} + Profit {SCORE.profit}, minus a penalty for a drawdown breach.
+          Higher score wins, not just higher profit.
+        </p>
+        <p className="mt-2 font-mono text-xs text-zinc-300">
+          Rating change (demo): <span className={tone(result.ratingDelta)}>{result.ratingDelta > 0 ? "+" : ""}{result.ratingDelta}</span>
+        </p>
+
+        <div className="mt-4 grid gap-4 border-t border-white/10 pt-3 sm:grid-cols-2">
+          <TradeTable title="Your trades" trades={you.trades} />
+          <TradeTable title="Opponent trades (revealed)" trades={bot.trades} />
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          <button ref={againRef} type="button" onClick={onAgain} className="border border-orange-400 bg-orange-500 px-5 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-black transition hover:bg-orange-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300">
+            Play again
+          </button>
+          <button type="button" onClick={onHome} className="border border-white/15 px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-200 transition hover:border-orange-500/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400">
+            Back to dashboard
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ForfeitDialog({ onKeep, onForfeit }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" role="alertdialog" aria-modal="true" aria-label="Forfeit match">
+      <div className="lv-panel lv-pop w-full max-w-sm p-5">
+        <h2 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">Forfeit this match?</h2>
+        <p className="mt-2 text-sm leading-6 text-zinc-400">The match will count as a loss. Open positions are closed at the current price.</p>
+        <div className="mt-4 flex gap-2">
+          <button type="button" autoFocus onClick={onKeep} className="border border-orange-400 bg-orange-500 px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider text-black">Keep playing</button>
+          <button type="button" onClick={onForfeit} className="border border-red-500/60 px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-red-300">Forfeit</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Page ---------- */
+
+function LiveMatch({ setup }) {
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+
+  const symbol = setup.symbol;
+  const ticker = SYMBOLS[symbol] ?? symbol.toUpperCase();
+  const minutes = [1, 3, 5].includes(setup.minutes) ? setup.minutes : 3;
+  const total = minutes * 60000;
+  const opponent = setup.opponent ?? { country: "US", rating: PROFILE.rating };
+  const roomId = params.get("roomId") ?? setup.roomId ?? "rm_demo";
+
+  const [phase, setPhase] = useState("countdown"); // countdown | running | ended
+  const [count, setCount] = useState(START_COUNTDOWN);
+  const [remaining, setRemaining] = useState(total);
+  const [reason, setReason] = useState("");
+  const [announce, setAnnounce] = useState("");
+  const [stalled, setStalled] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const [you, setYou] = useState(newAccount);
+  const [bot, setBot] = useState(newAccount);
+  const [riskIdx, setRiskIdx] = useState(1);
+  const [stopText, setStopText] = useState("0.25");
+  const [tp, setTp] = useState(2);
+  const [tab, setTab] = useState("rules");
+  const [showEma, setShowEma] = useState(true);
+  const [showSma, setShowSma] = useState(false);
+  const [fitKey, setFitKey] = useState(0);
+  const [emotes, setEmotes] = useState({ you: null, opp: null });
+  const [cooling, setCooling] = useState(false);
+
+  const phaseRef = useRef("countdown");
+  const youRef = useRef(you);
+  const botRef = useRef(bot);
+  const deadlineRef = useRef(0);
+  const announcedRef = useRef(new Set());
+  const botEvalRef = useRef(0);
+  const botEmoteAtRef = useRef(0);
+  const emoteTimerRef = useRef(null);
+  const againRef = useRef(null);
+  const latest = useRef({});
+
+  const feed = usePriceFeed(symbol, (price, candles) => latest.current.handleTick?.(price, candles));
+  const price = feed.price;
+
+  const commitYou = (next) => {
+    youRef.current = next;
+    setYou(next);
+  };
+  const commitBot = (next) => {
+    botRef.current = next;
+    setBot(next);
+  };
+  const showEmote = (who, text) => setEmotes((prev) => ({ ...prev, [who]: { key: Date.now() + Math.random(), text } }));
+
+  const finish = (why, atPrice) => {
+    if (phaseRef.current === "ended") return;
+    phaseRef.current = "ended";
+    const p = Number.isFinite(atPrice) ? atPrice : feed.priceRef.current;
+    const now = Date.now();
+    if (Number.isFinite(p)) {
+      commitYou(marketExit(youRef.current, p, "match end", now));
+      commitBot(marketExit(botRef.current, p, "match end", now));
+    }
+    setReason(why);
+    setPhase("ended");
+    setConfirmOpen(false);
+    setAnnounce("Match ended");
+  };
+
+  const handleTick = (tickPrice, candles) => {
+    if (phaseRef.current !== "running") return;
+    const now = Date.now();
+
+    const before = youRef.current;
+    const afterYou = checkExits(before, tickPrice, now);
+    if (afterYou !== before) {
+      commitYou(afterYou);
+      const closed = afterYou.trades[afterYou.trades.length - 1];
+      setAnnounce(`Position closed by ${closed.reason}: ${fmtMoney(closed.pnl, true)}`);
+    }
+
+    let nextBot = checkExits(botRef.current, tickPrice, now);
+    nextBot = botStep(nextBot, candles, tickPrice, now, botEvalRef);
+    if (nextBot !== botRef.current) commitBot(nextBot);
+
+    if (Math.random() < 0.025 && now - botEmoteAtRef.current > 9000) {
+      botEmoteAtRef.current = now;
+      showEmote("opp", EMOTES[Math.floor(Math.random() * EMOTES.length)]);
+    }
+
+    if (drawdownOf(equityOf(youRef.current, tickPrice)) >= MAX_DRAWDOWN) finish("drawdown-you", tickPrice);
+    else if (drawdownOf(equityOf(botRef.current, tickPrice)) >= MAX_DRAWDOWN) finish("drawdown-bot", tickPrice);
+  };
+
+  const stopPct = parseFloat(stopText);
+  const previewBase = { balance: you.balance, price, stopFrac: stopPct / 100, riskFrac: RISK_OPTIONS[riskIdx], tpMult: tp };
+  const previewBuy = computeOrder({ ...previewBase, side: "buy" });
+  const previewSell = computeOrder({ ...previewBase, side: "sell" });
+
+  const placeOrder = (side) => {
+    const acct = youRef.current;
+    const livePrice = feed.priceRef.current;
+    if (getBlockers({ phase: phaseRef.current, acct, price: livePrice, stopPct }).length > 0) return;
+    const order = computeOrder({
+      balance: acct.balance,
+      price: livePrice,
+      side,
+      stopFrac: stopPct / 100,
+      riskFrac: RISK_OPTIONS[riskIdx],
+      tpMult: tp,
+    });
+    if (!order) return;
+    commitYou(openPosition(acct, order, Date.now()));
+    setAnnounce(`${side === "buy" ? "Buy" : "Sell"} position opened`);
+  };
+
+  const closeNow = () => {
+    if (phaseRef.current !== "running" || !youRef.current.position) return;
+    const next = marketExit(youRef.current, feed.priceRef.current, "manual", Date.now());
+    commitYou(next);
+    const closed = next.trades[next.trades.length - 1];
+    setAnnounce(`Position closed: ${fmtMoney(closed.pnl, true)}`);
+  };
+
+  const sendEmote = (text) => {
+    if (cooling || phaseRef.current === "ended") return;
+    showEmote("you", text);
+    setCooling(true);
+    clearTimeout(emoteTimerRef.current);
+    emoteTimerRef.current = setTimeout(() => setCooling(false), EMOTE_COOLDOWN_MS);
+  };
+
+  useEffect(() => {
+    latest.current = { handleTick, finish, placeOrder, closeNow, escape: () => setConfirmOpen(false) };
+  });
+
+  useEffect(() => () => clearTimeout(emoteTimerRef.current), []);
+
+  // 3-2-1 countdown, started once the price is ready.
+  useEffect(() => {
+    if (phase !== "countdown" || !feed.ready) return undefined;
+    let n = START_COUNTDOWN;
+    const id = setInterval(() => {
+      n -= 1;
+      if (n > 0) {
+        setCount(n);
+        return;
+      }
+      clearInterval(id);
+      deadlineRef.current = Date.now() + total;
+      phaseRef.current = "running";
+      setRemaining(total);
+      setPhase("running");
+      setAnnounce("Match started");
+    }, 1000);
+    return () => clearInterval(id);
+  }, [phase, feed.ready, total]);
+
+  // Match timer based on timestamps, so a hidden tab cannot slow it down.
+  useEffect(() => {
+    if (phase !== "running") return undefined;
+    const id = setInterval(() => {
+      const now = Date.now();
+      const ms = Math.max(0, deadlineRef.current - now);
+      setRemaining(ms);
+      setStalled(now - feed.lastTickRef.current > STALL_MS);
+
+      const secs = Math.ceil(ms / 1000);
+      if ([60, 30, 10].includes(secs) && !announcedRef.current.has(secs)) {
+        announcedRef.current.add(secs);
+        setAnnounce(`${secs} seconds left`);
+      }
+      if (ms <= 0) latest.current.finish?.("time");
+    }, 250);
+    return () => clearInterval(id);
+  }, [phase, feed.lastTickRef]);
+
+  useEffect(() => {
+    if (phase === "ended") againRef.current?.focus();
+  }, [phase]);
+
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target?.isContentEditable) return;
+      const key = event.key.toLowerCase();
+      if (key === "escape") latest.current.escape?.();
+      else if (key === "b") latest.current.placeOrder?.("buy");
+      else if (key === "s") latest.current.placeOrder?.("sell");
+      else if (key === "x") latest.current.closeNow?.();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const result = useMemo(() => (phase === "ended" ? buildResult(you, bot, reason) : null), [phase, you, bot, reason]);
+
+  const youEquity = equityOf(you, price);
+  const botEquity = equityOf(bot, price);
+  const youPnl = youEquity - START_CAPITAL;
+  const botPnl = botEquity - START_CAPITAL;
+  const dd = drawdownOf(youEquity);
+  const stopOk = Number.isFinite(stopPct) && stopPct >= STOP_MIN && stopPct <= STOP_MAX;
+  const rules = [
+    { ok: you.position ? true : stopOk, label: "Stop-loss set", note: you.position ? "on position" : stopOk ? `${stopPct}%` : "missing" },
+    { ok: !previewBuy || previewBuy.riskAmount <= you.balance * 0.01 + 0.01, label: "Risk within 1%", note: previewBuy ? fmtMoney(previewBuy.riskAmount) : "—" },
+    { ok: dd < MAX_DRAWDOWN, label: "Drawdown used", note: `${(dd * 100).toFixed(2)}% of ${MAX_DRAWDOWN * 100}%` },
+    { ok: you.opened < MAX_TRADES, label: "Trades used", note: `${you.opened} of ${MAX_TRADES}` },
+  ];
+
+  const running = phase === "running";
+  const sourceLabel = feed.source === "coingecko" ? "Sim feed · CoinGecko base" : "Demo price";
+
+  return (
+    <main className="lv-root flex h-dvh flex-col overflow-hidden text-zinc-100 max-lg:h-auto max-lg:min-h-dvh max-lg:overflow-visible">
+      <p className="sr-only" aria-live="polite">{announce}</p>
+
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/10 px-3 py-2">
+        <button
+          type="button"
+          disabled={phase === "ended"}
+          onClick={() => setConfirmOpen(true)}
+          className="inline-flex items-center gap-2 text-xs text-zinc-400 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 disabled:opacity-40"
+        >
+          <LogOut size={14} />
+          Forfeit
+        </button>
+        <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-zinc-500">
+          Online mode <span className="text-orange-500">/</span> Live match <span className="ml-2 text-zinc-700">{roomId}</span>
+        </p>
         <div className="flex items-center gap-2">
-          <span className="lv-demo-label inline-flex items-center gap-1.5 border border-amber-300/20 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-amber-200">
-            <span className="size-1.5 bg-amber-300" />
-            Demo
-          </span>
-          <span className="hidden items-center gap-1.5 border border-emerald-300/15 px-2 py-1 text-[9px] text-emerald-300 sm:inline-flex">
-            <span className="size-1.5 bg-emerald-400" />
-            {feed.status === "loading" ? "LOADING" : "SIMULATED FEED"}
+          {DEMO_MODE && (
+            <span className="border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-amber-300">
+              Demo: simulated opponent and prices
+            </span>
+          )}
+          <span className={`border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ${stalled ? "border-red-500/50 text-red-300" : "border-white/10 text-zinc-400"}`}>
+            {stalled ? "Feed stalled" : feed.status === "loading" ? "Connecting" : sourceLabel}
           </span>
         </div>
       </header>
 
-      <div className="lv-demo-notice relative z-10 flex items-center justify-center gap-2 border-b border-amber-300/10 bg-amber-300/[0.035] px-3 py-1.5 text-center text-[10px] text-amber-200/80">
-        <CircleHelp size={12} />
-        Demo: simulated opponent and prices
-        {feed.isFallback && <span className="text-amber-100">· Fallback price</span>}
-        {isTabHidden && <span className="text-orange-300">· Tab hidden; timer continues</span>}
-      </div>
-
-      <div className="lv-workspace relative z-10 grid min-h-0 grid-cols-1 gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-3 lg:p-4">
-        <section className="lv-main-column flex min-h-0 min-w-0 flex-col gap-3">
-          <div className="lv-duel-strip grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-4">
-            <CornerPanel className="lv-player-panel min-w-0" title="YOU">
-              <div className="flex items-center gap-2">
-                <CountryFlag country={setup.country} />
-                <div className="min-w-0">
-                  <p className="truncate text-xs font-semibold text-white">You</p>
-                  <p className="font-mono text-[9px] text-zinc-500">
-                    Rating {safeNumber(setup.rating, 1000)}
-                  </p>
-                </div>
-              </div>
-              <div
-                className={`lv-pnl-value mt-3 truncate font-mono text-base font-semibold tabular-nums sm:text-xl ${
-                  userPnl >= 0 ? "text-emerald-300" : "text-red-300"
-                }`}
-              >
-                {userPnl >= 0 ? "+" : "−"}{formatMoney(Math.abs(userPnl))}
-              </div>
-              <p className="font-mono text-[9px] text-zinc-500">
-                {formatPercent(userPnlPercent)}
-              </p>
-              {userEmote && (
-                <span key={userEmote.id} className="lv-emote-bubble" aria-label={`You sent ${userEmote.emote}`}>
-                  {userEmote.emote}
-                </span>
-              )}
-            </CornerPanel>
-
-            <div className="lv-timer-block flex flex-col items-center justify-center">
-              <div
-                className={`lv-timer-ring ${isCriticalTimer ? "lv-timer-critical" : ""}`}
-                style={{ "--lv-progress": `${timerProgress * 100}%` }}
-                aria-label={`Time remaining ${formatClock(remainingSeconds)}`}
-              >
-                <div className="lv-timer-inner">
-                  <span className="font-mono text-2xl font-semibold tabular-nums sm:text-3xl">
-                    {formatClock(remainingSeconds)}
-                  </span>
-                  <span className="mt-1 text-[8px] uppercase tracking-[0.2em] text-zinc-500">
-                    Remaining
-                  </span>
-                </div>
-              </div>
-              <p className="mt-2 font-mono text-[10px] font-semibold text-orange-300">
-                {symbolLabel} · {matchMinutes} MIN
-              </p>
-              <span className="sr-only" aria-live="polite">
-                {remainingSeconds === 10 ? "Ten seconds remaining" : ""}
-                {remainingSeconds === 0 ? "Match time ended" : ""}
-              </span>
+      <div className="grid min-h-0 flex-1 gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex min-h-0 min-w-0 flex-col gap-3">
+          <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 max-md:grid-cols-1 max-md:justify-items-center">
+            <div className="w-full">
+              <DuelCard who="you" code={setup.country} name="You" sub={`${PROFILE.rating.toLocaleString("en-US")} rating`} pnl={youPnl} pnlPct={(youPnl / START_CAPITAL) * 100} emote={emotes.you} />
             </div>
-
-            <CornerPanel className="lv-player-panel min-w-0" title="OPPONENT">
-              <div className="flex items-center justify-end gap-2 text-right">
-                <div className="min-w-0">
-                  <p className="truncate text-xs font-semibold text-white">
-                    {opponent.name || "Unknown trader"}
-                  </p>
-                  <p className="font-mono text-[9px] text-zinc-500">
-                    Rating {safeNumber(opponent.rating, 1000)}
-                  </p>
-                </div>
-                <CountryFlag country={opponent.country} />
-              </div>
-              <div
-                className={`relative mt-3 truncate text-right font-mono text-base font-semibold tabular-nums sm:text-xl ${
-                  opponentPnl >= 0 ? "text-emerald-300" : "text-red-300"
-                }`}
-              >
-                {OPPONENT_PNL === "hidden" && !matchEnded
-                  ? "Trading..."
-                  : `${opponentPnl >= 0 ? "+" : "−"}${formatMoney(Math.abs(opponentPnl))}`}
-                {opponentLastEmote && (
-                  <span key={opponentLastEmote.id} className="lv-emote-bubble lv-emote-opponent">
-                    {opponentLastEmote.emote}
-                  </span>
-                )}
-              </div>
-              <p className="text-right font-mono text-[9px] text-zinc-500">
-                {OPPONENT_PNL === "hidden" && !matchEnded
-                  ? "P&L hidden"
-                  : formatPercent(opponentPnlPercent)}
-              </p>
-            </CornerPanel>
-          </div>
-
-          <CornerPanel
-            className="lv-chart-panel flex min-h-0 flex-1 flex-col"
-            title="PRICE ACTION"
-            right={
-              <div className="flex items-center gap-1.5">
-                <span className="font-mono text-[10px] text-zinc-500">{symbolLabel}/USD</span>
-                <span className="size-1.5 bg-emerald-400" />
-                <span className="font-mono text-[9px] text-zinc-500">
-                  {currentPrice === null ? "—" : formatPrice(currentPrice)}
-                </span>
-              </div>
-            }
-          >
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="border border-orange-400/20 bg-orange-400/5 px-2 py-1 font-mono text-[10px] text-orange-200">
-                  {symbolLabel}
-                </span>
-                <span className="hidden font-mono text-[9px] text-zinc-600 sm:inline">
-                  {CANDLE_SECONDS}s candles
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  aria-pressed={showEma}
-                  onClick={() => setShowEma((value) => !value)}
-                  className={`lv-toolbar-button ${showEma ? "is-active" : ""}`}
-                >
-                  EMA 20
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={showSma}
-                  onClick={() => setShowSma((value) => !value)}
-                  className={`lv-toolbar-button ${showSma ? "is-active" : ""}`}
-                >
-                  SMA 50
-                </button>
-                <button
-                  type="button"
-                  title="Fit chart content"
-                  onClick={() => chartRef.current?.timeScale().fitContent()}
-                  className="lv-toolbar-button"
-                >
-                  <Maximize2 size={12} />
-                  Fit
-                </button>
-              </div>
+            <div className="text-center">
+              <TimerRing remaining={remaining} total={total} label={`${ticker} · ${minutes} min`} />
             </div>
-
-            <div className="lv-chart-wrap lv-chart-frame relative">
-              <div
-                ref={chartContainerRef}
-                className="lv-chart-canvas absolute inset-0"
-                aria-label={`${symbolLabel} candlestick chart`}
-              />
-
-              {currentPrice !== null && (
-                <div className="lv-live-price-tag absolute right-1 top-2 z-10 border border-orange-400/20 bg-[#111111]/95 px-2 py-1 font-mono text-[10px] text-orange-200">
-                  {formatPrice(currentPrice)}
-                </div>
-              )}
-
-              {feed.status === "loading" && (
-                <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#050505]/90">
-                  <div className="text-center">
-                    <Activity className="mx-auto mb-2 animate-pulse text-orange-300" size={20} />
-                    <p className="font-mono text-[10px] text-zinc-400">Building price history…</p>
-                  </div>
-                </div>
-              )}
-
-              {chartError && (
-                <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#050505]/95 p-5">
-                  <div className="max-w-xs text-center">
-                    <ShieldAlert className="mx-auto mb-2 text-red-300" size={22} />
-                    <p className="text-xs text-red-200">{chartError}</p>
-                    <button
-                      type="button"
-                      onClick={() => window.location.reload()}
-                      className="lv-button mt-3 border border-white/10 px-3 py-2 text-[10px]"
-                    >
-                      <RotateCcw size={12} className="mr-2 inline" />
-                      Retry chart
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-white/6 pt-2">
-              <div className="flex items-center gap-3 font-mono text-[9px] text-zinc-500">
-                <span><span className="mr-1 inline-block size-1.5 bg-orange-400" />Entry</span>
-                <span><span className="mr-1 inline-block size-1.5 bg-red-400" />Stop</span>
-                <span><span className="mr-1 inline-block size-1.5 bg-emerald-400" />Target</span>
-              </div>
-              <span className="font-mono text-[9px] text-zinc-600">
-                {position ? `${position.side} POSITION OPEN` : "NO OPEN POSITION"}
-              </span>
-            </div>
-          </CornerPanel>
-
-          <div className="lv-emote-row flex items-center justify-between gap-2">
-            <span className="hidden text-[9px] uppercase tracking-[0.16em] text-zinc-500 sm:block">
-              Quick emote
-            </span>
-            <div className="flex flex-1 items-center justify-end gap-1.5 sm:justify-start">
-              {EMOTES.map((emote) => (
-                <button
-                  key={emote}
-                  type="button"
-                  disabled={emoteCooldown || matchEnded || countdown > 0}
-                  onClick={() => sendEmote(emote)}
-                  aria-label={`Send emote ${emote}`}
-                  className="lv-emote-button"
-                >
-                  {emote}
-                </button>
-              ))}
-              <span className="ml-1 min-w-10 font-mono text-[9px] text-zinc-600">
-                {emoteCooldown ? "WAIT" : "3s CD"}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        <aside className="lv-side-panel flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto">
-          <CornerPanel title="ACCOUNT">
-            <div className="mb-2 flex items-end justify-between gap-3">
-              <div>
-                <p className="text-[9px] uppercase tracking-wider text-zinc-500">Balance</p>
-                <p className="mt-1 font-mono text-lg font-semibold tabular-nums text-white">
-                  {formatMoney(balance)}
-                </p>
-              </div>
-              <span className="border border-white/8 px-2 py-1 font-mono text-[9px] text-zinc-400">
-                VIRTUAL USD
-              </span>
-            </div>
-            <Metric label="Equity" value={formatMoney(equity)} />
-            <Metric
-              label="Realised P&L"
-              value={formatMoney(realisedPnl)}
-              tone={realisedPnl >= 0 ? "positive" : "negative"}
-            />
-            <Metric
-              label="Unrealised P&L"
-              value={formatMoney(unrealisedPnl)}
-              tone={unrealisedPnl >= 0 ? "positive" : "negative"}
-            />
-
-            <div className="mt-3 border-t border-white/8 pt-3">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <span className="text-[9px] uppercase tracking-wider text-zinc-500">Drawdown limit</span>
-                <span className="font-mono text-[10px] text-zinc-300">
-                  {drawdownPercent.toFixed(2)}% / {MAX_DRAWDOWN_PERCENT}%
-                </span>
-              </div>
-              <div
-                className="lv-drawdown-track"
-                role="progressbar"
-                aria-label="Drawdown limit used"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={drawdownUsed}
-              >
-                <div
-                  className={`lv-drawdown-fill ${
-                    drawdownUsed >= 75 ? "is-danger" : drawdownUsed >= 40 ? "is-warning" : ""
-                  }`}
-                  style={{ width: `${drawdownUsed}%` }}
-                />
-              </div>
-              <p className="mt-1.5 text-[9px] text-zinc-600">
-                Match forfeits at 3% equity drawdown.
-              </p>
-            </div>
-          </CornerPanel>
-
-          <CornerPanel title="ORDER TICKET">
-            <div className="mb-3">
-              <div className="mb-2 flex items-center justify-between">
-                <label className="text-[10px] text-zinc-400">Risk per trade</label>
-                <span className="font-mono text-[10px] text-orange-300">Max 1%</span>
-              </div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {RISK_OPTIONS.map((risk) => (
-                  <button
-                    type="button"
-                    key={risk}
-                    aria-pressed={riskPercent === risk}
-                    onClick={() => setRiskPercent(risk)}
-                    className={`lv-risk-chip ${riskPercent === risk ? "is-active" : ""}`}
-                  >
-                    {risk}%
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mb-3">
-              <div className="mb-1.5 flex items-center justify-between">
-                <label htmlFor="lv-stop" className="text-[10px] text-zinc-400">
-                  Stop-loss <span className="text-red-300">*</span>
-                </label>
-                <span className="font-mono text-[9px] text-zinc-600">Required</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  aria-label="Decrease stop-loss price"
-                  onClick={() => {
-                    const step = Math.max((currentPrice || 1) * 0.0001, 0.000001);
-                    setStopPrice((safeNumber(stopPrice, currentPrice || 1) - step).toFixed(6));
-                  }}
-                  className="lv-step-button"
-                >
-                  <Minus size={12} />
-                </button>
-                <input
-                  id="lv-stop"
-                  type="number"
-                  inputMode="decimal"
-                  value={stopPrice}
-                  onChange={(event) => setStopPrice(event.target.value)}
-                  placeholder="Enter stop price"
-                  className="lv-number-input min-w-0 flex-1"
-                />
-                <button
-                  type="button"
-                  aria-label="Increase stop-loss price"
-                  onClick={() => {
-                    const step = Math.max((currentPrice || 1) * 0.0001, 0.000001);
-                    setStopPrice((safeNumber(stopPrice, currentPrice || 1) + step).toFixed(6));
-                  }}
-                  className="lv-step-button"
-                >
-                  <Plus size={12} />
-                </button>
-              </div>
-              <div className="mt-1.5 flex flex-wrap gap-1">
-                {["tight", "normal", "wide"].map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => applyStopPreset(preset)}
-                    className="lv-preset-button"
-                  >
-                    {preset}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mb-3">
-              <label htmlFor="lv-target" className="mb-1.5 block text-[10px] text-zinc-400">
-                Take-profit <span className="text-zinc-600">(optional)</span>
-              </label>
-              <input
-                id="lv-target"
-                type="number"
-                inputMode="decimal"
-                value={takeProfitPrice}
-                onChange={(event) => setTakeProfitPrice(event.target.value)}
-                placeholder="No target"
-                className="lv-number-input w-full"
+            <div className="w-full">
+              <DuelCard
+                who="opp"
+                code={opponent.country}
+                name="Unknown trader"
+                sub={`${Number(opponent.rating).toLocaleString("en-US")} rating`}
+                pnl={botPnl}
+                pnlPct={(botPnl / START_CAPITAL) * 100}
+                hidden={OPPONENT_PNL === "hidden" && phase !== "ended"}
+                emote={emotes.opp}
               />
             </div>
+          </div>
 
-            <div className="mb-3 border-y border-white/8 py-2">
-              <Metric label="Est. position size" value={plannedSize > 0 ? plannedSize.toFixed(5) : "—"} />
-              <Metric label="Risk amount" value={formatMoney(riskDollars)} tone="orange" />
-              <Metric label="Planned R:R" value={plannedRR > 0 ? `1 : ${plannedRR.toFixed(2)}` : "—"} />
-            </div>
-
-            {sideError && (
-              <p role="alert" className="mb-2 border border-red-400/20 bg-red-400/5 px-2 py-2 text-[10px] leading-4 text-red-300">
-                {sideError}
-              </p>
-            )}
-
-            {lastOrderMessage && (
-              <p role="status" className="mb-2 border border-emerald-400/15 bg-emerald-400/5 px-2 py-2 text-[10px] leading-4 text-emerald-300">
-                {lastOrderMessage}
-              </p>
-            )}
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                disabled={Boolean(orderReason !== "Ready to trade") || !stopSideValid("BUY")}
-                onClick={() => placeOrder("BUY")}
-                className="lv-order-button is-buy"
-              >
-                <TrendingUp size={15} />
-                BUY <span className="ml-auto font-mono text-[9px] opacity-70">B</span>
-              </button>
-              <button
-                type="button"
-                disabled={Boolean(orderReason !== "Ready to trade") || !stopSideValid("SELL")}
-                onClick={() => placeOrder("SELL")}
-                className="lv-order-button is-sell"
-              >
-                <TrendingDown size={15} />
-                SELL <span className="ml-auto font-mono text-[9px] opacity-70">S</span>
-              </button>
-            </div>
-
-            <p className="mt-2 text-[9px] leading-4 text-zinc-600">
-              {orderReason}. Shortcuts: B buy · S sell · X close.
-            </p>
-          </CornerPanel>
-
-          <CornerPanel
-            title="OPEN POSITION"
-            right={
-              position ? (
-                <span className={`font-mono text-[9px] ${position.side === "BUY" ? "text-emerald-300" : "text-red-300"}`}>
-                  {position.side}
-                </span>
-              ) : null
-            }
-          >
-            {position ? (
-              <>
-                <Metric label="Position size" value={position.size.toFixed(5)} />
-                <Metric label="Entry" value={formatPrice(position.entry)} />
-                <Metric label="Current price" value={formatPrice(currentPrice)} />
-                <Metric
-                  label="Live P&L"
-                  value={formatMoney(unrealisedPnl)}
-                  tone={unrealisedPnl >= 0 ? "positive" : "negative"}
-                />
-                <button
-                  type="button"
-                  onClick={closeUserPosition}
-                  className="lv-close-position mt-3 w-full"
-                >
-                  Close position <span className="ml-auto font-mono text-[9px]">X</span>
-                </button>
-              </>
-            ) : (
-              <p className="py-2 text-[10px] text-zinc-600">
-                No open position. A trade will appear here after entry.
-              </p>
-            )}
-          </CornerPanel>
-
-          <CornerPanel title="RULES CHECKLIST">
-            <div className="space-y-2">
-              {[
-                {
-                  label: "Stop-loss set",
-                  valid: stopIsValid,
-                },
-                {
-                  label: "Risk within 1%",
-                  valid: riskPercent <= MAX_RISK_PERCENT,
-                },
-                {
-                  label: "Drawdown under limit",
-                  valid: drawdownPercent < MAX_DRAWDOWN_PERCENT,
-                },
-                {
-                  label: "Trades available",
-                  valid: tradesUsed < MAX_TRADES,
-                  detail: `${tradesUsed} of ${MAX_TRADES}`,
-                },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center justify-between gap-3">
-                  <span className="text-[10px] text-zinc-400">{item.label}</span>
-                  <span className="inline-flex items-center gap-1.5 font-mono text-[9px]">
-                    {item.detail && <span className="text-zinc-500">{item.detail}</span>}
-                    {item.valid ? (
-                      <Check size={12} className="text-emerald-300" />
-                    ) : (
-                      <X size={12} className="text-red-300" />
-                    )}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CornerPanel>
-
-          <CornerPanel title="TRADE LOG">
-            {tradeLog.length ? (
-              <div className="space-y-2">
-                {tradeLog.slice(0, 5).map((trade) => (
-                  <div key={trade.id} className="flex items-center justify-between gap-3 border-b border-white/5 pb-2 last:border-0 last:pb-0">
-                    <div>
-                      <p className={`font-mono text-[10px] ${trade.side === "BUY" ? "text-emerald-300" : "text-red-300"}`}>
-                        {trade.side}
-                      </p>
-                      <p className="mt-0.5 text-[9px] text-zinc-600">
-                        {trade.reason}
-                      </p>
-                    </div>
-                    <span className={`font-mono text-[10px] tabular-nums ${trade.pnl >= 0 ? "text-emerald-300" : "text-red-300"}`}>
-                      {trade.pnl >= 0 ? "+" : "−"}{formatMoney(Math.abs(trade.pnl))}
-                    </span>
-                  </div>
-                ))}
+          <Panel className="flex min-h-0 flex-1 flex-col max-lg:h-96 max-lg:flex-none">
+            <div className="mb-2 flex shrink-0 flex-wrap items-center gap-2">
+              <span className="border border-orange-500/50 bg-orange-500/10 px-2 py-1 font-mono text-[11px] text-orange-300">{ticker}/USD</span>
+              <span className="font-mono text-lg font-bold tabular-nums text-white">{fmtPrice(price)}</span>
+              <span className="font-mono text-[10px] text-zinc-600">{CANDLE_SECONDS}s candles</span>
+              <div className="ml-auto flex items-center gap-1.5">
+                <button type="button" aria-pressed={showEma} onClick={() => setShowEma((v) => !v)} className={`border px-2 py-1 font-mono text-[10px] ${showEma ? "border-orange-500 bg-orange-500/15 text-orange-300" : "border-white/10 text-zinc-500"}`}>EMA 20</button>
+                <button type="button" aria-pressed={showSma} onClick={() => setShowSma((v) => !v)} className={`border px-2 py-1 font-mono text-[10px] ${showSma ? "border-zinc-300 bg-white/10 text-zinc-100" : "border-white/10 text-zinc-500"}`}>SMA 50</button>
+                <button type="button" aria-label="Fit chart" onClick={() => setFitKey((k) => k + 1)} className="border border-white/10 p-1.5 text-zinc-400 transition hover:text-white"><Maximize2 size={12} /></button>
               </div>
-            ) : (
-              <p className="text-[10px] text-zinc-600">Closed trades will appear here.</p>
+            </div>
+            <PriceChart candles={feed.candles} position={you.position} showEma={showEma} showSma={showSma} fitKey={fitKey} />
+            {stalled && running && (
+              <p role="alert" className="mt-2 font-mono text-[11px] text-red-300">Price feed stalled. Orders may fill at an old price.</p>
             )}
-          </CornerPanel>
+          </Panel>
+
+          <div className="lv-panel flex shrink-0 flex-wrap items-center gap-2 px-3 py-2">
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">Emotes</span>
+            {EMOTES.map((e) => (
+              <button
+                key={e}
+                type="button"
+                disabled={cooling || phase === "ended"}
+                onClick={() => sendEmote(e)}
+                aria-label={`Send ${e}`}
+                className="h-8 min-w-10 border border-white/10 px-2 text-base transition hover:border-orange-500/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 disabled:opacity-40"
+              >
+                {e}
+              </button>
+            ))}
+            <span className="ml-auto font-mono text-[10px] text-zinc-600">{cooling ? "Cooldown..." : "No text chat in a match"}</span>
+          </div>
+        </div>
+
+        <aside className="lv-scroll flex min-h-0 flex-col gap-3 lg:overflow-y-auto">
+          <AccountPanel acct={you} price={price} />
+          <Ticket
+            symbol={ticker}
+            phase={phase}
+            acct={you}
+            price={price}
+            buy={previewBuy}
+            sell={previewSell}
+            riskIdx={riskIdx}
+            setRiskIdx={setRiskIdx}
+            stopText={stopText}
+            setStopText={setStopText}
+            tp={tp}
+            setTp={setTp}
+            onTrade={placeOrder}
+          />
+          <PositionPanel acct={you} price={price} symbol={ticker} onClose={closeNow} canClose={running} />
+          <RulesLog tab={tab} setTab={setTab} rules={rules} trades={you.trades} />
         </aside>
       </div>
 
-      <footer className="relative z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-white/8 bg-[#080808] px-3 py-2 text-[9px] text-zinc-600 sm:px-5">
+      <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-orange-500/30 bg-[#070707]/95 px-3 py-2 font-mono text-[10px] text-zinc-600">
+        <span>Virtual funds only. Educational. Not investment advice. Prices may differ from real markets.</span>
         <span>Charts powered by TradingView Lightweight Charts</span>
-        <span>Virtual funds only. Educational. Not investment advice.</span>
-        <span>Prices may differ from real markets</span>
       </footer>
 
-      {countdown > 0 && !matchStartedAt && (
-        <div className="lv-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-5">
-          <div className="text-center">
-            <p className="text-[10px] uppercase tracking-[0.3em] text-orange-300">
-              Match starts
-            </p>
-            <p key={countdown} className="lv-countdown-number mt-3 font-mono text-8xl font-semibold text-white">
-              {countdown}
-            </p>
-            <p className="mt-3 font-mono text-[10px] text-zinc-500">
-              {symbolLabel} · {matchMinutes} MIN · VIRTUAL FUNDS
-            </p>
-          </div>
-        </div>
-      )}
-
-      {showForfeitConfirm && (
-        <div className="lv-overlay fixed inset-0 z-60 flex items-center justify-center bg-black/80 p-4">
-          <div role="dialog" aria-modal="true" aria-labelledby="lv-forfeit-title" className="lv-dialog w-full max-w-sm">
-            <span aria-hidden="true" className="lv-corner lv-corner-tl" />
-            <span aria-hidden="true" className="lv-corner lv-corner-br" />
-            <ShieldAlert className="mb-3 text-red-300" size={23} />
-            <h2 id="lv-forfeit-title" className="text-base font-semibold text-white">
-              Forfeit this match?
-            </h2>
-            <p className="mt-2 text-xs leading-5 text-zinc-400">
-              Your open position will be closed at the current simulated price. This match will end immediately.
-            </p>
-            <div className="mt-5 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setShowForfeitConfirm(false)}
-                className="lv-button border border-white/10 px-3 py-3 text-xs text-zinc-300 hover:bg-white/5"
-              >
-                Keep playing
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForfeitConfirm(false);
-                  finishMatch("forfeit");
-                }}
-                className="lv-button border border-red-400/30 bg-red-400/10 px-3 py-3 text-xs font-semibold text-red-200 hover:bg-red-400/15"
-              >
-                Forfeit match
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {matchEnded && (
-        <div className="lv-overlay fixed inset-0 z-70 overflow-y-auto bg-[#050505]/98 p-4 sm:p-8">
-          <div className="mx-auto flex min-h-full w-full max-w-3xl items-center justify-center">
-            <div className="lv-result-panel relative w-full p-5 sm:p-8">
-              <span aria-hidden="true" className="lv-corner lv-corner-tl" />
-              <span aria-hidden="true" className="lv-corner lv-corner-br" />
-
-              <p className="text-center text-[10px] uppercase tracking-[0.3em] text-orange-300">
-                Match result
-              </p>
-              <h1 className={`mt-3 text-center text-3xl font-semibold tracking-tight sm:text-5xl ${
-                drawdownBreached ? "text-red-300" : userWon ? "text-emerald-300" : "text-white"
-              }`}>
-                {resultLabel}
-              </h1>
-           <p className="mt-2 text-center text-xs text-zinc-500">
-                {endReason === "forfeit"
-                  ? "You forfeited the match. Your opponent wins."
-                  : endReason === "drawdown"
-                    ? "You breached the 3% maximum drawdown limit. Match lost."
-                    : endReason === "time"
-                      ? isDraw
-                        ? "Time is up. The match ended in a draw."
-                        : userWon
-                          ? "Time is up. You won on final score."
-                          : "Time is up. Your opponent won on final score."
-                      : "The match has ended."}
-              </p>
-
-              <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <CornerPanel title="YOU">
-                  <p className={`font-mono text-2xl font-semibold ${userPnl >= 0 ? "text-emerald-300" : "text-red-300"}`}>
-                    {userPnl >= 0 ? "+" : "−"}{formatMoney(Math.abs(userPnl))}
-                  </p>
-                  <p className="mt-1 font-mono text-xs text-zinc-500">
-                    {formatPercent(userPnlPercent)}
-                  </p>
-                  <div className="mt-3 border-t border-white/8 pt-2">
-                    <Metric label="Risk / reward" value={`${userScore.riskReward}/40`} />
-                    <Metric label="Consistency" value={`${userScore.consistency}/30`} />
-                    <Metric label="Profit" value={`${userScore.profit}/30`} />
-                    {userScore.penalty > 0 && (
-                      <Metric label="Drawdown penalty" value={`−${userScore.penalty}`} tone="negative" />
-                    )}
-                    <Metric label="Final score" value={`${userScore.total}/100`} tone="orange" />
-                  </div>
-                </CornerPanel>
-
-                <CornerPanel title="OPPONENT">
-                  <p className={`font-mono text-2xl font-semibold ${opponentPnl >= 0 ? "text-emerald-300" : "text-red-300"}`}>
-                    {opponentPnl >= 0 ? "+" : "−"}{formatMoney(Math.abs(opponentPnl))}
-                  </p>
-                  <p className="mt-1 font-mono text-xs text-zinc-500">
-                    {formatPercent(opponentPnlPercent)}
-                  </p>
-                  <div className="mt-3 border-t border-white/8 pt-2">
-                    <Metric label="Risk / reward" value={`${opponentScore.riskReward}/40`} />
-                    <Metric label="Consistency" value={`${opponentScore.consistency}/30`} />
-                    <Metric label="Profit" value={`${opponentScore.profit}/30`} />
-                    <Metric label="Final score" value={`${opponentScore.total}/100`} tone="orange" />
-                  </div>
-                </CornerPanel>
-              </div>
-
-              <div className="mt-4 border border-white/8 bg-white/2 p-3">
-                <p className="text-[9px] uppercase tracking-wider text-zinc-500">Scoring formula</p>
-                <p className="mt-1 text-[10px] leading-5 text-zinc-300">
-                  Risk/reward 40 + consistency 30 + profit 30 − drawdown penalty 25.
-                  Higher score wins, not just higher profit.
-                </p>
-              </div>
-
-              <div className="mt-4 border border-white/8 p-3">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <h2 className="text-[10px] uppercase tracking-wider text-zinc-400">Trade replay</h2>
-                  <span className="text-[9px] text-zinc-600">Opponent markers revealed</span>
-                </div>
-                {opponentTrades.length ? (
-                  <div className="space-y-2">
-                    {opponentTrades.map((trade) => (
-                      <div key={trade.id} className="grid grid-cols-[52px_1fr_1fr] gap-2 border-b border-white/5 pb-2 font-mono text-[10px] last:border-0">
-                        <span className={trade.side === "BUY" ? "text-emerald-300" : "text-red-300"}>
-                          {trade.side}
-                        </span>
-                        <span className="text-zinc-500">
-                          Entry {formatPrice(trade.entry)}
-                        </span>
-                        <span className="text-zinc-500">
-                          Exit {formatPrice(trade.exit)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[10px] text-zinc-600">No opponent trades were closed during this match.</p>
-                )}
-              </div>
-
-              <p className="mt-4 text-center font-mono text-[10px] text-amber-200">
-                Demo match · virtual rating is not updated
-              </p>
-
-              <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={resetToSetup}
-                  className="lv-button border border-orange-400/30 bg-orange-400/10 px-4 py-3 text-xs font-semibold text-orange-200 hover:bg-orange-400/15"
-                >
-                  <RotateCcw size={14} className="mr-2 inline" />
-                  Play again
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate(ROUTES.home)}
-                  className="lv-button border border-white/10 px-4 py-3 text-xs text-zinc-200 hover:bg-white/5"
-                >
-                  <ArrowLeft size={14} className="mr-2 inline" />
-                  Back to dashboard
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {phase === "countdown" && <StartOverlay feed={feed} count={count} />}
+      {confirmOpen && <ForfeitDialog onKeep={() => setConfirmOpen(false)} onForfeit={() => finish("forfeit")} />}
+      {result && (
+        <ResultOverlay result={result} you={you} bot={bot} againRef={againRef} onAgain={() => navigate(ROUTES.setup)} onHome={() => navigate(ROUTES.home)} />
       )}
     </main>
   );
+}
+
+export default function Live() {
+  const location = useLocation();
+  const setup = location.state;
+  if (!setup?.symbol) return <Navigate to={ROUTES.setup} replace />;
+  return <LiveMatch setup={setup} />;
 }
