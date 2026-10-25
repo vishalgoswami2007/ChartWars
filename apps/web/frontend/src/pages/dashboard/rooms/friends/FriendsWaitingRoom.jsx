@@ -1,403 +1,216 @@
+import { useCallback, useEffect, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { Check, Copy, LogOut, RefreshCw } from "lucide-react";
 
-import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import VoicePanel, { useDemoSpeaking, useLocalMedia } from "./FriendsVoicePanel";
+import PermissionsPanel from "./FriendsPermissions";
 import {
-  ArrowLeft,
-  ArrowUpRight,
-  Check,
-  Copy,
-  Crown,
-  Link2,
-  Mic,
-  MicOff,
-  ShieldCheck,
-  Users,
-  Video,
-  VideoOff,
-  Zap,
-} from "lucide-react";
+  DEMO_FRIENDS,
+  DEMO_MODE,
+  ROUTES,
+  SYMBOLS,
+  clearRoom,
+  loadRoom,
+  makeCode,
+  makeMember,
+  saveRoom,
+  useCopy,
+} from "./friendsData";
 import "./friends-room.css";
 
-export default function FriendsWaitingRoom() {
+function Waiting({ initial }) {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [room, setRoom] = useState(initial);
+  const media = useLocalMedia();
+  const speakingId = useDemoSpeaking(room.participants);
+  const { copied, copy } = useCopy();
 
-  const roomId = searchParams.get("roomId") || "";
-  const role = searchParams.get("role") || "player";
-  const isHost = role.toLowerCase() === "admin" || role.toLowerCase() === "host";
-  const voiceEnabled = searchParams.get("voice") !== "false";
-  const videoEnabled = searchParams.get("video") !== "false";
+  useEffect(() => {
+    saveRoom(room);
+  }, [room]);
 
-  const [copied, setCopied] = useState(false);
-  const [started, setStarted] = useState(false);
-  const [copyError, setCopyError] = useState("");
+  // Demo: friends join one by one while the host waits.
+  useEffect(() => {
+    if (!DEMO_MODE || room.participants.length >= room.players) return undefined;
+    const friend = DEMO_FRIENDS.find((f) => !room.participants.some((p) => p.id === f.id));
+    if (!friend) return undefined;
+    const id = setTimeout(() => {
+      setRoom((r) => ({ ...r, participants: [...r.participants, makeMember(friend)] }));
+    }, 2000);
+    return () => clearTimeout(id);
+  }, [room.participants, room.players]);
 
-  const inviteUrl = `${window.location.origin}/dashboard/rooms/friends/room?roomId=${encodeURIComponent(roomId)}`;
+  // Demo: friends mark themselves ready after joining.
+  useEffect(() => {
+    if (!DEMO_MODE) return undefined;
+    const pending = room.participants.find((p) => p.id !== "you" && p.role !== "host" && !p.ready);
+    if (!pending) return undefined;
+    const id = setTimeout(() => {
+      setRoom((r) => ({ ...r, participants: r.participants.map((p) => (p.id === pending.id ? { ...p, ready: true } : p)) }));
+    }, 1600);
+    return () => clearTimeout(id);
+  }, [room.participants]);
 
-  const players = [
-    { id: 1, name: "You", initials: "YOU", status: "Connected", host: isHost },
-    { id: 2, name: "Waiting for player", initials: "+", status: "Open seat" },
-    { id: 3, name: "Waiting for player", initials: "+", status: "Open seat" },
-    { id: 4, name: "Waiting for player", initials: "+", status: "Open seat" },
-  ];
+  const me = room.participants.find((p) => p.id === "you");
+  const isHost = me?.role === "host";
+  const full = room.participants.length >= room.players;
+  const allReady = full && room.participants.every((p) => p.ready);
+  const symbol = SYMBOLS.find((s) => s.id === room.symbol) ?? SYMBOLS[0];
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(inviteUrl);
-      setCopied(true);
-      setCopyError("");
-      window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setCopyError("Copy failed. Select and copy the invitation link manually.");
-    }
+  const startMatch = useCallback(() => {
+    saveRoom({ ...room, phase: "live", startsAt: Date.now() });
+    navigate(ROUTES.live);
+  }, [room, navigate]);
+
+  // Demo: when you are a member, the simulated host starts the match once everyone is ready.
+  useEffect(() => {
+    if (!DEMO_MODE || isHost || !allReady) return undefined;
+    const id = setTimeout(startMatch, 3500);
+    return () => clearTimeout(id);
+  }, [isHost, allReady, startMatch]);
+
+  const updatePerm = (id, key, value) =>
+    setRoom((r) => ({ ...r, participants: r.participants.map((p) => (p.id === id ? { ...p, perms: { ...p.perms, [key]: value } } : p)) }));
+  const kick = (id) => setRoom((r) => ({ ...r, participants: r.participants.filter((p) => p.id !== id) }));
+  const toggleReady = () =>
+    setRoom((r) => ({ ...r, participants: r.participants.map((p) => (p.id === "you" ? { ...p, ready: !p.ready } : p)) }));
+  const newCode = () => setRoom((r) => ({ ...r, code: makeCode() }));
+  const leave = () => {
+    clearRoom();
+    navigate(ROUTES.lobby);
   };
 
-  const handleBack = () => {
-    navigate("/dashboard/rooms/friends");
-  };
+  const readyCount = room.participants.filter((p) => p.ready).length;
+  const startHint = !full
+    ? `Waiting for ${room.players - room.participants.length} more`
+    : !allReady
+      ? "Waiting for everyone to be ready"
+      : "Everyone is ready";
 
   return (
-    <main className="fr-page">
-      <div className="fr-shell">
-        <header className="fr-topbar">
-          <div className="fr-brand">
-            <button
-              type="button"
-              className="fr-back"
-              onClick={handleBack}
-              aria-label="Back to Friends Room setup"
-            >
-              <ArrowLeft size={17} />
-            </button>
+    <main className="fr-root fixed inset-0 z-50 flex flex-col overflow-hidden text-zinc-100 max-lg:overflow-y-auto">
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-2.5">
+        <button
+          type="button"
+          onClick={leave}
+          className="inline-flex items-center gap-2 text-xs text-zinc-400 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+        >
+          <LogOut size={14} />
+          Leave room
+        </button>
+        <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-zinc-500">
+          Friends <span className="text-orange-500">/</span> Waiting room
+        </p>
+        <div className="flex items-center gap-2">
+          {DEMO_MODE && (
+            <span className="border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-amber-300">
+              Demo: simulated friends
+            </span>
+          )}
+        </div>
+      </header>
 
-            <div className="fr-brand-mark">
-              <Users size={19} />
-            </div>
-
+      <div className="grid min-h-0 flex-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:overflow-hidden">
+        <div className="flex min-h-0 flex-col gap-4">
+          <section className="fr-panel flex flex-wrap items-center gap-x-6 gap-y-2 p-3">
             <div>
-              <div className="fr-brand-name">
-                CHART<span>WARS</span>
-              </div>
-              <div className="fr-brand-subtitle">FRIENDS ARENA</div>
-            </div>
-          </div>
-
-          <div className="fr-top-status">
-            <span className="fr-status-dot" />
-            {started ? "PRACTICE SESSION" : "WAITING ROOM"}
-          </div>
-
-          <div className="fr-top-version">FR / 02</div>
-        </header>
-
-        <section className="fr-hero">
-          <div className="fr-eyebrow">
-            <span className="fr-eyebrow-line" />
-            PRIVATE MULTIPLAYER
-            <span className="fr-eyebrow-line" />
-          </div>
-
-          <h1>
-            {started ? "Your arena." : "Your crew."}
-            <br />
-            <span>{started ? "Your next move." : "Your next move."}</span>
-          </h1>
-
-          <p className="fr-hero-copy">
-            {started
-              ? "Your local practice view is active. Real-time multiplayer requires the backend connection."
-              : "Share your room, get your crew together, and prepare for a private practice session."}
-          </p>
-
-          <div className="fr-hero-meta">
-            <span><Users size={14} /> UP TO 4 PLAYERS</span>
-            <span><ShieldCheck size={14} /> PRIVATE ROOM</span>
-            <span><Zap size={14} /> PRACTICE MODE</span>
-          </div>
-        </section>
-
-        <section className="fr-main-grid">
-          <article className="fr-panel fr-create-panel">
-            <div className="fr-panel-heading">
-              <div className="fr-section-icon">
-                <Users size={19} />
-              </div>
-              <div>
-                <div className="fr-kicker">01 / SESSION STATUS</div>
-                <h2>{started ? "Practice is ready" : "Waiting for your crew"}</h2>
-              </div>
-              {isHost && (
-                <span className="fr-admin-badge">
-                  <Crown size={12} /> HOST
-                </span>
-              )}
-            </div>
-
-            <div className="fr-room-identity">
-              <div>
-                <span className="fr-field-label">ROOM IDENTIFIER</span>
-                <strong>{roomId ? roomId.toUpperCase() : "ROOM ID MISSING"}</strong>
-              </div>
-              <span className="fr-preview-live">
-                <span className="fr-status-dot" />
-                {started ? "ACTIVE" : "READY"}
-              </span>
-            </div>
-
-            <label className="fr-field-label" htmlFor="fr-waiting-invite">
-              INVITATION LINK
-            </label>
-
-            <div className="fr-invite-row">
-              <div className="fr-input-with-icon">
-                <Link2 size={15} />
-                <input
-                  id="fr-waiting-invite"
-                  value={inviteUrl}
-                  readOnly
-                  onFocus={(event) => event.target.select()}
-                  aria-label="Room invitation link"
-                />
-              </div>
-
-              <button
-                type="button"
-                className={`fr-copy-button ${copied ? "is-copied" : ""}`}
-                onClick={handleCopy}
-                disabled={!roomId}
-              >
-                {copied ? <Check size={15} /> : <Copy size={15} />}
-                {copied ? "COPIED" : "COPY LINK"}
-              </button>
-            </div>
-
-            {copyError && <p className="fr-error">{copyError}</p>}
-
-            <div className="fr-divider" />
-
-            <div className="fr-subheading">
-              <span>PLAYER ROSTER</span>
-              <span>1 / 4 CONNECTED</span>
-            </div>
-
-            <div className="fr-player-grid">
-              {players.map((player) => (
-                <div
-                  className={`fr-player-slot ${
-                    player.id === 1 ? "is-host" : "is-empty"
-                  }`}
-                  key={player.id}
+              <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-zinc-500">Room code</p>
+              <div className="flex items-center gap-2">
+                <span className="fr-code font-mono text-2xl font-bold tracking-[0.3em] text-orange-300">{room.code}</span>
+                <button
+                  type="button"
+                  onClick={() => copy(room.code)}
+                  aria-label="Copy room code"
+                  className="border border-white/15 p-1.5 text-zinc-300 transition hover:border-orange-500/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
                 >
-                  <div className="fr-player-avatar">
-                    {player.id === 1 ? player.initials : <Users size={18} />}
-                    {player.id === 1 && <span className="fr-avatar-online" />}
-                  </div>
-
-                  <div className="fr-player-name">{player.name}</div>
-                  <div className="fr-player-role">
-                    {player.host ? "ROOM HOST" : player.status.toUpperCase()}
-                  </div>
-                  {player.host && (
-                    <span className="fr-host-crown">
-                      <Crown size={11} />
-                    </span>
-                  )}
-                </div>
-              ))}
+                  {copied ? <Check size={13} /> : <Copy size={13} />}
+                </button>
+                {isHost && (
+                  <button
+                    type="button"
+                    onClick={newCode}
+                    aria-label="Generate a new room code"
+                    title="New code"
+                    className="border border-white/15 p-1.5 text-zinc-300 transition hover:border-orange-500/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+                  >
+                    <RefreshCw size={13} />
+                  </button>
+                )}
+              </div>
             </div>
+            {[
+              ["Market", `${symbol.ticker}/USD`],
+              ["Players", `${room.participants.length} of ${room.players}`],
+              ["Length", `${room.minutes} min`],
+              ["Capital", "$10,000 virtual"],
+            ].map(([k, v]) => (
+              <div key={k}>
+                <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-zinc-500">{k}</p>
+                <p className="font-mono text-sm font-semibold text-white">{v}</p>
+              </div>
+            ))}
+          </section>
 
-            <p className="fr-helper">
-              Player slots are currently a frontend preview. Other participants
-              will appear after a real multiplayer service is connected.
+          <section className="fr-panel min-h-0 flex-1 overflow-y-auto p-3 fr-scroll">
+            <h2 className="mb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-400">The lounge</h2>
+            <VoicePanel people={room.participants} players={room.players} media={media} speakingId={speakingId} />
+            <p className="mt-3 border-l-2 border-orange-500/60 pl-3 text-xs leading-5 text-zinc-400">
+              Turn on your mic to talk before the match. Camera is optional, and you can switch either on or off at any time.
             </p>
+          </section>
+        </div>
 
-            <div className="fr-divider" />
+        <aside className="fr-scroll flex min-h-0 flex-col gap-4 lg:overflow-y-auto">
+          <section className="fr-panel p-3">
+            <h2 className="mb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-400">Permissions</h2>
+            <PermissionsPanel people={room.participants} meId="you" onChange={updatePerm} onKick={kick} />
+          </section>
 
-            <div className="fr-subheading">
-              <span>ROOM PERMISSIONS</span>
-              <span className="fr-editable-label">HOST SETTINGS</span>
-            </div>
-
-            <div className="fr-permission-row">
-              <span className="fr-permission-icon">
-                {voiceEnabled ? <Mic size={17} /> : <MicOff size={17} />}
-              </span>
-              <span className="fr-permission-copy">
-                <strong>Global voice</strong>
-                <small>Room voice permission</small>
-              </span>
-              <span className={`fr-toggle ${voiceEnabled ? "is-on" : ""}`}>
-                <span />
-              </span>
-              <span className="fr-toggle-value">
-                {voiceEnabled ? "ON" : "OFF"}
-              </span>
-            </div>
-
-            <div className="fr-permission-row">
-              <span className="fr-permission-icon">
-                {videoEnabled ? <Video size={17} /> : <VideoOff size={17} />}
-              </span>
-              <span className="fr-permission-copy">
-                <strong>Video access</strong>
-                <small>Room camera permission</small>
-              </span>
-              <span className={`fr-toggle ${videoEnabled ? "is-on" : ""}`}>
-                <span />
-              </span>
-              <span className="fr-toggle-value">
-                {videoEnabled ? "YES" : "NO"}
-              </span>
-            </div>
-
-            {started && (
-              <p className="fr-helper">
-                Frontend preview active — this does not connect other players
-                or start a synchronized live match.
-              </p>
-            )}
+          <section className="fr-panel p-3">
+            <h2 className="mb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-400">Ready check</h2>
+            <p className="font-mono text-sm text-white">
+              {readyCount} of {room.players} ready
+            </p>
+            <p className="mb-3 text-[11px] text-zinc-500">{startHint}</p>
 
             {isHost ? (
               <button
                 type="button"
-                className="fr-primary-button"
-                onClick={() => setStarted((value) => !value)}
+                disabled={!allReady}
+                onClick={startMatch}
+                className="w-full border border-orange-400 bg-orange-500 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-black transition hover:bg-orange-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {started ? "RETURN TO WAITING ROOM" : "START PRACTICE PREVIEW"}
-                <ArrowUpRight size={17} />
+                [ Start match ]
               </button>
             ) : (
-              <button
-                type="button"
-                className="fr-primary-button"
-                onClick={handleBack}
-              >
-                BACK TO ROOM SETUP
-                <ArrowUpRight size={17} />
-              </button>
-            )}
-
-            <p className="fr-disclaimer">
-              VIRTUAL FUNDS ONLY · EDUCATIONAL PRACTICE
-            </p>
-          </article>
-
-          <aside className="fr-side-column">
-            <article className="fr-panel fr-join-panel">
-              <div className="fr-kicker">02 / ROOM DETAILS</div>
-              <h2>Bring your crew in.</h2>
-              <p>
-                Copy the invitation link and share it with friends. They can
-                use the room ID to open this waiting room.
-              </p>
-
-              <div className="fr-room-identity">
-                <div>
-                  <span className="fr-field-label">YOUR ROLE</span>
-                  <strong>{isHost ? "ROOM HOST" : "PLAYER"}</strong>
-                </div>
-                <ShieldCheck size={20} />
-              </div>
-
-              <button
-                type="button"
-                className="fr-secondary-button"
-                onClick={handleCopy}
-                disabled={!roomId}
-              >
-                {copied ? "LINK COPIED" : "SHARE INVITE LINK"}
-                {copied ? <Check size={16} /> : <ArrowUpRight size={16} />}
-              </button>
-            </article>
-
-            <article className="fr-panel fr-preview-panel">
-              <div className="fr-preview-top">
-                <div className="fr-kicker">03 / SESSION PREVIEW</div>
-                <span className="fr-preview-live">
-                  <span className="fr-status-dot" />
-                  {started ? "ACTIVE" : "STANDBY"}
-                </span>
-              </div>
-
-              <div className="fr-preview-chart">
-                <div className="fr-chart-grid">
-                  {[1, 2, 3, 4, 5].map((line) => (
-                    <span key={line} />
-                  ))}
-                </div>
-
-                <svg
-                  viewBox="0 0 320 145"
-                  className="fr-chart-svg"
-                  role="img"
-                  aria-label="Illustrative practice chart"
-                  preserveAspectRatio="none"
+              <>
+                <button
+                  type="button"
+                  onClick={toggleReady}
+                  className={`w-full border py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 ${
+                    me?.ready ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-300" : "border-orange-400 bg-orange-500 text-black hover:bg-orange-400"
+                  }`}
                 >
-                  <defs>
-                    <linearGradient
-                      id="fr-waiting-chart-fill"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="0%" stopColor="#f97316" stopOpacity=".22" />
-                      <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    d="M0 112 L20 99 L37 106 L53 73 L69 85 L86 64 L105 77 L122 49 L141 66 L157 38 L174 55 L193 62 L211 33 L231 48 L250 26 L271 42 L289 18 L320 24 L320 145 L0 145 Z"
-                    fill="url(#fr-waiting-chart-fill)"
-                  />
-                  <path
-                    d="M0 112 L20 99 L37 106 L53 73 L69 85 L86 64 L105 77 L122 49 L141 66 L157 38 L174 55 L193 62 L211 33 L231 48 L250 26 L271 42 L289 18 L320 24"
-                    fill="none"
-                    stroke="#f97316"
-                    strokeWidth="2"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                </svg>
-
-                <div className="fr-chart-price">
-                  {started ? "PRACTICE PREVIEW" : "SHARED MARKET VIEW"}
-                </div>
-              </div>
-
-              <div className="fr-preview-stats">
-                <div>
-                  <span>PLAYERS</span>
-                  <strong>Up to 4</strong>
-                </div>
-                <div>
-                  <span>VOICE</span>
-                  <strong>{voiceEnabled ? "Enabled" : "Disabled"}</strong>
-                </div>
-                <div>
-                  <span>VIDEO</span>
-                  <strong>{videoEnabled ? "Enabled" : "Disabled"}</strong>
-                </div>
-              </div>
-            </article>
-
-            <div className="fr-note">
-              <Zap size={17} />
-              <div>
-                <strong>One chart. One crew.</strong>
-                <p>
-                  Prepare together and practise trading strategies in an
-                  educational environment.
+                  {me?.ready ? "Ready (tap to undo)" : "I am ready"}
+                </button>
+                <p className="mt-2 text-[11px] text-zinc-500">
+                  {allReady ? "The host is starting the match..." : "The host starts the match when everyone is ready."}
                 </p>
-              </div>
-            </div>
-          </aside>
-        </section>
-
-        <footer className="fr-footer">
-          <span>CHARTWARS / FRIENDS WAITING ROOM</span>
-          <span><ShieldCheck size={13} /> EDUCATIONAL USE ONLY</span>
-          <span>BUILD 01.00</span>
-        </footer>
+              </>
+            )}
+          </section>
+        </aside>
       </div>
+
+      <footer className="shrink-0 border-t border-orange-500/30 bg-[#070707]/95 px-4 py-2 text-center font-mono text-[10px] text-zinc-600">
+        Virtual funds only. Educational. Not investment advice.
+      </footer>
     </main>
   );
+}
+
+export default function FriendsWaitingRoom() {
+  const [room] = useState(loadRoom);
+  if (!room) return <Navigate to={ROUTES.lobby} replace />;
+  return <Waiting initial={room} />;
 }
