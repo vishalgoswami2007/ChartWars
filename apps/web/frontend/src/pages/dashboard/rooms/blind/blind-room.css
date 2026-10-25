@@ -1,0 +1,133 @@
+/* Blind Room: shared look and animations. Layout lives in Tailwind classes. */
+
+.br-root {
+  background:
+    radial-gradient(ellipse at 50% 120%, rgba(249, 115, 22, 0.14), transparent 60%),
+    radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px) 0 0 / 26px 26px,
+    #050505;
+}
+
+/* Panels with orange corner brackets */
+.br-panel {
+  position: relative;
+  background: rgba(11, 11, 11, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.br-panel::before,
+.br-panel::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+  border: 0 solid #f97316;
+}
+.br-panel::before {
+  top: -1px;
+  left: -1px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+.br-panel::after {
+  right: -1px;
+  bottom: -1px;
+  border-right-width: 2px;
+  border-bottom-width: 2px;
+}
+
+.br-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(249, 115, 22, 0.4) transparent;
+}
+
+/* Level map nodes */
+.br-node {
+  position: relative;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+.br-node.is-open {
+  border-color: rgba(249, 115, 22, 0.8);
+  background: rgba(249, 115, 22, 0.08);
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.3), 0 0 22px rgba(249, 115, 22, 0.2);
+}
+.br-node.is-open:hover,
+.br-node.is-done:hover {
+  transform: translateY(-2px);
+}
+.br-node.is-done {
+  border-color: rgba(52, 211, 153, 0.55);
+  background: rgba(52, 211, 153, 0.06);
+}
+.br-node.is-locked {
+  border-color: rgba(255, 255, 255, 0.08);
+  opacity: 0.55;
+}
+.br-node.is-planned {
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  opacity: 0.4;
+}
+
+/* Hint tokens */
+.br-pip {
+  transition: background-color 0.3s, box-shadow 0.3s, transform 0.3s;
+}
+.br-pip.is-full {
+  background: #f97316;
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.7);
+}
+.br-pip.is-empty {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(0.8);
+}
+
+/* Stars appear one after another */
+.br-star {
+  color: rgba(255, 255, 255, 0.15);
+}
+.br-star.is-on {
+  color: #fdba74;
+  filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.8));
+  animation: br-star 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+@keyframes br-star {
+  from {
+    opacity: 0;
+    transform: scale(0.2) rotate(-40deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Panels slide in */
+.br-rise {
+  animation: br-rise 0.4s ease-out both;
+}
+@keyframes br-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Score bars */
+.br-bar {
+  transition: width 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .br-star.is-on,
+  .br-rise {
+    animation: none;
+  }
+  .br-node,
+  .br-pip,
+  .br-bar {
+    transition: none;
+  }
+}
