@@ -61,7 +61,9 @@ import FriendsWaitingRoom from "../pages/dashboard/rooms/friends/FriendsWaitingR
 import FriendsLiveArena from "../pages/dashboard/rooms/friends/FriendsLiveArena";
 import FriendsAnalytics from "../pages/dashboard/rooms/friends/FriendsAnalytics";
 
-
+import BlindRoom from "../pages/dashboard/rooms/blind/BlindRoom";
+import BlindLevelMap from "../pages/dashboard/rooms/blind/BlindLevelMap";
+import BlindLevel from "../pages/dashboard/rooms/blind/BlindLevel";
 
 const friendsElement = (
   <FriendsPage
@@ -158,6 +160,16 @@ export const router = createBrowserRouter([
       {
         path: "friendsPage",
         element: friendsElement,
+      },
+
+      { path: "rooms/blind", 
+        element: <BlindRoom /> 
+      },
+      { path: "rooms/blind/levels", 
+        element: <BlindLevelMap /> 
+      },
+      { path: "rooms/blind/level/:levelId", 
+        element: <BlindLevel /> 
       },
 
       {

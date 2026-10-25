@@ -637,7 +637,7 @@ const handlePrimaryAction = () => {
   }
 
   if (activeMode?.id === "blind") {
-    setSearchParams({ mode: "blind", stage: "challenge" });
+      navigate("/dashboard/rooms/blind");
     return;
   }
 
