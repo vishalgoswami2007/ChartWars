@@ -57,6 +57,7 @@ import MatchMaking from "../pages/dashboard/rooms/online-mode/MatchMaking";
 import LiveMatch from "../pages/dashboard/rooms/online-mode/LiveMatch";
 import FriendsRoom from "../pages/dashboard/rooms/friends/FriendsRoom";
 
+
 const friendsElement = (
   <FriendsPage
     eyebrow="YOUR NETWORK"

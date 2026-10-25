@@ -623,17 +623,29 @@ export default function RoomPage() {
     setTransitioning(false);
   };
 
-  const handlePrimaryAction = () => {
-    if (activeMode?.id === "online") {
-      setSearchParams({ mode: "online", stage: "matchmaking" });
-    } else if (activeMode?.id === "friends") {
-      setSearchParams({ mode: "friends", stage: "create" });
-    } else if (activeMode?.id === "blind") {
-      setSearchParams({ mode: "blind", stage: "challenge" });
-    } else if (activeMode?.id === "coaches") {
-      setSearchParams({ mode: "coaches", stage: "training" });
-    }
-  };
+  
+const handlePrimaryAction = () => {
+  if (activeMode?.id === "online") {
+    // Existing Online Mode flow — unchanged.
+    setSearchParams({ mode: "online", stage: "matchmaking" });
+    return;
+  }
+
+  if (activeMode?.id === "friends") {
+    navigate("/dashboard/rooms/friends");
+    return;
+  }
+
+  if (activeMode?.id === "blind") {
+    setSearchParams({ mode: "blind", stage: "challenge" });
+    return;
+  }
+
+  if (activeMode?.id === "coaches") {
+    setSearchParams({ mode: "coaches", stage: "training" });
+  }
+};
+
 
   return (
     <div className="rooms-page relative min-h-full overflow-hidden rounded-2xl">
