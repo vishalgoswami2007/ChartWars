@@ -58,6 +58,9 @@ import LiveMatch from "../pages/dashboard/rooms/online-mode/LiveMatch";
 import FriendsRoom from "../pages/dashboard/rooms/friends/FriendsRoom";
 
 import FriendsWaitingRoom from "../pages/dashboard/rooms/friends/FriendsWaitingRoom";
+import FriendsLiveArena from "../pages/dashboard/rooms/friends/FriendsLiveArena";
+import FriendsAnalytics from "../pages/dashboard/rooms/friends/FriendsAnalytics";
+
 
 
 const friendsElement = (
@@ -135,6 +138,14 @@ export const router = createBrowserRouter([
         path: "rooms/friends/room",
         element: <FriendsWaitingRoom />,
       },
+      {
+        path: "rooms/friends/live",
+        element: <FriendsLiveArena />,
+     },
+     {
+        path: "rooms/friends/analytics",
+        element: <FriendsAnalytics />,
+     },
       
 
       // Friends workspace and friend requests
