@@ -212,7 +212,11 @@ export default function Sidebar({
                               const isSelected =
                                 isRoomsRoute && currentMode === mode;
 
-                              const roomPath = `/dashboard/rooms?mode=${mode}`;
+                                      const roomPath =
+                                        mode === "friends"
+                                          ? "/dashboard/rooms?mode=friends&stage=create"
+                                          : `/dashboard/rooms?mode=${mode}`;
+
 
                               if (comingSoon) {
                                 return (
