@@ -57,6 +57,8 @@ import MatchMaking from "../pages/dashboard/rooms/online-mode/MatchMaking";
 import LiveMatch from "../pages/dashboard/rooms/online-mode/LiveMatch";
 import FriendsRoom from "../pages/dashboard/rooms/friends/FriendsRoom";
 
+import FriendsWaitingRoom from "../pages/dashboard/rooms/friends/FriendsWaitingRoom";
+
 
 const friendsElement = (
   <FriendsPage
@@ -128,6 +130,10 @@ export const router = createBrowserRouter([
       {
         path: "rooms/friends",
         element: <FriendsRoom />,
+      },
+      {
+        path: "rooms/friends/room",
+        element: <FriendsWaitingRoom />,
       },
       
 
