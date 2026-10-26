@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import logo from "../assets/logo.png";
+import "./desktop-only.css";
 
 function useMobileScreen() {
   const [isMobile, setIsMobile] = useState(() =>
