@@ -203,7 +203,7 @@ window.addEventListener("storage", (event) => {
   }
 });
 
-// eslint-disable-next-line react-refresh/only-export-components
+
 export const useAccount = () => useSyncExternalStore(subscribe, () => state);
 
 /* ---------- Actions ---------- */
