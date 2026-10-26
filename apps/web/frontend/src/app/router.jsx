@@ -70,6 +70,11 @@ import CoachSetup from "../pages/dashboard/rooms/coach/CoachSetup";
 import CoachBattle from "../pages/dashboard/rooms/coach/CoachBattle";
 import CoachResults from "../pages/dashboard/rooms/coach/CoachResults";
 
+import ProfilePage from "../pages/dashboard/ProfilePage";
+import HistoryPage from "../pages/dashboard/HistoryPage";
+import NotificationsPage from "../pages/dashboard/NotificationsPage";
+import SettingsPage from "../pages/dashboard/SettingsPage";
+
 const friendsElement = (
   <FriendsPage
     eyebrow="YOUR NETWORK"
@@ -188,6 +193,19 @@ export const router = createBrowserRouter([
       },
       { path: "rooms/coach/results",
         element: <CoachResults />
+      },
+
+      { path: "profile", 
+        element: <ProfilePage /> 
+      },
+      { path: "history", 
+        element: <HistoryPage />
+      },
+      { path: "notifications",
+        element: <NotificationsPage />
+        },
+      { path: "settings", 
+        element: <SettingsPage /> 
       },
 
       {
