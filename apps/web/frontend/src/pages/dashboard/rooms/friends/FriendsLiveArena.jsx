@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { AlertCircle, LogOut, Maximize2, Minus, Plus, RefreshCw } from "lucide-react";
-
+import { recordMatch } from "../../../../features/account/accountStore";
 import FriendsChart from "./FriendsChart";
 import PermissionsPanel from "./FriendsPermissions";
 import VoicePanel, { useDemoSpeaking, useLocalMedia } from "./FriendsVoicePanel";
@@ -200,6 +200,14 @@ function LiveArena({ initial }) {
 
     const entry = buildSummary({ room, acct: closed, samples: samplesRef.current, maxDd: maxDdRef.current, reason, people: peopleRef.current });
     pushHistory(entry);
+    recordMatch({
+      id: entry.id,
+      mode: "friends",
+      title: `${sym.ticker} · ${room.players} players · ${room.minutes} min`,
+      result: entry.pnl > 0 ? "win" : entry.pnl < 0 ? "loss" : "draw",
+      pnl: entry.pnl,
+      detail: `${entry.trades.length} trades · max drawdown ${(entry.maxDd * 100).toFixed(2)}%`,
+    });
     rotateCode(); // a fresh room code for the next match
     clearRoom();
     setEndInfo(entry);

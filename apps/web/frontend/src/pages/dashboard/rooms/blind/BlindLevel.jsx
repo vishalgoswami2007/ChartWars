@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-
+import { recordMatch } from "../../../../features/account/accountStore";
 import BlindAnswerForm from "./BlindAnswerForm";
 import BlindChart from "./BlindChart";
 import BlindHintPanel from "./BlindHintPanel";
@@ -109,6 +109,13 @@ function Play({ level, progress, update }) {
       hintsUsed: state.hintsUsed,
     });
     update((p) => recordAttempt(p, level.id, scoring));
+    recordMatch({
+      mode: "blind",
+      title: `Level ${level.id}: ${level.title}`,
+      result: scoring.passed ? "pass" : "fail",
+      pnl: null,
+      detail: `Score ${scoring.finalScore} · ${scoring.stars} star${scoring.stars === 1 ? "" : "s"}`,
+    });
     setResult({ evaluation, scoring, firstClear: !state.passed && scoring.passed });
     setStage("result");
   };

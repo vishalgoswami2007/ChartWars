@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, Maximize2, Pause, Play, SkipForward } from "lucide-react";
-
+import { recordMatch } from "../../../../features/account/accountStore";
 import BattleChart from "../../../../features/coach/components/BattleChart";
 import BotPanel from "../../../../features/coach/components/BotPanel";
 import CoachPanel from "../../../../features/coach/components/CoachPanel";
@@ -50,6 +50,14 @@ function Battle({ ctx, setup }) {
     const summary = summarizeMatch(match, ctx);
     saveResult(summary);
     pushHistory(summary);
+    recordMatch({
+        id: summary.id,
+        mode: "coach",
+        title: `${summary.difficultyLabel}: ${summary.scenarioTitle}`,
+        result: summary.verdict.winner === "user" ? "win" : summary.verdict.winner === "coach" ? "loss" : "draw",
+        pnl: summary.user.pnl,
+        detail: `vs ${summary.botName}`,
+      });
     navigate(COACH_ROUTES.results, { replace: true, state: { summary, setup } });
   }, [match, ctx, navigate, setup]);
 

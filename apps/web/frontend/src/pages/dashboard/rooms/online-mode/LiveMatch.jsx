@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import * as LWC from "lightweight-charts";
 import { AlertCircle, Check, LogOut, Maximize2, Minus, Plus, RefreshCw, X } from "lucide-react";
-
+import { recordMatch } from "../../../../features/account/accountStore";
 import { fetchMarkets } from "../../../../services/cryptoMarketAPI";
 
 
@@ -1005,6 +1005,15 @@ function LiveMatch({ setup }) {
       commitYou(marketExit(youRef.current, p, "match end", now));
       commitBot(marketExit(botRef.current, p, "match end", now));
     }
+    const outcome = buildResult(youRef.current, botRef.current, why);
+    recordMatch({
+      id: `online_${roomId}_${Date.now()}`,
+      mode: "online",
+      title: `${ticker} · ${minutes} min vs Unknown trader`,
+      result: outcome.outcome,
+      pnl: outcome.you.pnl,
+      detail: `Score ${outcome.you.total.toFixed(1)} vs ${outcome.bot.total.toFixed(1)}`,
+    });
     setReason(why);
     setPhase("ended");
     setConfirmOpen(false);
