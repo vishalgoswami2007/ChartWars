@@ -31,11 +31,11 @@ export function Meter({ label, value, max, color = "bg-orange-400", text }) {
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
+
 export const btnPrimary =
   "border border-orange-400 bg-orange-500 font-mono font-bold uppercase text-black transition hover:bg-orange-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-not-allowed disabled:opacity-40";
 
-// eslint-disable-next-line react-refresh/only-export-components
+
 export const btnGhost =
   "border border-white/15 font-mono uppercase text-zinc-200 transition hover:border-orange-500/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 disabled:cursor-not-allowed disabled:opacity-40";
 
