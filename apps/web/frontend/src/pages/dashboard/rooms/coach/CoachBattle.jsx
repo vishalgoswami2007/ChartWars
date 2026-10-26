@@ -252,7 +252,7 @@ function Battle({ ctx, setup }) {
       </div>
 
       {confirmEnd && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4" role="alertdialog" aria-modal="true" aria-label="End match">
+        <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/80 p-4" role="alertdialog" aria-modal="true" aria-label="End match">
           <div className="cc-panel cc-pop w-full max-w-sm p-5">
             <h2 className="font-mono text-sm font-bold uppercase tracking-[0.2em] text-white">End the match now?</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
