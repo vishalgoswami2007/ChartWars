@@ -65,6 +65,11 @@ import BlindRoom from "../pages/dashboard/rooms/blind/BlindRoom";
 import BlindLevelMap from "../pages/dashboard/rooms/blind/BlindLevelMap";
 import BlindLevel from "../pages/dashboard/rooms/blind/BlindLevel";
 
+import CoachLanding from "../pages/dashboard/rooms/coach/CoachLanding";
+import CoachSetup from "../pages/dashboard/rooms/coach/CoachSetup";
+import CoachBattle from "../pages/dashboard/rooms/coach/CoachBattle";
+import CoachResults from "../pages/dashboard/rooms/coach/CoachResults";
+
 const friendsElement = (
   <FriendsPage
     eyebrow="YOUR NETWORK"
@@ -170,6 +175,19 @@ export const router = createBrowserRouter([
       },
       { path: "rooms/blind/level/:levelId", 
         element: <BlindLevel /> 
+      },
+
+      { path: "rooms/coach", 
+        element: <CoachLanding /> 
+      },
+      { path: "rooms/coach/setup", 
+        element: <CoachSetup />
+      },
+      { path: "rooms/coach/battle", 
+        element: <CoachBattle />
+      },
+      { path: "rooms/coach/results",
+        element: <CoachResults />
       },
 
       {

@@ -1,0 +1,27 @@
+/* Wallet balance flash when a match changes it. */
+.ac-flash-up {
+  animation: ac-up 1.4s ease-out;
+}
+.ac-flash-down {
+  animation: ac-down 1.4s ease-out;
+}
+@keyframes ac-up {
+  0%,
+  30% {
+    color: #34d399;
+    text-shadow: 0 0 12px rgba(52, 211, 153, 0.8);
+  }
+}
+@keyframes ac-down {
+  0%,
+  30% {
+    color: #f87171;
+    text-shadow: 0 0 12px rgba(248, 113, 113, 0.8);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac-flash-up,
+  .ac-flash-down {
+    animation: none;
+  }
+}

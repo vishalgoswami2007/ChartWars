@@ -15,6 +15,7 @@ import {
   Bot,
   Trophy,
   Swords,
+  History
 } from "lucide-react";
 
 import logo from "../../assets/logo.png";
@@ -330,6 +331,21 @@ export default function Sidebar({
             }
           >
             <Settings size={19} strokeWidth={1.8} />
+          </NavLink>
+          <NavLink to="/dashboard/history"
+            onClick={onClose}
+            aria-label="History"
+            title="History"
+            className={({ isActive }) =>
+              `${accountIconClass} ${
+                isActive
+                  ? "border-orange-500/50 bg-orange-500/10 text-orange-400"
+                  : ""
+              }`
+            }
+          >
+            <History size={19} strokeWidth={1.8} />
+            
           </NavLink>
         </div>
       </aside>

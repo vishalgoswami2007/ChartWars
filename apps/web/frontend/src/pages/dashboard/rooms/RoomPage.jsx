@@ -642,7 +642,8 @@ const handlePrimaryAction = () => {
   }
 
   if (activeMode?.id === "coaches") {
-    setSearchParams({ mode: "coaches", stage: "training" });
+     navigate("/dashboard/rooms/coach");
+     return;
   }
 };
 
