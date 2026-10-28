@@ -1,5 +1,5 @@
 
-import { signupUser, loginUser } from "../services/auth.service.js";
+import { signupUser, loginUser , googleLoginUser} from "../services/auth.service.js";
 import { createAccessToken } from "../services/token.service.js";
 import {
   createRefreshSession,
@@ -39,6 +39,26 @@ export async function login(req, res, next) {
     return res.status(200).json({
       success: true,
       message: "Login successful.",
+      data: { user },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function googleLogin(req, res, next) {
+  try {
+    const user = await googleLoginUser(req.body);
+
+    const accessToken = createAccessToken(user.id);
+    const refreshSession = await createRefreshSession(user.id);
+
+    res.cookie("cw_access", accessToken, accessCookieOptions);
+    res.cookie("cw_refresh", refreshSession.token, refreshCookieOptions);
+
+    return res.status(200).json({
+      success: true,
+      message: "Google login successful.",
       data: { user },
     });
   } catch (error) {

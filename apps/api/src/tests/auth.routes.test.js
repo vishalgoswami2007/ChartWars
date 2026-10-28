@@ -5,6 +5,7 @@ import request from "supertest";
 const {
   signupUserMock,
   loginUserMock,
+  googleLoginUserMock,
   createAccessTokenMock,
   verifyAccessTokenMock,
   createRefreshSessionMock,
@@ -15,6 +16,7 @@ const {
 } = vi.hoisted(() => ({
   signupUserMock: vi.fn(),
   loginUserMock: vi.fn(),
+  googleLoginUserMock: vi.fn(),
   createAccessTokenMock: vi.fn(),
   verifyAccessTokenMock: vi.fn(),
   createRefreshSessionMock: vi.fn(),
@@ -27,6 +29,8 @@ const {
 vi.mock("../services/auth.service.js", () => ({
   signupUser: signupUserMock,
   loginUser: loginUserMock,
+  googleLoginUser: googleLoginUserMock,
+
 }));
 
 vi.mock("../services/token.service.js", () => ({
@@ -64,6 +68,13 @@ describe("Auth routes", () => {
       email: "vishal@example.com",
     });
 
+      googleLoginUserMock.mockResolvedValue({
+    id: "google-user-123",
+    username: "vishal1234",
+    email: "vishal@example.com",
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  });
+
     createAccessTokenMock.mockReturnValue("test-access-token");
 
     verifyAccessTokenMock.mockReturnValue({
@@ -95,6 +106,63 @@ describe("Auth routes", () => {
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
     });
   });
+
+  it("logs in with Google and sets authentication cookies", async () => {
+  const response = await request(app)
+    .post("/api/v1/auth/google")
+    .send({ idToken: "mock-google-id-token" });
+
+  expect(response.status).toBe(200);
+  expect(response.body.success).toBe(true);
+  expect(response.body.message).toBe("Google login successful.");
+
+  expect(googleLoginUserMock).toHaveBeenCalledWith({
+    idToken: "mock-google-id-token",
+  });
+
+  expect(createAccessTokenMock).toHaveBeenCalledWith(
+    "google-user-123",
+  );
+  expect(createRefreshSessionMock).toHaveBeenCalledWith(
+    "google-user-123",
+  );
+
+  const cookies = response.headers["set-cookie"].join("; ");
+
+  expect(cookies).toContain("cw_access=");
+  expect(cookies).toContain("cw_refresh=");
+  expect(cookies.toLowerCase()).toContain("httponly");
+});
+
+it("rejects Google login when the ID token is missing", async () => {
+  const response = await request(app)
+    .post("/api/v1/auth/google")
+    .send({});
+
+  expect(response.status).toBe(400);
+  expect(googleLoginUserMock).not.toHaveBeenCalled();
+});
+
+it("returns an error when Google login service rejects the token", async () => {
+  googleLoginUserMock.mockRejectedValue(
+    Object.assign(
+      new Error("Google ID token is invalid or expired."),
+      {
+        statusCode: 401,
+        code: "INVALID_GOOGLE_TOKEN",
+      },
+    ),
+  );
+
+  const response = await request(app)
+    .post("/api/v1/auth/google")
+    .send({ idToken: "invalid-google-id-token" });
+
+  expect(response.status).toBe(401);
+  expect(googleLoginUserMock).toHaveBeenCalledWith({
+    idToken: "invalid-google-id-token",
+  });
+});
 
   it("creates an account with valid signup data", async () => {
     const response = await request(app)

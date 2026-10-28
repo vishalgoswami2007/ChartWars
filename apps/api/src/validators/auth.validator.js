@@ -43,3 +43,12 @@ export const loginSchema = z
       .max(128, "Password must not exceed 128 characters."),
   })
   .strict();
+
+  export const googleLoginSchema = z
+  .object({
+    idToken: z
+      .string()
+      .min(1, "Google ID token is required.")
+      .max(10_000, "Google ID token is too long."),
+  })
+  .strict();

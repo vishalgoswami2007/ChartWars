@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { validate } from "../middleware/validate.js";
 import { requireAuth } from "../middleware/require-auth.js";
-import { signupSchema, loginSchema } from "../validators/auth.validator.js";
+import { signupSchema, loginSchema , googleLoginSchema } from "../validators/auth.validator.js";
 import {
   signup,
   login,
+  googleLogin,
   refresh,
   logout,
   me,
@@ -14,6 +15,7 @@ const router = Router();
 
 router.post("/signup", validate(signupSchema), signup);
 router.post("/login", validate(loginSchema), login);
+router.post( "/google", validate(googleLoginSchema), googleLogin);
 router.post("/refresh", refresh);
 router.post("/logout", logout);
 router.get("/me", requireAuth, me);
