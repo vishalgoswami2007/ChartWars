@@ -6,16 +6,22 @@ const {
   signupUserMock,
   loginUserMock,
   createAccessTokenMock,
+  verifyAccessTokenMock,
   createRefreshSessionMock,
   rotateRefreshSessionMock,
   revokeRefreshSessionMock,
+  userFindByIdMock,
+  userLeanMock,
 } = vi.hoisted(() => ({
   signupUserMock: vi.fn(),
   loginUserMock: vi.fn(),
   createAccessTokenMock: vi.fn(),
+  verifyAccessTokenMock: vi.fn(),
   createRefreshSessionMock: vi.fn(),
   rotateRefreshSessionMock: vi.fn(),
   revokeRefreshSessionMock: vi.fn(),
+  userFindByIdMock: vi.fn(),
+  userLeanMock: vi.fn(),
 }));
 
 vi.mock("../services/auth.service.js", () => ({
@@ -25,12 +31,19 @@ vi.mock("../services/auth.service.js", () => ({
 
 vi.mock("../services/token.service.js", () => ({
   createAccessToken: createAccessTokenMock,
+  verifyAccessToken: verifyAccessTokenMock,
 }));
 
 vi.mock("../services/refresh-session.service.js", () => ({
   createRefreshSession: createRefreshSessionMock,
   rotateRefreshSession: rotateRefreshSessionMock,
   revokeRefreshSession: revokeRefreshSessionMock,
+}));
+
+vi.mock("../models/User.js", () => ({
+  default: {
+    findById: userFindByIdMock,
+  },
 }));
 
 import app from "../app.js";
@@ -53,6 +66,10 @@ describe("Auth routes", () => {
 
     createAccessTokenMock.mockReturnValue("test-access-token");
 
+    verifyAccessTokenMock.mockReturnValue({
+      sub: "user-123",
+    });
+
     createRefreshSessionMock.mockResolvedValue({
       token: "test-refresh-token",
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -64,6 +81,19 @@ describe("Auth routes", () => {
     });
 
     revokeRefreshSessionMock.mockResolvedValue(undefined);
+
+    userFindByIdMock.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        lean: userLeanMock,
+      }),
+    });
+
+    userLeanMock.mockResolvedValue({
+      _id: "user-123",
+      username: "vishal_dev",
+      email: "vishal@example.com",
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    });
   });
 
   it("creates an account with valid signup data", async () => {
@@ -191,5 +221,52 @@ describe("Auth routes", () => {
 
     expect(cookies).toContain("cw_access=");
     expect(cookies).toContain("cw_refresh=");
+  });
+
+  it("returns the current user's profile with a valid access token", async () => {
+    const response = await request(app)
+      .get("/api/v1/auth/me")
+      .set("Cookie", "cw_access=valid-access-token");
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.user).toMatchObject({
+      id: "user-123",
+      username: "vishal_dev",
+      email: "vishal@example.com",
+    });
+
+    expect(verifyAccessTokenMock).toHaveBeenCalledWith(
+      "valid-access-token",
+    );
+    expect(userFindByIdMock).toHaveBeenCalledWith("user-123");
+  });
+
+  it("rejects the current-user request when the access cookie is missing", async () => {
+    const response = await request(app)
+      .get("/api/v1/auth/me");
+
+    expect(response.status).toBe(401);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error.code).toBe("UNAUTHORIZED");
+
+    expect(verifyAccessTokenMock).not.toHaveBeenCalled();
+    expect(userFindByIdMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid access token", async () => {
+    verifyAccessTokenMock.mockImplementation(() => {
+      throw new Error("Invalid or expired token.");
+    });
+
+    const response = await request(app)
+      .get("/api/v1/auth/me")
+      .set("Cookie", "cw_access=invalid-access-token");
+
+    expect(response.status).toBe(401);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error.code).toBe("INVALID_ACCESS_TOKEN");
+
+    expect(userFindByIdMock).not.toHaveBeenCalled();
   });
 });

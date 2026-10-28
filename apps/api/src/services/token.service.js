@@ -42,3 +42,14 @@ export function hashRefreshToken(token) {
 
   return createHash("sha256").update(token).digest("hex");
 }
+
+export function verifyAccessToken(token) {
+  if (typeof token !== "string" || token.length === 0) {
+    throw new Error("An access token is required.");
+  }
+
+  return jwt.verify(token, getAccessTokenSecret(), {
+    issuer: "chartwars-api",
+    audience: "chartwars-web",
+  });
+}

@@ -1,13 +1,16 @@
 
-import { signupUser , loginUser } from "../services/auth.service.js";
+import { signupUser, loginUser } from "../services/auth.service.js";
 import { createAccessToken } from "../services/token.service.js";
-import { createRefreshSession } from "../services/refresh-session.service.js";
+import {
+  createRefreshSession,
+  rotateRefreshSession,
+  revokeRefreshSession,
+} from "../services/refresh-session.service.js";
 import {
   accessCookieOptions,
   refreshCookieOptions,
 } from "../config/cookies.js";
-import { rotateRefreshSession , revokeRefreshSession } from "../services/refresh-session.service.js";
-
+import User from "../models/User.js";
 
 export async function signup(req, res, next) {
   try {
@@ -22,8 +25,6 @@ export async function signup(req, res, next) {
     return next(error);
   }
 }
-
-
 
 export async function login(req, res, next) {
   try {
@@ -44,7 +45,6 @@ export async function login(req, res, next) {
     return next(error);
   }
 }
-
 
 export async function refresh(req, res, next) {
   try {
@@ -91,6 +91,38 @@ export async function logout(req, res, next) {
     return res.status(200).json({
       success: true,
       message: "Logout successful.",
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function me(req, res, next) {
+  try {
+    const user = await User.findById(req.auth.userId)
+      .select("_id username email createdAt")
+      .lean();
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: "UNAUTHORIZED",
+          message: "The user account no longer exists.",
+        },
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        user: {
+          id: String(user._id),
+          username: user.username,
+          email: user.email,
+          createdAt: user.createdAt,
+        },
+      },
     });
   } catch (error) {
     return next(error);
