@@ -1,124 +1,51 @@
+import crypto from "node:crypto";
+import { RefreshSession } from "../models/RefreshSession.js";
+import { User } from "../models/User.js";
+import { REFRESH_TTL_MS } from "../constants/auth.js";
+import { ApiError } from "../utils/ApiError.js";
+import { generateOpaqueToken, hashToken } from "./token.service.js";
 
-import mongoose from "mongoose";
-import RefreshSession from "../models/RefreshSession.js";
-import {
-  createRefreshToken,
-  hashRefreshToken,
-} from "./token.service.js";
-import { env } from "../config/env.js";
-
-function createAuthError(message, code = "INVALID_REFRESH_TOKEN") {
-  const error = new Error(message);
-  error.statusCode = 401;
-  error.code = code;
-  return error;
-}
-
-function getExpiryDate() {
-  const days = env.REFRESH_TOKEN_TTL_DAYS;
-
-  if (!Number.isInteger(days) || days < 1 || days > 30) {
-    throw new Error("REFRESH_TOKEN_TTL_DAYS must be between 1 and 30.");
-  }
-
-  return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-}
-
-export async function createRefreshSession(userId) {
-  if (!mongoose.isValidObjectId(userId)) {
-    throw new Error("A valid user ID is required.");
-  }
-
-  const token = createRefreshToken();
-  const tokenHash = hashRefreshToken(token);
-  const expiresAt = getExpiryDate();
-
+export async function createSession(user, meta = {}, family = crypto.randomUUID()) {
+  const token = generateOpaqueToken();
   await RefreshSession.create({
-    userId,
-    tokenHash,
-    expiresAt,
+    user: user.id,
+    tokenHash: hashToken(token),
+    family,
+    expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
+    ip: meta.ip,
+    userAgent: meta.userAgent,
   });
-
-  return { token, expiresAt };
+  return token;
 }
 
-export async function rotateRefreshSession(token) {
-  if (typeof token !== "string" || token.length === 0) {
-    throw createAuthError("Invalid refresh token.");
-  }
+// One-time-use refresh tokens. Using an old token again = theft signal -> kill the whole family.
+export async function rotateSession(rawToken, meta = {}) {
+  const tokenHash = hashToken(rawToken);
 
-  const oldHash = hashRefreshToken(token);
-  const newToken = createRefreshToken();
-  const newHash = hashRefreshToken(newToken);
-  const expiresAt = getExpiryDate();
-
-  const session = await mongoose.startSession();
-
-  try {
-    let userId;
-
-    await session.withTransaction(async () => {
-      const current = await RefreshSession.findOne({
-        tokenHash: oldHash,
-        revokedAt: null,
-        expiresAt: { $gt: new Date() },
-      }).session(session);
-
-      if (!current) {
-        throw createAuthError("Invalid or expired refresh token.");
-      }
-
-      const result = await RefreshSession.updateOne(
-        {
-          _id: current._id,
-          revokedAt: null,
-          expiresAt: { $gt: new Date() },
-        },
-        {
-          $set: {
-            revokedAt: new Date(),
-            replacedByTokenHash: newHash,
-          },
-        },
-        { session },
-      );
-
-      if (result.modifiedCount !== 1) {
-        throw createAuthError("Refresh token has already been used.");
-      }
-
-      await RefreshSession.create(
-        [
-          {
-            userId: current.userId,
-            tokenHash: newHash,
-            expiresAt,
-          },
-        ],
-        { session },
-      );
-
-      userId = current.userId.toString();
-    });
-
-    return { token: newToken, expiresAt, userId };
-  } finally {
-    await session.endSession();
-  }
-}
-
-export async function revokeRefreshSession(token) {
-  if (typeof token !== "string" || token.length === 0) {
-    return;
-  }
-
-  await RefreshSession.updateOne(
-    {
-      tokenHash: hashRefreshToken(token),
-      revokedAt: null,
-    },
-    {
-      $set: { revokedAt: new Date() },
-    },
+  const session = await RefreshSession.findOneAndUpdate(
+    { tokenHash, revokedAt: null, expiresAt: { $gt: new Date() } },
+    { revokedAt: new Date() }
   );
+
+  if (!session) {
+    const old = await RefreshSession.findOne({ tokenHash });
+    if (old?.revokedAt) {
+      await RefreshSession.updateMany({ family: old.family, revokedAt: null }, { revokedAt: new Date() });
+    }
+    throw ApiError.unauthorized("Session expired, please login again");
+  }
+
+  const user = await User.findById(session.user);
+  if (!user) throw ApiError.unauthorized("Session expired, please login again");
+
+  const refreshToken = await createSession(user, meta, session.family);
+  return { user, refreshToken };
+}
+
+export async function revokeSession(rawToken) {
+  await RefreshSession.updateOne({ tokenHash: hashToken(rawToken), revokedAt: null }, { revokedAt: new Date() });
+}
+
+export async function revokeAllForUser(userId) {
+  await RefreshSession.updateMany({ user: userId, revokedAt: null }, { revokedAt: new Date() });
 }

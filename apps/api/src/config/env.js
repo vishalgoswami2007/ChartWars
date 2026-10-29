@@ -1,43 +1,29 @@
+import "dotenv/config";
 import { z } from "zod";
 
-
-const envSchema = z.object({
-  NODE_ENV: z
-    .enum(["development", "test", "production"])
-    .default("development"),
-
-  HOST: z.string().min(1).default("127.0.0.1"),
-  MONGODB_URI: z.string().optional(),
-  PORT: z.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(65535)
-    .default(4000),
-
-  WEB_ORIGIN: z.url().default("http://localhost:5173"),
-
-  LOG_LEVEL: z
-    .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
-    .default("info"),
-
-    
-        ACCESS_TOKEN_SECRET: z.string().min(64).optional(),
-        ACCESS_TOKEN_TTL: z.string().default("15m"),
-        REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(30).default(7),
-
+const schema = z.object({
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  PORT: z.coerce.number().default(4000),
+  MONGODB_URI: z.string().min(1),
+  CLIENT_URL: z.string().url().default("http://localhost:5173"),
+  JWT_ACCESS_SECRET: z.string().min(32, "JWT_ACCESS_SECRET must be 32+ chars"),
+  OTP_SECRET: z.string().min(32, "OTP_SECRET must be 32+ chars"),
+  GOOGLE_CLIENT_ID: z.string().min(1),
+  SMTP_HOST: z.string().default("smtp.gmail.com"),
+  SMTP_PORT: z.coerce.number().default(465),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  EMAIL_FROM: z.string().default("ChartWars <no-reply@chartwars.app>"),
 });
 
-const result = envSchema.safeParse(process.env);
-
-if (!result.success) {
-  console.error("Invalid environment configuration:");
-
-  for (const issue of result.error.issues) {
-    console.error(`- ${issue.path.join(".")}: ${issue.message}`);
+const parsed = schema.safeParse(process.env);
+if (!parsed.success) {
+  console.error("Invalid environment variables:");
+  for (const issue of parsed.error.issues) {
+    console.error(` - ${issue.path.join(".")}: ${issue.message}`);
   }
-
   process.exit(1);
 }
 
-export const env = Object.freeze(result.data);
+export const env = parsed.data;
+export const isProd = env.NODE_ENV === "production";

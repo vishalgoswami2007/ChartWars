@@ -1,46 +1,18 @@
-
 import mongoose from "mongoose";
 
 const refreshSessionSchema = new mongoose.Schema(
   {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true,
-    },
-
-    tokenHash: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-
-    expiresAt: {
-      type: Date,
-      required: true,
-      index: { expires: 0 },
-    },
-
-    revokedAt: {
-      type: Date,
-      default: null,
-    },
-
-    replacedByTokenHash: {
-      type: String,
-      default: null,
-    },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    tokenHash: { type: String, required: true, unique: true },
+    family: { type: String, required: true, index: true }, // all rotations of one login share a family
+    expiresAt: { type: Date, required: true },
+    revokedAt: Date,
+    ip: String,
+    userAgent: String,
   },
-  {
-    timestamps: true,
-    versionKey: false,
-  },
+  { timestamps: true }
 );
 
-const RefreshSession = mongoose.model(
-  "RefreshSession",
-  refreshSessionSchema,
-);
+refreshSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export default RefreshSession;
+export const RefreshSession = mongoose.model("RefreshSession", refreshSessionSchema);

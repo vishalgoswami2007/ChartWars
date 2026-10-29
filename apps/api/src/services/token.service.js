@@ -1,55 +1,27 @@
-
+import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
-import { randomBytes, createHash } from "node:crypto";
 import { env } from "../config/env.js";
+import { ACCESS_TOKEN_TTL } from "../constants/auth.js";
 
-function getAccessTokenSecret() {
-  const secret = env.ACCESS_TOKEN_SECRET;
+export const signAccessToken = (user) =>
+  jwt.sign({ sub: user.id }, env.JWT_ACCESS_SECRET, { expiresIn: ACCESS_TOKEN_TTL });
 
-  if (!secret || Buffer.byteLength(secret, "utf8") < 64) {
-    throw new Error(
-      "ACCESS_TOKEN_SECRET must contain at least 64 bytes of random secret data.",
-    );
-  }
+export const verifyAccessToken = (token) => jwt.verify(token, env.JWT_ACCESS_SECRET);
 
-  return secret;
-}
+export const generateOpaqueToken = () => crypto.randomBytes(48).toString("base64url");
 
-export function createAccessToken(userId) {
-  if (!userId) {
-    throw new Error("A user ID is required to create an access token.");
-  }
+export const hashToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
 
-  return jwt.sign(
-    { sub: String(userId) },
-    getAccessTokenSecret(),
-    {
-      expiresIn: env.ACCESS_TOKEN_TTL,
-      issuer: "chartwars-api",
-      audience: "chartwars-web",
-    },
-  );
-}
+export const fingerprint = (hash) =>
+  crypto.createHash("sha256").update(hash || "").digest("hex").slice(0, 16);
 
-export function createRefreshToken() {
-  return randomBytes(48).toString("base64url");
-}
-
-export function hashRefreshToken(token) {
-  if (typeof token !== "string" || token.length === 0) {
-    throw new Error("A refresh token is required.");
-  }
-
-  return createHash("sha256").update(token).digest("hex");
-}
-
-export function verifyAccessToken(token) {
-  if (typeof token !== "string" || token.length === 0) {
-    throw new Error("An access token is required.");
-  }
-
-  return jwt.verify(token, getAccessTokenSecret(), {
-    issuer: "chartwars-api",
-    audience: "chartwars-web",
+export const signResetToken = (user) =>
+  jwt.sign({ sub: user.id, ph: fingerprint(user.passwordHash), purpose: "reset" }, env.OTP_SECRET, {
+    expiresIn: "10m",
   });
-}
+
+export const verifyResetToken = (token) => {
+  const payload = jwt.verify(token, env.OTP_SECRET);
+  if (payload.purpose !== "reset") throw new Error("Wrong token type");
+  return payload;
+};
