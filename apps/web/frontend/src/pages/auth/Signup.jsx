@@ -1,15 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import AuthLayout, { Alert, AuthLink, DemoNote, Divider, Field, GoogleButton, PasswordField, PasswordMeter, SubmitButton, postJson } from "./AuthLayout";
+import AuthLayout, { Alert, AuthLink, DemoNote, Divider, Field, GoogleButton, PasswordField, PasswordMeter, SubmitButton, passwordError, postJson } from "./AuthLayout";
 
 const ROUTES = {
-  dashboard: "/dashboard",
   login: "/login",
-  forgotPassword: "/forgetPassword",
-  home:"/",
-  privacyPolicy:"/privacyPolicy",
-  termsOfUse: "/termsOfUse"
+  verifyOtp: "/verify-otp",
+  privacyPolicy: "/privacy-policy",
+  termsOfUse: "/terms-of-use",
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -18,7 +16,8 @@ function validate(v) {
   const e = {};
   if (v.name.trim().length < 2) e.name = "Enter your full name.";
   if (!EMAIL_RE.test(v.email.trim())) e.email = "Enter a valid email address.";
-  if (v.password.length < 8) e.password = "Use at least 8 characters.";
+  const pw = passwordError(v.password);
+  if (pw) e.password = pw;
   if (!v.terms) e.terms = "Please accept the Terms of Use and Privacy Policy.";
   return e;
 }
@@ -45,20 +44,21 @@ export default function Signup() {
     setError("");
     if (Object.keys(found).length > 0) return;
 
+    const email = values.email.trim();
     setStatus("sending");
     try {
-      await postJson("/api/auth/signup", {
+      await postJson("/api/v1/auth/signup", {
         name: values.name.trim(),
-        email: values.email.trim(),
+        email,
         password: values.password,
       });
-      navigate(ROUTES.login, { replace: true, state: { registered: true } });
+      navigate(ROUTES.verifyOtp, { state: { email, purpose: "verify_email" } });
     } catch (err) {
-      setError(
-        err.status === 409
-          ? "An account with this email may already exist. Try logging in instead."
-          : "We could not create your account. Please try again."
-      );
+      if (err.status === 409) setError("An account with this email already exists. Try logging in instead.");
+      else if (err.status === 422) setError(err.message);
+      else if (err.status === 429) setError("Too many attempts. Please wait a moment and try again.");
+      else if (!err.status) setError("Cannot reach the server. Check your connection and try again.");
+      else setError("We could not create your account. Please try again.");
       setStatus("idle");
     }
   };

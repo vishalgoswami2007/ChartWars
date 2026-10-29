@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../../assets/logo.png";
+import { useAuth } from "../auth/AuthProvider";
 
 // Change the slogan here. Two lines: the first in white, the second in orange.
 const SLOGAN = ["Decide before", "you know."];
@@ -38,9 +39,10 @@ export async function postJson(path, body) {
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
+    if (!res.ok) {
     const error = new Error(data.message || "Request failed");
     error.status = res.status;
+    error.code = data.code;
     throw error;
   }
   return data;
@@ -209,9 +211,18 @@ export function PasswordMeter({ value }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
+export function passwordError(v) {
+  if (v.length < 8) return "Use at least 8 characters.";
+  if (!/[a-z]/.test(v) || !/[A-Z]/.test(v)) return "Use both upper and lower case letters.";
+  if (!/\d/.test(v)) return "Add at least one number.";
+  if (!/[^A-Za-z0-9]/.test(v)) return "Add at least one symbol.";
+  return "";
+}
 
 export function GoogleButton({ label, onUnavailable }) {
   const navigate = useNavigate();
+  const { setUser } = useAuth();
   const buttonRef = useRef(null);
   const callbackRef = useRef(null);
   const [status, setStatus] = useState("loading");
@@ -306,7 +317,7 @@ export function GoogleButton({ label, onUnavailable }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ idToken: response.credential }),
+          body: JSON.stringify({ credential: response.credential }),
         });
 
         const data = await result.json().catch(() => ({}));
@@ -316,7 +327,7 @@ export function GoogleButton({ label, onUnavailable }) {
             data.message || "Google sign-in failed. Please try again."
           );
         }
-
+        if (data.user) setUser(data.user);
         navigate("/dashboard", { replace: true });
       } catch (err) {
         setError(
@@ -332,7 +343,7 @@ export function GoogleButton({ label, onUnavailable }) {
     return () => {
       active = false;
     };
-  }, [apiUrl, googleClientId, label, navigate, onUnavailable]);
+  }, [apiUrl, googleClientId, label, navigate, onUnavailable , setUser]);
 
   return (
     <div className="w-full">

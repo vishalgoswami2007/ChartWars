@@ -4,22 +4,16 @@ import { useNavigate } from "react-router-dom";
 import AuthLayout, { Alert, AuthLink, DemoNote, Field, SubmitButton, postJson } from "./AuthLayout";
 
 const ROUTES = {
-  dashboard: "/dashboard",
   login: "/login",
-  Signup:"/signup",
-  forgotPassword: "/forgetPassword",
-  home:"/",
-  privacyPolicy:"/privacyPolicy",
-  termsOfUse: "/termsOfUse",
-  verifyOtp: "/verifyOtp"
+  verifyOtp: "/verify-otp",
 };
-
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
+  const [fieldError, setFieldError] = useState("");
   const [error, setError] = useState("");
   const [status, setStatus] = useState("idle");
 
@@ -27,17 +21,20 @@ export default function ForgotPassword() {
     e.preventDefault();
     if (status === "sending") return;
     if (!EMAIL_RE.test(email.trim())) {
-      setError("Enter a valid email address.");
+      setFieldError("Enter a valid email address.");
       return;
     }
+    setFieldError("");
     setError("");
     setStatus("sending");
     try {
-      await postJson("/api/auth/forgot-password", { email: email.trim() });
-      // The same result whether or not the account exists, so emails cannot be probed.
-      navigate(ROUTES.verifyOtp, { state: { email: email.trim() } });
-    } catch {
-      setError("We could not send the code. Please try again.");
+      await postJson("/api/v1/auth/forgot-password", { email: email.trim() });
+      // Same result whether or not the account exists, so emails cannot be probed.
+      navigate(ROUTES.verifyOtp, { state: { email: email.trim(), purpose: "reset_password" } });
+    } catch (err) {
+      if (err.status === 429) setError("Too many requests. Please wait a moment and try again.");
+      else if (!err.status) setError("Cannot reach the server. Check your connection and try again.");
+      else setError("We could not send the code. Please try again.");
       setStatus("idle");
     }
   };
@@ -52,7 +49,7 @@ export default function ForgotPassword() {
         </>
       }
     >
-      {status === "idle" && error && !EMAIL_RE.test(email.trim()) ? null : error && <Alert>{error}</Alert>}
+      {error && <Alert>{error}</Alert>}
       <form onSubmit={handleSubmit} noValidate>
         <Field
           label="Email"
@@ -63,9 +60,10 @@ export default function ForgotPassword() {
           value={email}
           onChange={(e) => {
             setEmail(e.target.value);
+            setFieldError("");
             setError("");
           }}
-          error={error}
+          error={fieldError}
         />
         <SubmitButton loading={status === "sending"}>Send code</SubmitButton>
       </form>

@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import AuthLayout, { Alert, AuthLink, DemoNote, Divider, Field, GoogleButton, PasswordField, SubmitButton, postJson } from "./AuthLayout";
+import { useAuth } from "../auth/AuthProvider";
+
 const ROUTES = {
   dashboard: "/dashboard",
   signup: "/signup",
-  forgotPassword: "/forgetPassword",
-  home:"/"
+  forgotPassword: "/forgot-password",
+  verifyOtp: "/verify-otp",
+  home: "/",
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -20,16 +23,16 @@ function validate(v) {
 
 export default function Login() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [values, setValues] = useState({ email: "", password: "", remember: true });
+  const { setUser } = useAuth();
+  const [values, setValues] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
   const handleChange = (e) => {
-    const { name, type, value, checked } = e.target;
-    setValues((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+    const { name, value } = e.target;
+    setValues((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
@@ -41,17 +44,28 @@ export default function Login() {
     setError("");
     if (Object.keys(found).length > 0) return;
 
+    const email = values.email.trim();
     setStatus("sending");
     try {
-      await postJson("/api/auth/login", {
-        email: values.email.trim(),
-        password: values.password,
-        remember: values.remember,
-      });
-      navigate(ROUTES.dashboard ?? ROUTES.home, { replace: true });
+      const data = await postJson("/api/v1/auth/login", { email, password: values.password });
+      if (data.user) setUser(data.user);
+      navigate(ROUTES.dashboard, { replace: true });
     } catch (err) {
-      // One message for every failure, so we never reveal whether an email exists.
-      setError(err.status === 429 ? "Too many attempts. Please wait a moment and try again." : "Incorrect email or password.");
+      if (err.code === "EMAIL_NOT_VERIFIED") {
+        // account exists but email was never verified: send a fresh code and continue there
+        try {
+          await postJson("/api/v1/auth/resend-otp", { email });
+        } catch {
+          // the code from signup may still be valid, so carry on
+        }
+        navigate(ROUTES.verifyOtp, { state: { email, purpose: "verify_email" } });
+        return;
+      }
+
+      if (err.status === 401) setError("Incorrect email or password.");
+      else if (err.status === 429) setError("Too many attempts. Please wait a moment and try again.");
+      else if (!err.status) setError("Cannot reach the server. Check your connection and try again.");
+      else setError("Something went wrong. Please try again.");
       setStatus("idle");
     }
   };
@@ -66,8 +80,6 @@ export default function Login() {
         </>
       }
     >
-      {location.state?.registered && <Alert tone="success">Account created. Log in to continue.</Alert>}
-      {location.state?.passwordReset && <Alert tone="success">Password updated. Log in with your new password.</Alert>}
       {error && <Alert>{error}</Alert>}
       {notice && <Alert tone="info">{notice}</Alert>}
 
@@ -86,11 +98,9 @@ export default function Login() {
           error={errors.password}
           right={<AuthLink to={ROUTES.forgotPassword} className="text-xs">Forgot password?</AuthLink>}
         />
-        <label className="mb-4 flex items-center gap-3 text-sm text-zinc-400">
-          <input type="checkbox" name="remember" checked={values.remember} onChange={handleChange} className="h-4 w-4 accent-orange-500" />
-          Keep me signed in on this device
-        </label>
-        <SubmitButton loading={status === "sending"}>Log in</SubmitButton>
+        <div className="mt-2">
+          <SubmitButton loading={status === "sending"}>Log in</SubmitButton>
+        </div>
       </form>
       <DemoNote />
     </AuthLayout>

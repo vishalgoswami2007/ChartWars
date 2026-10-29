@@ -1,20 +1,31 @@
 import { useEffect, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 
-import AuthLayout, { Alert, AuthLink, DemoNote, PasswordField, PasswordMeter, SubmitButton, postJson } from "./AuthLayout";
+import AuthLayout, { Alert, AuthLink, DemoNote, PasswordField, PasswordMeter, SubmitButton, passwordError, postJson } from "./AuthLayout";
+import { useAuth } from "../auth/AuthProvider";
 
 const ROUTES = {
+  dashboard: "/dashboard",
   login: "/login",
-  forgetPassword: "/forgetPassword",
+  signup: "/signup",
+  forgotPassword: "/forgot-password",
 };
 
 const LENGTH = 6;
-const RESEND_SECONDS = 30;
+const RESEND_SECONDS = 60; // matches the server-side cooldown
+
+function otpMessage(err) {
+  if (!err.status) return "Cannot reach the server. Check your connection and try again.";
+  if (err.status === 400 || err.status === 429) return err.message;
+  return "Something went wrong. Please try again.";
+}
 
 export default function VerifyOtp() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { setUser } = useAuth();
   const email = location.state?.email;
+  const isSignup = location.state?.purpose === "verify_email";
 
   const [step, setStep] = useState("code"); // code | password
   const [digits, setDigits] = useState(Array(LENGTH).fill(""));
@@ -37,7 +48,7 @@ export default function VerifyOtp() {
   }, [step]);
 
   // Arrived without an email (for example by typing the URL): start from the beginning.
-  if (!email) return <Navigate to={ROUTES.forgetPassword} replace />;
+  if (!email) return <Navigate to={isSignup ? ROUTES.signup : ROUTES.forgotPassword} replace />;
 
   const code = digits.join("");
 
@@ -76,12 +87,19 @@ export default function VerifyOtp() {
     }
     setStatus("sending");
     try {
-      const data = await postJson("/api/auth/verify-otp", { email, code });
+      if (isSignup) {
+        // verifying the email also logs the user in
+        const data = await postJson("/api/v1/auth/verify-email", { email, otp: code });
+        if (data.user) setUser(data.user);
+        navigate(ROUTES.dashboard, { replace: true });
+        return;
+      }
+      const data = await postJson("/api/v1/auth/verify-reset-otp", { email, otp: code });
       setToken(data.resetToken || "");
       setStep("password");
       setError("");
     } catch (err) {
-      setError(err.status === 429 ? "Too many attempts. Please wait and try again." : "That code is not correct or has expired.");
+      setError(otpMessage(err));
     }
     setStatus("idle");
   };
@@ -91,7 +109,8 @@ export default function VerifyOtp() {
     setError("");
     setInfo("");
     try {
-      await postJson("/api/auth/forgot-password", { email });
+      const path = isSignup ? "/api/v1/auth/resend-otp" : "/api/v1/auth/forgot-password";
+      await postJson(path, { email });
       setInfo("A new code has been sent if the account exists.");
       setSeconds(RESEND_SECONDS);
       setDigits(Array(LENGTH).fill(""));
@@ -104,16 +123,24 @@ export default function VerifyOtp() {
   const reset = async (e) => {
     e.preventDefault();
     if (status === "sending") return;
-    if (password.length < 8) {
-      setError("Use at least 8 characters.");
+    const problem = passwordError(password);
+    if (problem) {
+      setError(problem);
       return;
     }
     setStatus("sending");
     try {
-      await postJson("/api/auth/reset-password", { email, code, resetToken: token, password });
+      await postJson("/api/v1/auth/reset-password", { resetToken: token, newPassword: password });
       navigate(ROUTES.login, { replace: true, state: { passwordReset: true } });
-    } catch {
-      setError("We could not update your password. The code may have expired. Please start again.");
+    } catch (err) {
+      if (err.code === "RESET_EXPIRED") {
+        setStep("code");
+        setDigits(Array(LENGTH).fill(""));
+        setPassword("");
+        setError("Your reset session expired. Please request a new code.");
+      } else {
+        setError(otpMessage(err));
+      }
       setStatus("idle");
     }
   };
@@ -150,12 +177,22 @@ export default function VerifyOtp() {
 
   return (
     <AuthLayout
-      title="Enter the code"
-      subtitle={`If an account exists for ${email}, we sent a 6-digit code. It expires soon.`}
+      title={isSignup ? "Verify your email" : "Enter the code"}
+      subtitle={
+        isSignup
+          ? `We sent a 6-digit code to ${email}. It expires in 10 minutes.`
+          : `If an account exists for ${email}, we sent a 6-digit code. It expires in 10 minutes.`
+      }
       footer={
-        <>
-          Wrong email? <AuthLink to={ROUTES.forgotPassword}>Use a different one</AuthLink>
-        </>
+        isSignup ? (
+          <>
+            Wrong email? <AuthLink to={ROUTES.signup}>Start again</AuthLink>
+          </>
+        ) : (
+          <>
+            Wrong email? <AuthLink to={ROUTES.forgotPassword}>Use a different one</AuthLink>
+          </>
+        )
       }
     >
       {error && <Alert>{error}</Alert>}
@@ -196,7 +233,7 @@ export default function VerifyOtp() {
             Resend code
           </button>
         </div>
-        <SubmitButton loading={status === "sending"}>Verify code</SubmitButton>
+        <SubmitButton loading={status === "sending"}>{isSignup ? "Verify email" : "Verify code"}</SubmitButton>
       </form>
       <DemoNote />
     </AuthLayout>

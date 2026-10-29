@@ -1,6 +1,6 @@
 
 import { createBrowserRouter } from "react-router-dom";
-
+import { GuestRoute, ProtectedRoute } from "../pages/auth/AuthProvider";
 // Landing
 import LandingPage from "../pages/landing/LandingPage";
 import NotFoundPage from "../app/NotFoundPage";
@@ -85,33 +85,32 @@ const friendsElement = (
 
 export const router = createBrowserRouter([
   // Main website
-  {
+    // Authentication
+   {
     path: "/",
     element: <LandingPage />,
   },
-
-  // Authentication
   {
     path: "/signup",
-    element: <Signup />,
+    element: <GuestRoute><Signup /></GuestRoute>,
   },
   {
     path: "/login",
-    element: <Login />,
+    element: <GuestRoute><Login /></GuestRoute>,
   },
   {
     path: "/forgot-password",
-    element: <ForgotPassword />,
+    element: <GuestRoute><ForgotPassword /></GuestRoute>,
   },
   {
     path: "/verify-otp",
-    element: <VerifyOtp />,
+    element: <GuestRoute><VerifyOtp /></GuestRoute>,
   },
 
   // Dashboard and nested pages
-  {
+    {
     path: "/dashboard",
-    element: <Dashboard />,
+    element: <ProtectedRoute><Dashboard /></ProtectedRoute>,
     children: [
       {
         index: true,
