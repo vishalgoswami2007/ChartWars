@@ -49,7 +49,7 @@ export default function Dashboard() {
     );
   }
 
-  // Normal dashboard layout.
+
   return (
     <div className="min-h-screen bg-[#050505] text-white">
       <Sidebar
