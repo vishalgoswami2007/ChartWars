@@ -13,6 +13,14 @@ export function errorHandler(err, _req, res, _next) {
   if (err instanceof ApiError) {
     return res.status(err.status).json({ message: err.message, code: err.code });
   }
+  // Galat ObjectId, jaise GET /users/abc ya /rooms/123
+  if (err?.name === "CastError") {
+    return res.status(400).json({ message: "Invalid id" });
+  }
+  // express.json() ko kharab JSON mila
+  if (err?.type === "entity.parse.failed") {
+    return res.status(400).json({ message: "Invalid JSON body" });
+  }
   if (err?.code === 11000) {
     console.error("DUPLICATE KEY:", err.keyPattern, err.keyValue, err.message);
     return res.status(409).json({ message: "Already exists" });
