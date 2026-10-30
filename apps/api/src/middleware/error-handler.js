@@ -3,8 +3,6 @@ import { ApiError } from "../utils/ApiError.js";
 
 export const notFound = (_req, res) => res.status(404).json({ message: "Route not found" });
 
-console.error("ERR:", err.status, err.code, err.keyPattern, err.keyValue, err.message);
-
 export function errorHandler(err, _req, res, _next) {
   if (err instanceof ZodError) {
     return res.status(422).json({
@@ -16,6 +14,7 @@ export function errorHandler(err, _req, res, _next) {
     return res.status(err.status).json({ message: err.message, code: err.code });
   }
   if (err?.code === 11000) {
+    console.error("DUPLICATE KEY:", err.keyPattern, err.keyValue, err.message);
     return res.status(409).json({ message: "Already exists" });
   }
   console.error(err);
