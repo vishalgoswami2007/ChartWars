@@ -91,7 +91,7 @@ export default function Signup() {
             I agree to the <AuthLink to={ROUTES.termsOfUse}>Terms of Use</AuthLink> and <AuthLink to={ROUTES.privacyPolicy}>Privacy Policy</AuthLink>.
           </span>
         </label>
-        <p className="mb-3 mt-1 min-h-3.5 text-xs text-red-500">{errors.terms}</p>
+        <p className="mb-3 mt-1 min-h-3.5 text-xs text-red-400">{errors.terms}</p>
 
         <SubmitButton loading={status === "sending"}>Create account</SubmitButton>
       </form>
