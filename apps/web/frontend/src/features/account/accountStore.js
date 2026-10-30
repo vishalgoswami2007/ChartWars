@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { api } from "../../lib/apiClient";
 
 export const HISTORY_DAYS = 10;
 export const START_BALANCE = 10000;
@@ -7,7 +8,8 @@ export const TIER = "Unranked";
 export const MODE_LABEL = { online: "Online", friends: "Friends", blind: "Blind Room", coach: "Vs Coach" };
 export const RESULT_LABEL = { win: "Win", loss: "Loss", draw: "Draw", pass: "Passed", fail: "Not yet" };
 
-const KEY = "cw.account.v1";
+const KEY_PREFIX = "cw.account.v2."; // + userId, har user ka alag local data
+const LEGACY_KEY = "cw.account.v1";
 const DAY = 86_400_000;
 const MAX_HISTORY = 500;
 const MAX_LEDGER = 200;
@@ -19,8 +21,10 @@ const whole = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 const cents = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export const formatCW = (v) => (Number.isFinite(v) ? whole.format(Math.round(v)) : "—");
+
 export const formatPnl = (v) =>
   Number.isFinite(v) ? `${v > 0 ? "+" : v < 0 ? "-" : ""}$${cents.format(Math.abs(v))}` : "—";
+
 export const pnlTone = (v) => (v > 0 ? "text-emerald-400" : v < 0 ? "text-red-400" : "text-zinc-300");
 
 export function timeAgo(at, now) {
@@ -43,6 +47,7 @@ export function dayLabel(at, now) {
 }
 
 export const displayName = (profile) => profile.fullName.trim() || profile.username;
+
 export const initials = (name) =>
   name
     .split(/\s+|_/)
@@ -50,9 +55,10 @@ export const initials = (name) =>
     .slice(0, 2)
     .map((p) => p[0].toUpperCase())
     .join("") || "T";
+
 export const unreadCount = (state) => state.notifications.filter((n) => !n.read).length;
 
-/* ---------- State shape, cleaning and pruning ---------- */
+/* ---------- Local state shape, cleaning and pruning ---------- */
 
 const uid = (prefix) => `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 const arr = (v) => (Array.isArray(v) ? v : []);
@@ -63,14 +69,7 @@ const flag = (v, fallback) => (typeof v === "boolean" ? v : fallback);
 function defaults() {
   const now = Date.now();
   return {
-    v: 1,
-    profile: {
-      username: `trader_${Math.floor(1000 + Math.random() * 9000)}`,
-      fullName: "",
-      bio: "",
-      avatar: { kind: "preset", id: "twin" },
-      createdAt: now,
-    },
+    v: 2,
     settings: {
       notify: { match: true, invites: true, tips: true },
       privacy: { showProfile: true, showOnLeaderboard: true, allowInvites: true },
@@ -97,25 +96,11 @@ function defaults() {
 function clean(raw) {
   const d = defaults();
   if (!raw || typeof raw !== "object") return d;
-  const p = raw.profile ?? {};
-  const a = p.avatar ?? {};
-  const avatar =
-    a.kind === "upload" && typeof a.src === "string" && a.src.startsWith("data:image/")
-      ? { kind: "upload", src: a.src }
-      : { kind: "preset", id: str(a.id, d.profile.avatar.id) };
   const n = raw.settings?.notify ?? {};
   const pv = raw.settings?.privacy ?? {};
   const s = raw.stats ?? {};
-
   return {
-    v: 1,
-    profile: {
-      username: /^[a-z0-9_]{3,20}$/.test(str(p.username)) ? p.username : d.profile.username,
-      fullName: str(p.fullName).slice(0, 40),
-      bio: str(p.bio).slice(0, 120),
-      avatar,
-      createdAt: num(p.createdAt, d.profile.createdAt),
-    },
+    v: 2,
     settings: {
       notify: { match: flag(n.match, true), invites: flag(n.invites, true), tips: flag(n.tips, true) },
       privacy: {
@@ -158,36 +143,89 @@ function prune(s) {
   };
 }
 
+/* ---------- Profile (server se aata hai) ---------- */
+
+const blankProfile = () => ({
+  username: "",
+  fullName: "",
+  bio: "",
+  avatar: { kind: "preset", id: "twin" },
+  createdAt: Date.now(),
+  email: "",
+  userCode: "",
+  hasPassword: true,
+});
+
+// Server me avatar "preset:twin" string hai, UI me { kind, id } object
+const parseAvatar = (value) =>
+  typeof value === "string" && value.startsWith("preset:")
+    ? { kind: "preset", id: value.slice(7) }
+    : { kind: "preset", id: "twin" };
+
+const avatarToServer = (avatar) => (avatar?.kind === "preset" ? `preset:${avatar.id}` : "");
+
+function toProfile(u, prev) {
+  return {
+    username: u.username ?? prev.username,
+    fullName: u.name ?? "",
+    bio: u.bio ?? "",
+    avatar: parseAvatar(u.avatar),
+    createdAt: u.createdAt ? new Date(u.createdAt).getTime() : prev.createdAt,
+    email: u.email ?? prev.email,
+    userCode: u.userCode ?? prev.userCode,
+    hasPassword: typeof u.hasPassword === "boolean" ? u.hasPassword : prev.hasPassword,
+  };
+}
+
 /* ---------- Store ---------- */
 
-function read() {
+function readLocal(userId) {
   try {
-    const raw = window.localStorage.getItem(KEY);
+    const raw = window.localStorage.getItem(KEY_PREFIX + userId);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
 
+// state se wo hissa jo local me save hota hai (profile, status, userId nahi)
+function localPart(s) {
+  const local = { ...s };
+  delete local.profile;
+  delete local.status;
+  delete local.userId;
+  delete local.error;
+  return local;
+}
+
 function persist(next) {
+  if (!next.userId) return true;
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(next));
+    window.localStorage.setItem(KEY_PREFIX + next.userId, JSON.stringify(localPart(next)));
     return true;
   } catch {
     return false; // storage is blocked or full: the app keeps working for this session
   }
 }
 
+// status: loading | ready | signedOut | leaving | error
+const emptyState = (status) => ({ ...defaults(), profile: blankProfile(), status, userId: null, error: "" });
+
 const listeners = new Set();
-const stored = read();
-let state = prune(clean(stored));
-if (!stored) persist(state);
+const notify = () => listeners.forEach((listener) => listener());
+
+let state = emptyState("loading");
 
 function commit(next) {
   state = next;
   const ok = persist(next);
-  listeners.forEach((listener) => listener());
+  notify();
   return ok;
+}
+
+function setMeta(status, error = "") {
+  state = { ...state, status, error };
+  notify();
 }
 
 const subscribe = (listener) => {
@@ -195,21 +233,101 @@ const subscribe = (listener) => {
   return () => listeners.delete(listener);
 };
 
-// Keep other tabs in step with this one.
+// Doosre tab me change ho to is tab ko sync karo (sirf is user ka local data)
 window.addEventListener("storage", (event) => {
-  if (event.key === KEY || event.key === null) {
-    state = prune(clean(read()));
-    listeners.forEach((listener) => listener());
+  if (!state.userId) return;
+  if (event.key === KEY_PREFIX + state.userId || event.key === null) {
+    const { profile, status, userId, error } = state;
+    state = { ...prune(clean(readLocal(userId))), profile, status, userId, error };
+    notify();
   }
 });
 
+// api client ne refresh try kiya aur session sach me khatam hai
+window.addEventListener("cw:auth-expired", () => {
+  if (state.status === "ready" || state.status === "loading") {
+    state = emptyState("signedOut");
+    notify();
+  }
+});
 
 export const useAccount = () => useSyncExternalStore(subscribe, () => state);
 
-/* ---------- Actions ---------- */
+/* ---------- Session ---------- */
 
-export const updateProfile = (patch) => commit({ ...state, profile: { ...state.profile, ...patch } });
-export const setAvatar = (avatar) => commit({ ...state, profile: { ...state.profile, avatar } });
+function applyUser(user) {
+  const id = String(user.id);
+  const same = state.userId === id;
+  const profile = toProfile(user, same ? state.profile : blankProfile());
+  const local = same ? localPart(state) : prune(clean(readLocal(id)));
+  commit({ ...local, profile, status: "ready", userId: id, error: "" });
+}
+
+/** Dashboard khulte hi ek baar chalao. Server se profile laata hai. */
+export async function loadAccount() {
+  if (state.status !== "ready") setMeta("loading");
+  try {
+    const { user } = await api.get("/users/me");
+    applyUser(user);
+  } catch (err) {
+    if (err.status === 401) {
+      if (state.status !== "signedOut") {
+        state = emptyState("signedOut");
+        notify();
+      }
+    } else {
+      setMeta(state.status === "ready" ? "ready" : "error", err.message);
+    }
+  }
+}
+
+export async function signOut() {
+  try {
+    await api.post("/auth/logout");
+  } catch {
+    // cookies pehle se khatam ho sakti hain, aage badho
+  }
+  state = emptyState("leaving");
+  notify();
+}
+
+export async function deleteAccount({ password } = {}) {
+  await api.delete("/users/me", { confirm: "DELETE", ...(password ? { password } : {}) });
+  try {
+    window.localStorage.removeItem(KEY_PREFIX + state.userId);
+    window.localStorage.removeItem(LEGACY_KEY);
+  } catch {
+    // storage blocked
+  }
+  state = emptyState("leaving");
+  notify();
+}
+
+export async function changePassword({ currentPassword, newPassword }) {
+  await api.post("/users/me/password", { currentPassword, newPassword });
+}
+
+/* ---------- Profile actions (server) ---------- */
+
+/** patch: { fullName?, username?, bio?, avatar? }. Fail hone pe error throw karta hai. */
+export async function updateProfile(patch) {
+  const body = {};
+  if (patch.fullName !== undefined) body.name = patch.fullName;
+  if (patch.username !== undefined) body.username = patch.username;
+  if (patch.bio !== undefined) body.bio = patch.bio;
+  if (patch.avatar !== undefined) body.avatar = avatarToServer(patch.avatar);
+  const { user } = await api.put("/users/me", body);
+  commit({ ...state, profile: toProfile(user, state.profile) });
+}
+
+export const setAvatar = (avatar) => updateProfile({ avatar });
+
+export async function checkUsername(username) {
+  const { available } = await api.get(`/users/username-available?u=${encodeURIComponent(username)}`);
+  return available;
+}
+
+/* ---------- Local actions (Phase B me server pe jayenge) ---------- */
 
 export function updateSettings(group, key, value) {
   commit({ ...state, settings: { ...state.settings, [group]: { ...state.settings[group], [key]: value } } });
@@ -226,9 +344,13 @@ export function addNotification({ type = "system", title, body = "" }) {
 
 export const markRead = (id) =>
   commit({ ...state, notifications: state.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)) });
+
 export const markAllRead = () => commit({ ...state, notifications: state.notifications.map((n) => ({ ...n, read: true })) });
+
 export const removeNotification = (id) => commit({ ...state, notifications: state.notifications.filter((n) => n.id !== id) });
+
 export const clearNotifications = () => commit({ ...state, notifications: [] });
+
 export const clearHistory = () => commit({ ...state, history: [] });
 
 export function resetWallet() {
@@ -246,7 +368,6 @@ export function recordMatch(match) {
   const s = state;
   const id = match.id ?? uid("m");
   if (s.history.some((h) => h.id === id)) return; // never record the same match twice
-
   const now = Date.now();
   const pnl = Number.isFinite(match.pnl) ? match.pnl : null;
   const entry = { id, at: now, mode: match.mode, title: match.title, result: match.result, pnl, detail: match.detail ?? "" };
@@ -280,21 +401,6 @@ export function recordMatch(match) {
 /* ---------- Data tools ---------- */
 
 export function exportData() {
-  const copy = { ...state, profile: { ...state.profile } };
-  if (copy.profile.avatar.kind === "upload") copy.profile.avatar = { kind: "upload", src: "[photo omitted from export]" };
+  const copy = { ...localPart(state), profile: { ...state.profile } };
   return JSON.stringify({ exportedAt: new Date().toISOString(), data: copy }, null, 2);
-}
-
-/** Removes every ChartWars value stored on this device and starts again from a fresh account. */
-export function deleteAllData() {
-  for (const store of [window.localStorage, window.sessionStorage]) {
-    try {
-      Object.keys(store)
-        .filter((key) => key.startsWith("cw.") || key.startsWith("chartwars."))
-        .forEach((key) => store.removeItem(key));
-    } catch {
-      // Storage is blocked. Nothing to remove.
-    }
-  }
-  commit(prune(clean(null)));
 }
