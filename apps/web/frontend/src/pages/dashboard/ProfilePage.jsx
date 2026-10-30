@@ -2,12 +2,13 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Camera, Pencil } from "lucide-react";
 
-import { MODE_LABEL, RATING, RESULT_LABEL, TIER, displayName, formatCW, formatPnl, pnlTone, setAvatar, timeAgo, updateProfile, useAccount } from "../../features/account/accountStore";
+import { MODE_LABEL, RATING, RESULT_LABEL, TIER, checkUsername, displayName, formatCW, formatPnl, pnlTone, setAvatar, timeAgo, updateProfile, useAccount } from "../../features/account/accountStore";
 import { Avatar } from "../../features/account/avatars";
 import AvatarPicker from "../../features/account/AvatarPicker";
 import { EmptyState, PageShell, SectionCard, btnGhost, btnPrimary, card, inputClass, useNow } from "../../features/account/ui";
 
 const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
+const FIELD_MAP = { name: "fullName", bio: "bio", username: "username" }; // server field -> form field
 
 function Stat({ label, value, className = "text-white" }) {
   return (
@@ -24,6 +25,8 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ username: "", fullName: "", bio: "" });
   const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState("");
+  const [busy, setBusy] = useState(false);
   const [picker, setPicker] = useState(false);
   const [status, setStatus] = useState("");
 
@@ -35,6 +38,7 @@ export default function ProfilePage() {
   const startEdit = () => {
     setForm({ username: profile.username, fullName: profile.fullName, bio: profile.bio });
     setErrors({});
+    setFormError("");
     setStatus("");
     setEditing(true);
   };
@@ -45,7 +49,20 @@ export default function ProfilePage() {
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
-  const save = (event) => {
+  // Username se bahar nikalte hi server se check, save pe server dobara check karta hai
+  const onUsernameBlur = async () => {
+    const u = form.username.trim().toLowerCase();
+    if (u === profile.username || !USERNAME_RE.test(u)) return;
+    try {
+      if (!(await checkUsername(u))) {
+        setErrors((prev) => ({ ...prev, username: "This username is already taken." }));
+      }
+    } catch {
+      // network issue: save ke time server phir check karega
+    }
+  };
+
+  const save = async (event) => {
     event.preventDefault();
     const next = {
       username: form.username.trim().toLowerCase(),
@@ -54,22 +71,42 @@ export default function ProfilePage() {
     };
     const found = {};
     if (!USERNAME_RE.test(next.username)) found.username = "Use 3 to 20 lowercase letters, numbers or underscores.";
-    if (next.fullName && next.fullName.length < 2) found.fullName = "Enter at least 2 characters, or leave it empty.";
+    if (next.fullName.length < 2) found.fullName = "Enter at least 2 characters.";
     if (next.fullName.length > 40) found.fullName = "Keep your name under 40 characters.";
     if (next.bio.length > 120) found.bio = "Keep your bio under 120 characters.";
     if (Object.keys(found).length > 0) {
       setErrors(found);
       return;
     }
-    const saved = updateProfile(next);
-    setEditing(false);
-    setStatus(saved ? "Profile saved." : "Saved for this session only. Browser storage is blocked or full.");
+
+    setBusy(true);
+    setFormError("");
+    try {
+      await updateProfile(next);
+      setEditing(false);
+      setStatus("Profile saved.");
+    } catch (err) {
+      if (err.code === "USERNAME_TAKEN") {
+        setErrors({ username: "This username is already taken." });
+      } else if (err.errors?.length) {
+        const mapped = {};
+        for (const item of err.errors) {
+          const field = FIELD_MAP[item.field];
+          if (field) mapped[field] = item.message;
+          else setFormError(item.message);
+        }
+        setErrors(mapped);
+      } else {
+        setFormError(err.message);
+      }
+    }
+    setBusy(false);
   };
 
-  const saveAvatar = (avatar) => {
-    const saved = setAvatar(avatar);
+  const saveAvatar = async (avatar) => {
+    await setAvatar(avatar); // fail hone pe picker khud error dikhata hai
     setPicker(false);
-    setStatus(saved ? "Avatar updated." : "Avatar changed for this session only. Browser storage is blocked or full.");
+    setStatus("Avatar updated.");
   };
 
   return (
@@ -94,13 +131,13 @@ export default function ProfilePage() {
             {editing ? (
               <form onSubmit={save} noValidate className="mt-5 w-full space-y-3 text-left">
                 <div>
-                  <label htmlFor="pf-name" className="text-xs text-zinc-400">Full name (optional)</label>
+                  <label htmlFor="pf-name" className="text-xs text-zinc-400">Full name</label>
                   <input id="pf-name" name="fullName" value={form.fullName} onChange={change} maxLength={40} autoComplete="name" className={`${inputClass} mt-1`} aria-invalid={Boolean(errors.fullName)} />
                   <p className="mt-1 min-h-4 text-[11px] text-red-400">{errors.fullName}</p>
                 </div>
                 <div>
                   <label htmlFor="pf-user" className="text-xs text-zinc-400">Username</label>
-                  <input id="pf-user" name="username" value={form.username} onChange={change} maxLength={20} autoComplete="username" spellCheck={false} className={`${inputClass} mt-1`} aria-invalid={Boolean(errors.username)} />
+                  <input id="pf-user" name="username" value={form.username} onChange={change} onBlur={onUsernameBlur} maxLength={20} autoComplete="username" spellCheck={false} className={`${inputClass} mt-1`} aria-invalid={Boolean(errors.username)} />
                   <p className="mt-1 min-h-4 text-[11px] text-red-400">{errors.username}</p>
                 </div>
                 <div>
@@ -108,11 +145,11 @@ export default function ProfilePage() {
                   <textarea id="pf-bio" name="bio" value={form.bio} onChange={change} maxLength={120} rows={3} className="mt-1 w-full resize-none rounded-lg border border-white/9 bg-[#080808] px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-[#e87524]/60" placeholder="Swing trader. Learning risk management." aria-invalid={Boolean(errors.bio)} />
                   <p className="mt-1 flex justify-between text-[11px]"><span className="text-red-400">{errors.bio}</span><span className="text-zinc-600">{form.bio.length}/120</span></p>
                 </div>
+                <p role="alert" className="min-h-4 text-[11px] text-red-400">{formError}</p>
                 <div className="flex gap-2">
-                  <button type="submit" className={`${btnPrimary} flex-1`}>Save</button>
-                  <button type="button" onClick={() => setEditing(false)} className={`${btnGhost} flex-1`}>Cancel</button>
+                  <button type="submit" disabled={busy} className={`${btnPrimary} flex-1`}>{busy ? "Saving..." : "Save"}</button>
+                  <button type="button" disabled={busy} onClick={() => setEditing(false)} className={`${btnGhost} flex-1`}>Cancel</button>
                 </div>
-                <p className="text-[11px] leading-4 text-zinc-600">Usernames are saved on this device. They will be checked for uniqueness once accounts live on a server.</p>
               </form>
             ) : (
               <>

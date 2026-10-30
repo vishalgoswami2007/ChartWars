@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, ChevronDown, History, LogOut, Settings, UserRound } from "lucide-react";
 
-import { displayName, unreadCount, useAccount } from "./accountStore";
+import { displayName, unreadCount, signOut, useAccount } from "./accountStore";
 import { Avatar } from "./avatars";
 import { ConfirmDialog, card, useDismiss } from "./ui";
 
@@ -107,9 +107,10 @@ export default function AccountMenu() {
           body="You will go back to the login page. Your profile, wallet and history stay saved on this device."
           confirmLabel="Sign out"
           onCancel={() => setConfirmOut(false)}
-          onConfirm={() => {
+                    onConfirm={async () => {
             setConfirmOut(false);
-            navigate("/login");
+            await signOut();
+            navigate("/login", { replace: true });
           }}
         />
       )}

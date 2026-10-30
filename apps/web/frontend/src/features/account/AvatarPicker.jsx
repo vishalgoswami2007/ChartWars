@@ -4,33 +4,9 @@ import { ImagePlus, X } from "lucide-react";
 import { AVATARS, Avatar } from "./avatars";
 import { btnGhost, btnPrimary, card } from "./ui";
 
-const MAX_BYTES = 5 * 1024 * 1024;
-const OUTPUT = 256;
-
-/** Reads a photo, crops the centre square and shrinks it so it fits comfortably in browser storage. */
-async function photoToAvatar(file) {
-  if (!/^image\/(png|jpeg|webp)$/.test(file.type)) throw new Error("Use a PNG, JPG or WebP image.");
-  if (file.size > MAX_BYTES) throw new Error("That image is larger than 5 MB.");
-
-  let bitmap;
-  try {
-    bitmap = await createImageBitmap(file);
-  } catch {
-    throw new Error("That image could not be read. Try another one.");
-  }
-  const side = Math.min(bitmap.width, bitmap.height);
-  const canvas = document.createElement("canvas");
-  canvas.width = OUTPUT;
-  canvas.height = OUTPUT;
-  const context = canvas.getContext("2d");
-  context.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, OUTPUT, OUTPUT);
-  bitmap.close?.();
-  return { kind: "upload", src: canvas.toDataURL("image/jpeg", 0.85) };
-}
-
 export default function AvatarPicker({ current, name, onSave, onClose }) {
-  const [tab, setTab] = useState(current?.kind === "upload" ? "photo" : "trading");
-  const [picked, setPicked] = useState(current);
+  const [tab, setTab] = useState("trading");
+  const [picked, setPicked] = useState(current?.kind === "preset" ? current : { kind: "preset", id: AVATARS[0].id });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -42,18 +18,15 @@ export default function AvatarPicker({ current, name, onSave, onClose }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const choosePhoto = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
+  const save = async () => {
     setBusy(true);
     setError("");
     try {
-      setPicked(await photoToAvatar(file));
+      await onSave(picked); // success pe parent picker band kar deta hai
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Could not save your avatar. Try again.");
+      setBusy(false);
     }
-    setBusy(false);
   };
 
   const tabClass = (active) =>
@@ -75,7 +48,7 @@ export default function AvatarPicker({ current, name, onSave, onClose }) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 id="avatar-title" className="text-base font-semibold text-white">Choose your avatar</h2>
-            <p className="mt-1 text-xs text-zinc-500">Pick a trading avatar, or use a photo from your device.</p>
+            <p className="mt-1 text-xs text-zinc-500">Pick a trading avatar. Photo upload is coming soon.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="rounded-md p-1.5 text-zinc-500 transition hover:bg-white/5 hover:text-white">
             <X size={16} />
@@ -115,18 +88,10 @@ export default function AvatarPicker({ current, name, onSave, onClose }) {
             })}
           </div>
         ) : (
-          <div className="mt-4">
-            <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 px-4 py-8 text-center transition hover:border-[#e87524]/50 focus-within:border-[#e87524]/70">
-              <ImagePlus size={22} className="text-[#f59a55]" />
-              <span className="text-sm text-zinc-200">{busy ? "Preparing your photo..." : "Choose a photo from your gallery"}</span>
-              <span className="text-[11px] text-zinc-500">PNG, JPG or WebP, up to 5 MB. It is cropped to a square and saved on this device.</span>
-              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={choosePhoto} disabled={busy} className="sr-only" />
-            </label>
-            {picked?.kind === "upload" && (
-              <button type="button" onClick={() => setPicked({ kind: "preset", id: AVATARS[0].id })} className="mt-3 text-xs text-zinc-400 underline-offset-4 transition hover:text-white hover:underline">
-                Remove the photo and use a trading avatar
-              </button>
-            )}
+          <div className="mt-4 flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 px-4 py-8 text-center">
+            <ImagePlus size={22} className="text-zinc-500" />
+            <span className="text-sm text-zinc-200">Photo upload is coming soon</span>
+            <span className="text-[11px] text-zinc-500">For now, pick one of the trading avatars.</span>
           </div>
         )}
 
@@ -134,7 +99,7 @@ export default function AvatarPicker({ current, name, onSave, onClose }) {
 
         <div className="mt-2 flex justify-end gap-2">
           <button type="button" onClick={onClose} className={btnGhost}>Cancel</button>
-          <button type="button" disabled={busy} onClick={() => onSave(picked)} className={btnPrimary}>Save avatar</button>
+          <button type="button" disabled={busy} onClick={save} className={btnPrimary}>{busy ? "Saving..." : "Save avatar"}</button>
         </div>
       </div>
     </div>
