@@ -3,6 +3,8 @@ import { ApiError } from "../utils/ApiError.js";
 
 export const notFound = (_req, res) => res.status(404).json({ message: "Route not found" });
 
+console.error("ERR:", err.status, err.code, err.keyPattern, err.keyValue, err.message);
+
 export function errorHandler(err, _req, res, _next) {
   if (err instanceof ZodError) {
     return res.status(422).json({
