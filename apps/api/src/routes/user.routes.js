@@ -1,12 +1,11 @@
 import { Router } from "express";
 import * as ctrl from "../controllers/user.controller.js";
-// yahan wahi auth middleware import kar jo /auth/me route pe laga hai
-import { requireAuth } from "../middlewares/auth.middleware.js";
+import { requireAuth } from "../middleware/require-auth.js";
 
 const router = Router();
 
 router.get("/me", requireAuth, ctrl.getMe);
 router.put("/me", requireAuth, ctrl.updateMe);
-router.get("/:userCode", requireAuth, ctrl.getPublicProfile); // /me ke NEECHE rakhna
+router.get("/:userCode", requireAuth, ctrl.getPublicProfile); // /me ke NEECHE hi rehna chahiye
 
 export default router;
