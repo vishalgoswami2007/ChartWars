@@ -7,6 +7,9 @@ import authRoutes from "./routes/auth.routes.js";
 import { notFound, errorHandler } from "./middleware/error-handler.js";
 import mongoose from "mongoose"; 
 import  userRoutes from "./routes/user.routes.js";
+import walletRoutes from "./routes/wallet.routes.js";
+import matchRoutes from "./routes/match.routes.js";
+
 
 const app = express();
 
@@ -22,6 +25,8 @@ app.get("/api/v1/health", (_req, res) =>
 );
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/wallet", walletRoutes);
+app.use("/api/v1/matches", matchRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
