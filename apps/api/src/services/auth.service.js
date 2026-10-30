@@ -112,22 +112,38 @@ export async function resetPassword({ resetToken, newPassword }) {
   await revokeAllForUser(user.id);
 }
 
+
 export async function googleLogin({ credential }) {
   const profile = await verifyGoogleCredential(credential);
-  let user = await User.findOne({ $or: [{ googleId: profile.googleId }, { email: profile.email }] });
+  const find = () =>
+    User.findOne({ $or: [{ googleId: profile.googleId }, { email: profile.email }] });
+
+  let user = await find();
 
   if (!user) {
-    user = await User.create({ ...profile, isEmailVerified: true });
-  } else {
-    if (!user.googleId) {
-      // Anti pre-hijack: if someone had squatted this email with an unverified password signup, wipe that password.
-      if (!user.isEmailVerified) user.passwordHash = undefined;
-      user.googleId = profile.googleId;
+    try {
+      user = await User.create({
+        ...profile,
+        isEmailVerified: true,
+        lastLoginAt: new Date(),
+      });
+      return user;
+    } catch (err) {
+      if (err?.code !== 11000) throw err;
+      console.error("Google create duplicate:", err.keyPattern, err.keyValue);
+      user = await find(); // dusri request ne bana diya, ab wahi utha lo
+      if (!user) throw err;
     }
-    user.isEmailVerified = true;
-    user.avatar = user.avatar || profile.avatar;
-    user.lastLoginAt = new Date();
-    await user.save();
   }
+
+  if (!user.googleId) {
+    // Anti pre-hijack: unverified password signup wipe
+    if (!user.isEmailVerified) user.passwordHash = undefined;
+    user.googleId = profile.googleId;
+  }
+  user.isEmailVerified = true;
+  user.avatar = user.avatar || profile.avatar;
+  user.lastLoginAt = new Date();
+  await user.save();
   return user;
 }
