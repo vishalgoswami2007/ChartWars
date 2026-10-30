@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-   "backfill:usercode": "node scripts/backfillUserCode.js",
+    "backfill:usercode": "node scripts/backfillUserCode.js",
 
 
     "check": "node --check src/server.js && node --check src/app.js && node --check src/config/env.js && node --check src/config/database.js && node --check src/config/cookies.js && node --check src/utils/create-server.js && node --check src/middleware/validate.js && node --check src/validators/auth.validator.js && node --check src/models/User.js && node --check src/models/RefreshSession.js && node --check src/services/auth.service.js && node --check src/services/token.service.js && node --check src/services/refresh-session.service.js && node --check src/controllers/auth.controller.js && node --check src/routes/auth.routes.js",
@@ -30,6 +30,7 @@
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.11.4",
+    "nanoid": "^6.0.2",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
     "zod": "^4.6.7"
