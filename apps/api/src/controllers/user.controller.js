@@ -2,6 +2,8 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { setAuthCookies, clearAuthCookies } from "../config/cookies.js";
 import * as auth from "../services/auth.service.js";
 import * as users from "../services/user.service.js";
+import { User } from "../models/User.js";
+import { ApiError } from "../utils/ApiError.js";
 import {
   updateProfileSchema, usernameCheckSchema, changePasswordSchema, deleteAccountSchema,
 } from "../validators/user.validation.js";
@@ -9,7 +11,11 @@ import {
 const meta = (req) => ({ ip: req.ip, userAgent: req.get("user-agent")?.slice(0, 200) });
 
 export const getMe = asyncHandler(async (req, res) => {
-  res.json({ user: await users.getMe(req.user.id) });
+  const user = await User.findById(req.user.id).select("+passwordHash");
+  if (!user) throw ApiError.unauthorized();
+  const json = user.toJSON(); 
+  json.hasPassword = Boolean(user.passwordHash);
+  res.json({ user: json });
 });
 
 export const updateMe = asyncHandler(async (req, res) => {

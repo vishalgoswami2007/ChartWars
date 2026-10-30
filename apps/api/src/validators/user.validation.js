@@ -11,6 +11,13 @@ const strongPassword = z
   .regex(/[A-Z]/, "Add an uppercase letter")
   .regex(/[0-9]/, "Add a number")
   .regex(/[^a-zA-Z0-9]/, "Add a symbol");
+    const avatar =  z
+        .union([
+            z.literal(""),
+            z.string().regex(/^preset:[a-z0-9_-]{1,30}$/, "Invalid avatar"),
+            z.string().url().max(500).startsWith("https://"),
+        ])
+        .optional();
 
 export const updateProfileSchema = z
   .object({
