@@ -1,4 +1,4 @@
-import { parse } from "cookie";
+import { parseCookie } from "cookie";
 import { ACCESS_COOKIE } from "../constants/auth.js";
 import { verifyAccessToken } from "../services/token.service.js";
 import { User } from "../models/User.js";
