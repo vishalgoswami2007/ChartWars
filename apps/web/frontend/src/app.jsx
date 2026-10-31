@@ -9,7 +9,6 @@ function App() {
       <div className="p-8 bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 text-center max-w-sm">
         <h1 className="text-2xl font-bold mb-4 text-indigo-400">clsx + tailwind-merge 🔥</h1>
         
-        {/* cn() का जादू: isActive के आधार पर बैकग्राउंड और टेक्स्ट कलर बदलेंगे */}
         <div className={cn(
           "p-4 rounded-xl mb-6 font-medium transition-all duration-300 border",
           isActive 

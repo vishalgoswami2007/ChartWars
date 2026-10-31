@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Check, Copy, RefreshCw } from "lucide-react";
 
-import { MINUTE_OPTIONS, PLAYER_OPTIONS, SYMBOLS, useCopy } from "./friendsData";
+import { MINUTE_OPTIONS, PLAYER_OPTIONS, SYMBOLS } from "./friendsData";
 
 const chip = (active) =>
   `border px-3 py-2 font-mono text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
@@ -21,45 +20,34 @@ function Panel({ index, title, children }) {
   );
 }
 
-export default function FriendsLobby({ nextCode, onNewCode, onCreate, onJoin, joinError, matchCount, onOpenAnalytics }) {
+export default function FriendsLobby({ onCreate, onJoin, joinError, matchCount, onOpenAnalytics }) {
   const [symbol, setSymbol] = useState("bitcoin");
   const [players, setPlayers] = useState(2);
   const [minutes, setMinutes] = useState(5);
   const [joinText, setJoinText] = useState("");
-  const { copied, copy } = useCopy();
+  const [creating, setCreating] = useState(false);
 
   const label = "mb-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500";
+
+  const create = async () => {
+    setCreating(true);
+    try {
+      await onCreate({ symbol, players, minutes });
+    } finally {
+      setCreating(false);
+    }
+  };
 
   return (
     <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4 fr-scroll lg:grid-cols-2">
       <Panel index="01" title="Create a room">
-        <p className={label}>Your room code for this match</p>
-        <div className="flex items-center gap-2 border border-orange-500/40 bg-orange-500/6 p-3">
-          <span className="fr-code flex-1 font-mono text-3xl font-bold tracking-[0.35em] text-orange-300">{nextCode}</span>
-          <button
-            type="button"
-            onClick={() => copy(nextCode)}
-            aria-label="Copy room code"
-            className="flex items-center gap-1.5 border border-white/15 px-2.5 py-1.5 font-mono text-[11px] text-zinc-200 transition hover:border-orange-500/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
-          >
-            {copied ? <Check size={13} /> : <Copy size={13} />}
-            {copied ? "Copied" : "Copy"}
-          </button>
-          <button
-            type="button"
-            onClick={onNewCode}
-            aria-label="Generate a new room code"
-            title="New code"
-            className="border border-white/15 p-2 text-zinc-300 transition hover:border-orange-500/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
-          >
-            <RefreshCw size={14} />
-          </button>
-        </div>
-        <p className="mt-1.5 text-[11px] text-zinc-500">Send this code to friends. It changes after every match.</p>
+        <p className="border-l-2 border-orange-500/60 pl-3 text-xs leading-5 text-zinc-400">
+          Your 6-character room code is created when you press Create. Share it, then approve the friends who ask to join.
+        </p>
 
         <p className={`${label} mt-4`}>Market</p>
         <div role="radiogroup" aria-label="Market" className="flex flex-wrap gap-1.5">
-          {SYMBOLS.map((s) => (
+          {SYMBOLS.filter((s) => s.id === "bitcoin").map((s) => (
             <button key={s.id} type="button" role="radio" aria-checked={symbol === s.id} onClick={() => setSymbol(s.id)} className={chip(symbol === s.id)}>
               {s.ticker}
             </button>
@@ -91,10 +79,11 @@ export default function FriendsLobby({ nextCode, onNewCode, onCreate, onJoin, jo
 
         <button
           type="button"
-          onClick={() => onCreate({ symbol, players, minutes })}
-          className="mt-5 w-full border border-orange-400 bg-orange-500 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-black transition hover:bg-orange-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+          disabled={creating}
+          onClick={create}
+          className="mt-5 w-full border border-orange-400 bg-orange-500 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-black transition hover:bg-orange-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-not-allowed disabled:opacity-50"
         >
-          [ Create room ]
+          {creating ? "[ Creating... ]" : "[ Create room ]"}
         </button>
       </Panel>
 
@@ -133,8 +122,8 @@ export default function FriendsLobby({ nextCode, onNewCode, onCreate, onJoin, jo
               Join room
             </button>
           </form>
-          <p className="mt-3 border-l-2 border-amber-500/60 pl-3 text-[11px] leading-5 text-amber-300/90">
-            Demo: there is no backend yet, so any valid 6-character code opens a simulated room hosted by a demo friend.
+          <p className="mt-3 border-l-2 border-orange-500/60 pl-3 text-[11px] leading-5 text-zinc-400">
+            The host has to approve your request before you enter the room.
           </p>
         </Panel>
 

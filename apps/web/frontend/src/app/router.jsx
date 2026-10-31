@@ -136,21 +136,20 @@ export const router = createBrowserRouter([
          path: "rooms/online/searching",
          element: <MatchMaking />,
      },
-      {
-        path: "rooms/online/live",
+     {
+        path: "rooms/online/live/:code",
         element: <LiveMatch />,
       },
-
       {
         path: "rooms/friends",
         element: <FriendsRoom />,
       },
       {
-        path: "rooms/friends/room",
+        path: "rooms/friends/room/:code",
         element: <FriendsWaitingRoom />,
       },
-      {
-        path: "rooms/friends/live",
+     {
+        path: "rooms/friends/live/:code",
         element: <FriendsLiveArena />,
      },
      {
