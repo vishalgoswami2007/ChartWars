@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { ObjectId } = mongoose.Schema.Types;
 
 const playerSchema = new mongoose.Schema({
@@ -13,11 +13,11 @@ const roomSchema = new mongoose.Schema({
   mode: { type: String, enum: ["friends", "online"], required: true },
   host: { type: ObjectId, ref: "User" },
   players: [playerSchema],
-  pending: [{ type: ObjectId, ref: "User" }],   // host approval ka wait
+  pending: [{ type: ObjectId, ref: "User" }],
   maxPlayers: { type: Number, default: 2 },
   durationSec: { type: Number, enum: [60, 300, 600, 900], default: 300 },
   status: { type: String, enum: ["waiting", "live", "finished"], default: "waiting" },
   winner: { type: ObjectId, ref: "User" },
 }, { timestamps: true });
 
-module.exports = mongoose.model("Room", roomSchema);
+export default mongoose.model("Room", roomSchema);

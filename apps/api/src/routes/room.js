@@ -1,22 +1,21 @@
-const router = require("express").Router();
-const Room = require("../models/Room");
-const uniqueCode = require("../utils/roomCode");
-const { protect } = require("../middleware/auth");
+import { Router } from "express";
+import Room from "../models/Room.js";
+import uniqueCode from "../utils/roomCode.js";
+import { protect } from "../middleware/auth.js";
 
+const router = Router();
 const emitTo = (req, userId, ev, data) => req.app.get("io").to(`user:${userId}`).emit(ev, data);
 
-// Friends room banao
 router.post("/", protect, async (req, res) => {
   const { durationSec = 300, maxPlayers = 2 } = req.body;
   const room = await Room.create({
     code: await uniqueCode(Room), mode: "friends", host: req.user.id,
-    players: [{ user: req.user.id, ready: false }],
+    players: [{ user: req.user.id }],
     durationSec, maxPlayers: Math.min(Math.max(maxPlayers, 2), 4),
   });
   res.status(201).json(room);
 });
 
-// Code se join REQUEST (host approve karega)
 router.post("/join", protect, async (req, res) => {
   const room = await Room.findOne({ code: String(req.body.code || "").toUpperCase() });
   if (!room) return res.status(404).json({ message: "Room nahi mila" });
@@ -29,7 +28,6 @@ router.post("/join", protect, async (req, res) => {
   res.json({ status: "pending" });
 });
 
-// Host approve / reject
 router.post("/approve", protect, async (req, res) => {
   const { code, userId, accept } = req.body;
   const room = await Room.findOne({ code });
@@ -50,4 +48,4 @@ router.get("/:code", protect, async (req, res) => {
   res.json(room);
 });
 
-module.exports = router;
+export default router;
