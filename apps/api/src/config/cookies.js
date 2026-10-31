@@ -6,7 +6,7 @@ import {
   REFRESH_TTL_MS,
 } from "../constants/auth.js";
 
-const base = { httpOnly: true, secure: isProd, sameSite: "lax" };
+const base = { httpOnly: true, secure: isProd, sameSite: isProd ? "none" : "lax" };
 const ACCESS_PATH = "/";
 const REFRESH_PATH = "/api/v1/auth"; // refresh cookie only travels to auth routes
 
