@@ -1,8 +1,26 @@
+import http from "http";
+import { Server } from "socket.io";
 import app from "./app.js";
 import { env } from "./config/env.js";
 import { connectDB } from "./config/database.js";
+import initSocket from "./socket/index.js";
+import { startFeed } from "./services/priceFeed.js";
+import { startMatchmaking } from "./services/matchmaking.js";
 
 await connectDB();
-app.listen(env.PORT, () => {
+
+const server = http.createServer(app);
+
+const origins = (process.env.CLIENT_URL || "http://localhost:5173").split(",");
+const io = new Server(server, {
+  cors: { origin: origins, credentials: true },
+});
+app.set("io", io);
+
+initSocket(io);
+startFeed();
+startMatchmaking(io);
+
+server.listen(env.PORT, () => {
   console.log(`ChartWars API listening at http://127.0.0.1:${env.PORT}`);
 });
