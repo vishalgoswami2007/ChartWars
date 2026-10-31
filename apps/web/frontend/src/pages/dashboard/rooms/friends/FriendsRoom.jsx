@@ -1,47 +1,62 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
 import FriendsLobby from "./FriendsLobby";
-import {
-  CODE_RE,
-  ROUTES,
-  createRoom,
-  getNextCode,
-  joinRoom,
-  loadHistory,
-  loadRoom,
-  normalizeCode,
-  rotateCode,
-  saveRoom,
-} from "./friendsData";
+import { CODE_RE, ROUTES, loadHistory, normalizeCode } from "./friendsData";
+import { createRoom, requestJoin } from "../../../../features/rooms/roomsApi";
+import { socket } from "../../../../lib/socket";
 import "./friends-room.css";
+
+const MINUTES_OK = [1, 5, 10, 15]; // backend sirf yahi durations allow karta hai
 
 export default function FriendsRoom() {
   const navigate = useNavigate();
-  const [nextCode, setNextCode] = useState(getNextCode);
   const [joinError, setJoinError] = useState("");
-  const [existing] = useState(loadRoom);
+  const [pendingCode, setPendingCode] = useState(null);
   const [matchCount] = useState(() => loadHistory().length);
 
-  const handleCreate = (options) => {
-    saveRoom(createRoom({ code: nextCode, ...options }));
-    navigate(ROUTES.waiting);
+  // Host ka jawab (approve / reject) socket se aata hai
+  useEffect(() => {
+    if (!pendingCode) return undefined;
+    const onResult = ({ code, accepted }) => {
+      if (code !== pendingCode) return;
+      if (accepted) {
+        navigate(`${ROUTES.waiting}/${code}`);
+      } else {
+        setPendingCode(null);
+        setJoinError("Host ne request reject kar di.");
+      }
+    };
+    socket.on("room:join-result", onResult);
+    return () => socket.off("room:join-result", onResult);
+  }, [pendingCode, navigate]);
+
+  const handleCreate = async (options = {}) => {
+    setJoinError("");
+    const minutes = MINUTES_OK.includes(options.minutes) ? options.minutes : 5;
+    try {
+      const room = await createRoom({ durationSec: minutes * 60, maxPlayers: options.players ?? 2 });
+      navigate(`${ROUTES.waiting}/${room.code}`);
+    } catch (e) {
+      setJoinError(e.message);
+    }
   };
 
-  const handleJoin = (raw) => {
+  const handleJoin = async (raw) => {
     const code = normalizeCode(raw);
     if (!CODE_RE.test(code)) {
       setJoinError("Enter the 6-character code your friend shared.");
       return;
     }
-    if (code === nextCode) {
-      setJoinError("That is your own code. Send it to a friend instead.");
-      return;
-    }
     setJoinError("");
-    saveRoom(joinRoom(code));
-    navigate(ROUTES.waiting);
+    try {
+      const res = await requestJoin(code);
+      if (res.status === "joined") navigate(`${ROUTES.waiting}/${code}`);
+      else setPendingCode(code);
+    } catch (e) {
+      setJoinError(e.message);
+    }
   };
 
   return (
@@ -61,24 +76,24 @@ export default function FriendsRoom() {
         <span className="hidden font-mono text-[10px] uppercase tracking-widest text-zinc-600 sm:block">Virtual funds only</span>
       </header>
 
-      {existing && (
+      {pendingCode && (
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-orange-500/30 bg-orange-500/8 px-4 py-2 text-xs text-orange-200">
           <span>
-            You are already in room <b className="font-mono tracking-widest">{existing.code}</b>.
+            Request bhej di room <b className="font-mono tracking-widest">{pendingCode}</b> ke liye. Host ke approve karne ka wait...
           </span>
           <button
             type="button"
-            onClick={() => navigate(existing.phase === "live" ? ROUTES.live : ROUTES.waiting)}
+            onClick={() => setPendingCode(null)}
             className="border border-orange-400 px-3 py-1 font-mono text-[11px] uppercase tracking-wider text-orange-200 transition hover:bg-orange-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
           >
-            Return to room
+            Cancel
           </button>
         </div>
       )}
 
       <FriendsLobby
-        nextCode={nextCode}
-        onNewCode={() => setNextCode(rotateCode())}
+        nextCode="------"
+        onNewCode={() => {}}
         onCreate={handleCreate}
         onJoin={handleJoin}
         joinError={joinError}
