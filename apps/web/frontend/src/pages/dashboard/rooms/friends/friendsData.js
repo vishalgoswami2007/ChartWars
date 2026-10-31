@@ -43,7 +43,7 @@ export const SYMBOLS = [
 ];
 
 export const PLAYER_OPTIONS = [2, 4];
-export const MINUTE_OPTIONS = [3, 5, 10, 15];
+export const MINUTE_OPTIONS = [1,3, 5, 10, 15];
 
 export const YOU = { id: "you", name: "You", country: "IN" };
 export const DEMO_FRIENDS = [
