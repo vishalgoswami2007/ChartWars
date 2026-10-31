@@ -1,7 +1,7 @@
 import { Router } from "express";
 import Room from "../models/Room.js";
 import uniqueCode from "../utils/roomCode.js";
-import { protect } from "../middleware/auth.js";
+import { requireAuth as protect } from "../middleware/require-auth.js";
 
 const router = Router();
 const emitTo = (req, userId, ev, data) => req.app.get("io").to(`user:${userId}`).emit(ev, data);

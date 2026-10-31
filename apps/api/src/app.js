@@ -9,7 +9,7 @@ import mongoose from "mongoose";
 import  userRoutes from "./routes/user.routes.js";
 import walletRoutes from "./routes/wallet.routes.js";
 import matchRoutes from "./routes/match.routes.js";
-import roomRoutes from "./routes/rooms.js";
+import roomRoutes from "./routes/room.routes.js";
 
 const app = express();
 

@@ -1,6 +1,6 @@
 import { joinQueue, leaveQueue } from "../services/matchmaking.js";
 import { isInMatch } from "../services/matchEngine.js";
-import User from "../models/User.js";
+import { User } from "../models/User.js";
 
 export default function queueHandlers(io, socket) {
   const uid = socket.user.id;

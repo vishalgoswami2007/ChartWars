@@ -1,5 +1,5 @@
 import Room from "../models/Room.js";
-import User from "../models/User.js";
+import { User } from "../models/User.js";
 import { getPrice } from "./priceFeed.js";
 import { eloChanges } from "./elo.js";
 
@@ -88,13 +88,22 @@ export async function endMatch(io, code) {
   });
   await room.save();
 
-  for (const r of results) {
-    if (changes[r.id] !== undefined) {
+    for (const r of results) {
+    try {
       const u = await User.findById(r.id);
-      u.elo = Math.max(0, u.elo + changes[r.id]);
-      await u.save();
+      if (u) {
+        if (changes[r.id] !== undefined) {
+          u.elo = Math.min(2000, Math.max(100, u.elo + changes[r.id]));   // model ki limit 100-2000
+        }
+        u.stats.played += 1;
+        if (r.id === results[0].id) u.stats.won += 1;
+        await u.save();
+      }
+    } catch (err) {
+      console.error("endMatch save failed for", r.id, err.message);
+    } finally {
+      inMatch.delete(r.id);   // save fail ho to bhi user match me atka na rahe
     }
-    inMatch.delete(r.id);
   }
   io.to(code).emit("match:end", {
     winner: results[0].id,
