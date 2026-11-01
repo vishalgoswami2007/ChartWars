@@ -1,6 +1,7 @@
 import Room from "../models/Room.js";
 import { roomState } from "../services/roomState.js";
 import { startMatch, trade, matches, viewFor } from "../services/matchEngine.js";
+import { getHistory } from "../services/priceFeed.js";
 
 export default function roomHandlers(io, socket) {
   const uid = socket.user.id;
@@ -13,6 +14,7 @@ export default function roomHandlers(io, socket) {
     socket.join(code);
     if (String(state.host) !== uid) delete state.pending;
     socket.emit("room:state", state);
+    socket.emit("price:history", getHistory());
     const m = matches.get(code);
     if (m) socket.emit("match:update", viewFor(m, uid));
   });
@@ -24,6 +26,7 @@ export default function roomHandlers(io, socket) {
     p.ready = !!ready;
     await room.save();
     io.to(code).emit("room:state", await roomState(code));
+
   });
 
   socket.on("room:leave", async ({ code }) => {

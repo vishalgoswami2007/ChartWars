@@ -37,7 +37,13 @@ export async function startMatch(io, code) {
 
   const m = { code, mode: room.mode, players: {}, status: "countdown", durationSec: room.durationSec };
   for (const p of room.players) {
-    m.players[p.user.id] = { id: p.user.id, username: p.user.username, elo: p.user.elo, cash: START_BALANCE, qty: 0 };
+        m.players[p.user.id] = {
+      id: p.user.id,
+      username: p.user.username || p.user.name || "Player",
+      elo: p.user.elo,
+      cash: START_BALANCE,
+      qty: 0,
+    };
     inMatch.add(p.user.id);
   }
   matches.set(code, m);
