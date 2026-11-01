@@ -1,8 +1,10 @@
 import { ACCESS_COOKIE } from "../constants/auth.js";
 import { verifyAccessToken } from "../services/token.service.js";
+import { trackConnect } from "../services/presence.js";
 import { User } from "../models/User.js";
 import roomHandlers from "./roomHandlers.js";
 import queueHandlers from "./queueHandlers.js";
+import chatHandlers from "./chatHandlers.js";
 
 const parseCookie = (header = "") =>
   Object.fromEntries(
@@ -29,7 +31,7 @@ export default function initSocket(io) {
         throw new Error(`no access cookie (expected ${ACCESS_COOKIE}, seen: ${Object.keys(cookies).join(", ") || "none"})`);
       }
       const payload = verifyAccessToken(token);
-     const u = await User.findById(payload.sub).select("username name elo");
+      const u = await User.findById(payload.sub).select("username name elo");
       if (!u) throw new Error("user not found");
       socket.user = { id: u.id, username: u.username || u.name || "Player" };
       next();
@@ -41,7 +43,9 @@ export default function initSocket(io) {
 
   io.on("connection", (socket) => {
     socket.join(`user:${socket.user.id}`);
+    trackConnect(io, socket);
     roomHandlers(io, socket);
     queueHandlers(io, socket);
+    chatHandlers(io, socket);
   });
 }
