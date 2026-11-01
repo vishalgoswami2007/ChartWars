@@ -325,7 +325,8 @@ function AssetCard({ asset, coin, active, flash, onSelect }) {
       role="radio"
       aria-checked={active}
       onClick={() => onSelect(asset.id)}
-      className={`ow-asset flex min-h-26 min-w-0 flex-col gap-1 border p-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
+        disabled={asset.id !== "bitcoin"}
+      className={`ow-asset flex min-h-26 min-w-0 flex-col gap-1 border p-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 disabled:cursor-not-allowed disabled:opacity-40 ${
         active ? "is-active" : "border-white/10"
       }`}
     >
@@ -622,8 +623,8 @@ export default function OnlineMode() {
           <div className="border border-orange-500/40 bg-orange-500/7 px-4 py-2 shadow-[0_0_20px_rgba(249,115,22,0.12)]">
             <span className="block font-mono text-[9px] uppercase tracking-[0.22em] text-zinc-500">CW Rating</span>
             <span className="block font-mono text-xl font-bold leading-6 text-orange-300">
-              {PROFILE.rating.toLocaleString("en-US")}
-            </span>
+         {rating.toLocaleString("en-US")}          
+  </span>
           </div>
           <div>
             <span className="block font-mono text-[9px] uppercase tracking-[0.22em] text-zinc-500">Global rank</span>
