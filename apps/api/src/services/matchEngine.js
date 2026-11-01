@@ -16,7 +16,14 @@ export function viewFor(m, userId) {
   const list = Object.values(m.players)
     .filter(p => m.mode === "friends" || p.id === userId)
     .map(p => ({ id: p.id, username: p.username, cash: p.cash, qty: p.qty, value: valueOf(p, price) }));
-  return { code: m.code, status: m.status, price, endsAt: m.endsAt, players: list };
+    return {
+    code: m.code,
+    status: m.status,
+    price,
+    endsAt: m.endsAt,
+    timeLeft: m.endsAt ? Math.max(0, m.endsAt - Date.now()) : null,
+    players: list,
+    };
 }
 
 function broadcast(io, m) {
@@ -25,7 +32,7 @@ function broadcast(io, m) {
 
 export async function startMatch(io, code) {
   if (matches.has(code)) return;
-  const room = await Room.findOne({ code }).populate("players.user", "username elo");
+ const room = await Room.findOne({ code }).populate("players.user", "username name elo");
   if (!room || room.status !== "waiting") return;
 
   const m = { code, mode: room.mode, players: {}, status: "countdown", durationSec: room.durationSec };
@@ -41,7 +48,7 @@ export async function startMatch(io, code) {
   setTimeout(() => {
     m.status = "live";
     m.endsAt = Date.now() + m.durationSec * 1000;
-    io.to(code).emit("match:start", { endsAt: m.endsAt });
+    io.to(code).emit("match:start", { endsAt: m.endsAt, timeLeft: m.durationSec * 1000 });
     m.ticker = setInterval(() => broadcast(io, m), 1000);
     m.timer = setTimeout(() => endMatch(io, code), m.durationSec * 1000);
   }, 3000);

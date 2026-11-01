@@ -15,7 +15,7 @@ const roomSchema = new mongoose.Schema({
   players: [playerSchema],
   pending: [{ type: ObjectId, ref: "User" }],
   maxPlayers: { type: Number, default: 2 },
-  durationSec: { type: Number, enum: [60, 300, 600, 900], default: 300 },
+  durationSec: { type: Number, enum: [60, 300,180,  600, 900], default: 300 },
   status: { type: String, enum: ["waiting", "live", "finished"], default: "waiting" },
   winner: { type: ObjectId, ref: "User" },
 }, { timestamps: true });
