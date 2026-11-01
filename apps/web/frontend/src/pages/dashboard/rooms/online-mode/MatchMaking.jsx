@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { X } from "lucide-react";
+import { socket } from "../../../../lib/socket";
+import { useAuth } from "../../../auth/AuthProvider";
 
 import "./MatchMaking.css";
 
@@ -22,10 +24,10 @@ const AUTO_ENTER = true;
 
 // While there is no backend, the opponent is simulated and clearly labelled.
 // Set to false once the real queue exists.
-const DEMO_MODE = true;
+
 
 // Replace with the signed-in player's real rating.
-const PROFILE = { rating: 1200 };
+
 
 const SYMBOLS = {
   bitcoin: "BTC",
@@ -36,7 +38,6 @@ const SYMBOLS = {
   binancecoin: "BNB",
 };
 
-const DEMO_COUNTRIES = ["US", "GB", "DE", "JP", "BR", "SG", "AE", "AU", "CA", "FR"];
 
 const PHASES = [
   { until: 4, text: "Opening the queue" },
@@ -57,7 +58,7 @@ const BLADE = "M100 4 L116 24 V120 H84 V24 Z";
 const regionNames =
   typeof Intl.DisplayNames === "function" ? new Intl.DisplayNames(["en"], { type: "region" }) : null;
 
-const countryName = (code) => regionNames?.of(code) ?? code;
+const countryName = (code) => (code ? regionNames?.of(code) ?? code : "Unknown");
 const pad = (n) => String(n).padStart(2, "0");
 
 function Flag({ code, className = "h-7 w-10" }) {
@@ -138,51 +139,57 @@ export default function MatchMaking() {
   const navigate = useNavigate();
   const location = useLocation();
   const [params] = useSearchParams();
+  const { user } = useAuth();
 
   const queueId = params.get("queueId") ?? "q_unknown";
   const setup = location.state;
   const valid = Boolean(setup?.symbol);
+  const rating = user?.elo ?? 100;
 
   const [status, setStatus] = useState("searching"); // searching | found | timeout
   const [elapsed, setElapsed] = useState(0);
   const [opponent, setOpponent] = useState(null);
+  const [roomCode, setRoomCode] = useState(null);
   const [attempt, setAttempt] = useState(0);
   const [startIn, setStartIn] = useState(START_SECONDS);
+  const [error, setError] = useState("");
   const entered = useRef(false);
 
-  // The 15 second search.
+  // Server queue: join karo, match:found ya queue:timeout ka wait
   useEffect(() => {
     if (!valid || status !== "searching") return undefined;
 
+    const join = () => socket.emit("queue:join", { durationSec: setup.minutes * 60, country: setup.country });
+    const onFound = ({ code, opponent: opp }) => {
+      setRoomCode(code);
+      setOpponent(opp);
+      setStartIn(START_SECONDS);
+      setStatus("found");
+    };
+    const onTimeout = () => {
+      setElapsed(SEARCH_SECONDS);
+      setStatus("timeout");
+    };
+    const onError = (message) => setError(String(message));
+
+    socket.on("match:found", onFound);
+    socket.on("queue:timeout", onTimeout);
+    socket.on("queue:error", onError);
+    socket.on("connect", join);
+    if (socket.connected) join();
+
     const start = performance.now();
-    // TODO(backend): join the queue here, then listen for a match (WebSocket) instead of this timer.
-    const foundAtMs = DEMO_MODE ? 5000 + Math.random() * 6000 : null;
+    const id = setInterval(() => setElapsed(Math.min(SEARCH_SECONDS, (performance.now() - start) / 1000)), 200);
 
-    const id = setInterval(() => {
-      const ms = performance.now() - start;
-
-      if (foundAtMs != null && ms >= foundAtMs) {
-        setOpponent({
-          country: DEMO_COUNTRIES[Math.floor(Math.random() * DEMO_COUNTRIES.length)],
-          rating: PROFILE.rating + Math.round((Math.random() * 2 - 1) * RATING_BAND),
-        });
-        setStartIn(START_SECONDS);
-        setStatus("found");
-        return;
-      }
-
-      if (ms >= SEARCH_SECONDS * 1000) {
-        setElapsed(SEARCH_SECONDS);
-        setStatus("timeout");
-        return;
-      }
-
-      setElapsed(ms / 1000);
-    }, 200);
-
-    // TODO(backend): leave the queue in this cleanup.
-    return () => clearInterval(id);
-  }, [valid, status, attempt]);
+    return () => {
+      clearInterval(id);
+      socket.off("match:found", onFound);
+      socket.off("queue:timeout", onTimeout);
+      socket.off("queue:error", onError);
+      socket.off("connect", join);
+      socket.emit("queue:leave");
+    };
+  }, [valid, status, attempt, setup]);
 
   // "Match starts in N" countdown after an opponent is found.
   useEffect(() => {
@@ -192,13 +199,10 @@ export default function MatchMaking() {
   }, [status]);
 
   const goLive = useCallback(() => {
-    if (entered.current) return;
+    if (entered.current || !roomCode) return;
     entered.current = true;
-    const roomId = `rm_demo_${Math.floor(1000 + Math.random() * 9000)}`;
-    navigate(`${ROUTES.live}?roomId=${roomId}&status=active`, {
-      state: { ...setup, opponent, roomId, demo: DEMO_MODE },
-    });
-  }, [navigate, setup, opponent]);
+    navigate(`${ROUTES.live}/${roomCode}`, { state: { opponent } });
+  }, [navigate, roomCode, opponent]);
 
   useEffect(() => {
     if (status === "found" && AUTO_ENTER && startIn === 0) goLive();
@@ -208,8 +212,8 @@ export default function MatchMaking() {
 
   const symbol = SYMBOLS[setup.symbol] ?? setup.symbol.toUpperCase();
   const formatLabel = setup.players === 4 ? "4 players" : "1v1";
-  const low = PROFILE.rating - RATING_BAND;
-  const high = PROFILE.rating + RATING_BAND;
+  const low = rating - RATING_BAND;
+  const high = rating + RATING_BAND;
   const remaining = status === "timeout" ? 0 : Math.max(0, Math.ceil(SEARCH_SECONDS - elapsed));
   const phase = PHASES.find((p) => elapsed < p.until)?.text ?? "";
   const chips = [
@@ -224,6 +228,7 @@ export default function MatchMaking() {
   const searchAgain = () => {
     setElapsed(0);
     setOpponent(null);
+    setError("");
     setStatus("searching");
     setAttempt((n) => n + 1);
   };
@@ -231,14 +236,18 @@ export default function MatchMaking() {
   return (
     <main className="mm-root flex h-dvh flex-col overflow-hidden text-zinc-100">
       <header className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-2.5">
-        <button
-          type="button"
-          onClick={cancel}
-          className="inline-flex items-center gap-2 text-xs text-zinc-400 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
-        >
-          <X size={14} />
-          {status === "searching" ? "Cancel" : "Back to setup"}
-        </button>
+        {status === "found" ? (
+          <span className="w-16" />
+        ) : (
+          <button
+            type="button"
+            onClick={cancel}
+            className="inline-flex items-center gap-2 text-xs text-zinc-400 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+          >
+            <X size={14} />
+            {status === "searching" ? "Cancel" : "Back to setup"}
+          </button>
+        )}
         <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-zinc-500">
           Online mode <span className="text-orange-500">/</span> Matchmaking
         </p>
@@ -246,9 +255,9 @@ export default function MatchMaking() {
       </header>
 
       <section className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-y-auto px-4 py-3">
-        {DEMO_MODE && (
-          <p className="border border-amber-500/40 bg-amber-500/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-amber-300">
-            Demo: backend not connected, opponent is simulated
+        {error && (
+          <p role="alert" className="border border-red-500/40 bg-red-500/10 px-3 py-1 font-mono text-[11px] text-red-300">
+            {error}
           </p>
         )}
 
@@ -290,7 +299,7 @@ export default function MatchMaking() {
                     status === "timeout" ? "text-red-400" : "text-orange-300"
                   }`}
                 >
-                  00:{pad(remaining)}
+                  {pad(Math.floor(remaining / 60))}:{pad(remaining % 60)}
                 </span>
                 <span className="relative font-mono text-[9px] uppercase tracking-[0.25em] text-zinc-500">
                   {status === "timeout" ? "Time up" : "Searching"}
@@ -298,7 +307,9 @@ export default function MatchMaking() {
               </div>
             )}
 
-            {status === "found" && opponent && <SwordEmblem youCode={setup.country} enemyCode={opponent.country} />}
+            {status === "found" && opponent && (
+              <SwordEmblem youCode={setup.country} enemyCode={opponent.country || "un"} />
+            )}
           </div>
 
           <svg viewBox="0 0 100 100" className="absolute inset-0 size-full -rotate-90">
@@ -327,20 +338,19 @@ export default function MatchMaking() {
         {status === "found" && opponent && (
           <div role="status" className="flex flex-col items-center gap-3">
             <p className="sr-only">
-              Opponent found: unknown trader from {countryName(opponent.country)}, rating{" "}
-              {opponent.rating.toLocaleString("en-US")}.
+              Opponent found: {opponent.username}, rating {Number(opponent.elo).toLocaleString("en-US")}.
             </p>
 
             <div className="mm-rise flex items-center gap-5 border border-orange-500/40 bg-black/50 px-6 py-3 shadow-[0_0_30px_rgba(249,115,22,0.15)]">
               <Who
                 align="right"
                 label="You"
-                sub={`${countryName(setup.country)} · ${PROFILE.rating.toLocaleString("en-US")}`}
+                sub={`${countryName(setup.country)} · ${rating.toLocaleString("en-US")}`}
               />
               <span className="font-mono text-xl font-bold text-orange-500">VS</span>
               <Who
-                label="Unknown trader"
-                sub={`${countryName(opponent.country)} · ${opponent.rating.toLocaleString("en-US")}`}
+                label={opponent.username}
+                sub={`${countryName(opponent.country)} · ${Number(opponent.elo).toLocaleString("en-US")}`}
               />
             </div>
 
@@ -366,7 +376,7 @@ export default function MatchMaking() {
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.3em] text-red-400">No opponent found</p>
               <p className="mt-2 text-sm leading-6 text-zinc-400">
-                Nobody matched your settings in {SEARCH_SECONDS} seconds. Few players may be online right now.
+                Nobody matched your settings in {SEARCH_SECONDS} seconds. Few players may be online right now. Invite a friend to a Friends room instead.
               </p>
             </div>
             <div className="flex flex-wrap justify-center gap-2">

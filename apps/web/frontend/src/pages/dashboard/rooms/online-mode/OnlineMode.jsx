@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronDown, RefreshCw, Search } from "lucide-react";
-
+   import { useAuth } from "../../../auth/AuthProvider";
 
 import { fetchMarkets } from "../../../../services/cryptoMarketAPI";
 import "./OnlineMode.css";
@@ -14,7 +14,7 @@ const ROUTES = {
 /* ---------- Data ---------- */
 
 // Replace with the signed-in player's real data once the backend exists.
-const PROFILE = { rating: 1200, rank: null };
+const PROFILE = { rank: null };
 
 const WATCH = [
   { id: "bitcoin", symbol: "BTC", name: "Bitcoin" },
@@ -33,17 +33,16 @@ const PLAYER_MODES = [
 ];
 
 // Breaking these ends the match. Keep the values in step with the match engine.
-const RULES = [
-  { id: "stoploss", label: "Stop-loss", value: "Required", tip: "No trade without a stop-loss." },
-  { id: "risk", label: "Risk per trade", value: "1% max", tip: "Position size is capped by your risk limit." },
-  { id: "drawdown", label: "Max drawdown", value: "3%", tip: "If total loss passes this, the match ends." },
-];
+   const RULES = [
+     { id: "capital", label: "Starting capital", value: "$10,000", tip: "Both players start with the same virtual cash." },
+     { id: "winner", label: "Winner", value: "Higher value", tip: "Cash plus holdings, valued at the final price." },
+     { id: "price", label: "Price feed", value: "Server", tip: "Both players see the same BTC price." },
+   ];
 
-// Information only: these are not rules you can break.
-const PARAMS = [
-  { id: "slippage", label: "Slippage", value: "Dynamic", tip: "Fills can differ slightly from the price you see." },
-  { id: "rating", label: "Rating change", value: "±100 max", tip: "One match moves your rating by at most 100." },
-];
+   const PARAMS = [
+     { id: "opponent", label: "Opponent", value: "Real player", tip: "Matched by rating. No bots." },
+     { id: "rating", label: "Rating change", value: "±32 max", tip: "One match moves your rating by at most 32." },
+   ];
 
 const REGIONS = ["All", "Asia", "Europe", "Americas", "Africa", "Oceania"];
 
@@ -435,6 +434,9 @@ function TimerGauge({ minutes, active, onSelect }) {
 /* ---------- Page ---------- */
 
 export default function OnlineMode() {
+
+     const { user } = useAuth();
+   const rating = user?.elo ?? 100;
   const navigate = useNavigate();
   const [country, setCountry] = useState("IN");
   const [symbol, setSymbol] = useState("bitcoin");
