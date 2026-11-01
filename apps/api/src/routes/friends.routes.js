@@ -11,7 +11,7 @@ import { isOnline } from "../services/presence.js";
 const router = Router();
 router.use(requireAuth);
 
-const PUBLIC = "username name avatar bio elo"; // email kabhi nahi bhejte
+const PUBLIC = "username name avatar bio elo stats createdAt"; // email kabhi nahi bhejte
 const toPerson = (u) => ({
   id: String(u._id),
   username: u.username || u.name || "Player",
@@ -19,6 +19,9 @@ const toPerson = (u) => ({
   avatar: u.avatar || "",
   bio: u.bio || "",
   elo: u.elo,
+  matches: u.stats?.played ?? 0,
+  wins: u.stats?.won ?? 0,
+  joinedAt: u.createdAt,
   online: isOnline(u._id),
 });
 
