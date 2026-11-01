@@ -140,7 +140,7 @@ export default function FriendsWaitingRoom() {
               {players.map((p) => (
                 <li key={p.id} className="flex items-center gap-3 border border-white/10 bg-black/30 p-3">
                   <span className="grid size-9 shrink-0 place-items-center border border-white/15 font-mono text-sm text-orange-300">
-                    {p.name.slice(0, 1).toUpperCase()}
+                   {(p.name || "?").slice(0, 1).toUpperCase()}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-white">
