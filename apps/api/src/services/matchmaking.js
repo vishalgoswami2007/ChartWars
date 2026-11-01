@@ -35,7 +35,14 @@ export function startMatchmaking(io) {
           players: [{ user: a.userId, ready: true }, { user: b.userId, ready: true }],
           maxPlayers: 2, durationSec: a.durationSec,
         });
-        [a, b].forEach(x => io.to(`user:${x.userId}`).emit("match:found", { code: room.code }));
+                io.to(`user:${a.userId}`).emit("match:found", {
+          code: room.code,
+          opponent: { username: b.username, elo: b.elo, country: b.country },
+        });
+        io.to(`user:${b.userId}`).emit("match:found", {
+          code: room.code,
+          opponent: { username: a.username, elo: a.elo, country: a.country },
+        });
         setTimeout(() => startMatch(io, room.code), 4000);
         i = -1;
       }
