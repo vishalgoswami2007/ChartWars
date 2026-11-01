@@ -1,4 +1,3 @@
-
 import { useMemo, useState } from "react";
 import {
   Search,
@@ -16,8 +15,8 @@ import {
   CircleHelp,
 } from "lucide-react";
 
-
-
+import { useDiscover, useFriends } from "../../features/social/useFriends";
+import { avatarSrc, displayName, handleOf } from "../../features/social/people";
 import ChatWindow from "./friends/ChatWindow";
 import UserProfileDrawer from "./friends/UserProfileDrawer";
 import AlexenderChat from "./friends/AlexenderChat";
@@ -29,80 +28,18 @@ const tabs = [
   { id: "sent", label: "Sent" },
 ];
 
-const previewUsers = [
-  {
-    id: "alexander-help",
-    name: "Alexender",
-    username: "@alexender",
-    role: "ChartWars Assistant",
-    bio: "Your guide to ChartWars features, practice rooms and account help.",
-    avatar: "A",
-    online: true,
-    isBot: true,
-    joined: "ChartWars guide",
-    matches: 0,
-    wins: 0,
-    losses: 0,
-    friends: 0,
-  },
-  {
-    id: "cw-demo-01",
-    name: "MarketPilot",
-    username: "@marketpilot",
-    role: "Practice enthusiast",
-    bio: "Learning price action one session at a time.",
-    avatar: "M",
-    online: true,
-    joined: "Preview profile",
-    matches: 24,
-    wins: 15,
-    losses: 9,
-    friends: 8,
-  },
-  {
-    id: "cw-demo-02",
-    name: "ChartSeeker",
-    username: "@chartseeker",
-    role: "Technical analysis learner",
-    bio: "Focused on consistency, risk management and better decisions.",
-    avatar: "C",
-    online: false,
-    joined: "Preview profile",
-    matches: 18,
-    wins: 10,
-    losses: 8,
-    friends: 5,
-  },
-  {
-    id: "cw-demo-03",
-    name: "CandleCraft",
-    username: "@candlecraft",
-    role: "Chart practice",
-    bio: "Every chart is a chance to learn something new.",
-    avatar: "C",
-    online: false,
-    joined: "Preview profile",
-    matches: 31,
-    wins: 19,
-    losses: 12,
-    friends: 11,
-  },
-];
-
-const initialRequests = [];
-const initialFriends = [];
-
 function Avatar({ user, size = "md" }) {
   const sizes = {
     sm: "h-9 w-9 text-xs",
     md: "h-11 w-11 text-sm",
     lg: "h-14 w-14 text-lg",
   };
+  const src = avatarSrc(user);
 
-  if (user?.avatarUrl) {
+  if (src) {
     return (
       <img
-        src={user.avatarUrl}
+        src={src}
         alt=""
         className={`${sizes[size]} shrink-0 rounded-full border border-white/10 object-cover`}
       />
@@ -113,131 +50,102 @@ function Avatar({ user, size = "md" }) {
     <div
       className={`${sizes[size]} flex shrink-0 items-center justify-center rounded-full border border-[#e87524]/25 bg-[#e87524]/10 font-semibold text-[#f5a36b]`}
     >
-      {(user?.name || "U").charAt(0).toUpperCase()}
+      {displayName(user).charAt(0).toUpperCase()}
     </div>
   );
 }
 
 export default function FriendsPage() {
-  
   const [activeTab, setActiveTab] = useState("discover");
   const [search, setSearch] = useState("");
+  const [onlineOnly, setOnlineOnly] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [chatUser, setChatUser] = useState(null);
+  const [chatId, setChatId] = useState(null);
   const [showAlexender, setShowAlexender] = useState(false);
-  const [requests, setRequests] = useState(initialRequests);
-  const [friends, setFriends] = useState(initialFriends);
-  const [sentRequests, setSentRequests] = useState([]);
   const [notice, setNotice] = useState("");
 
-  // These profiles are UI previews only, not real registered ChartWars users.
+  const { friends, requests, sent, loading, error, sendRequest, respond, unfriend, clearUnread } =
+    useFriends(chatId);
+  const discover = useDiscover(
+    activeTab === "discover" ? search.trim() : "",
+    friends.length + requests.length + sent.length
+  );
+
   const visibleUsers = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const q = search.trim().toLowerCase();
+    const match = (u) => `${displayName(u)} ${u.username ?? ""}`.toLowerCase().includes(q);
 
-    if (activeTab === "friends") {
-      return friends.filter((user) =>
-        `${user.name} ${user.username}`.toLowerCase().includes(query),
-      );
-    }
+    let list;
+    if (activeTab === "friends") list = friends.filter(match);
+    else if (activeTab === "requests") list = requests.map((r) => ({ ...r.from, requestId: r.id })).filter(match);
+    else if (activeTab === "sent") list = sent.map((s) => ({ ...s.to, requestId: s.id })).filter(match);
+    else list = discover.users; // server pe hi search ho chuka hai
 
-    if (activeTab === "requests") {
-      return requests.filter((user) =>
-        `${user.name} ${user.username}`.toLowerCase().includes(query),
-      );
-    }
+    return onlineOnly ? list.filter((u) => u.online) : list;
+  }, [activeTab, search, friends, requests, sent, discover.users, onlineOnly]);
 
-    if (activeTab === "sent") {
-      return sentRequests.filter((user) =>
-        `${user.name} ${user.username}`.toLowerCase().includes(query),
-      );
-    }
+  // Drawer me live flags: friend hai ya request bheji hui hai
+  const profile = useMemo(() => {
+    if (!selectedUser) return null;
+    const friend = friends.find((f) => f.id === selectedUser.id);
+    return {
+      ...selectedUser,
+      ...(friend ?? {}),
+      isFriend: Boolean(friend),
+      requestSent: sent.some((s) => s.to.id === selectedUser.id),
+    };
+  }, [selectedUser, friends, sent]);
 
-    return previewUsers.filter((user) => {
-      const matchesSearch =
-        `${user.name} ${user.username} ${user.role}`
-          .toLowerCase()
-          .includes(query);
+  const chatUser = friends.find((f) => f.id === chatId) ?? null;
+  const onlineFriends = friends.filter((f) => f.online).slice(0, 5);
+  const unreadTotal = friends.reduce((n, f) => n + (f.unread ?? 0), 0);
+  const conversations = friends.filter((f) => f.lastMessage).length + (showAlexender ? 1 : 0);
+  const listLoading = activeTab === "discover" ? discover.loading : loading;
 
-      return (
-        matchesSearch &&
-        !user.isBot &&
-        !friends.some((friend) => friend.id === user.id) &&
-        !sentRequests.some((friend) => friend.id === user.id)
-      );
-    });
-  }, [activeTab, search, friends, requests, sentRequests]);
-
-  const sendRequest = (user) => {
-    if (user.isBot) {
-      setShowAlexender(true);
-      return;
-    }
-
-    if (
-      friends.some((friend) => friend.id === user.id) ||
-      sentRequests.some((friend) => friend.id === user.id)
-    ) {
-      return;
-    }
-
-    setSentRequests((current) => [...current, user]);
-    setNotice(`Friend request prepared for ${user.name}.`);
+  const handleAdd = async (user) => {
+    const err = await sendRequest(user.id);
+    setNotice(err ?? `Friend request sent to ${displayName(user)}.`);
   };
 
-  const acceptRequest = (user) => {
-    setRequests((current) => current.filter((item) => item.id !== user.id));
-    setFriends((current) =>
-      current.some((item) => item.id === user.id) ? current : [...current, user],
-    );
-    setNotice(`${user.name} added to your local preview friends list.`);
+  const handleAccept = async (user) => {
+    const err = await respond(user.requestId, true);
+    setNotice(err ?? `You and ${displayName(user)} are now friends.`);
   };
 
-  const cancelRequest = (user) => {
-    setSentRequests((current) =>
-      current.filter((item) => item.id !== user.id),
-    );
-    setNotice(`Removed ${user.name} from the local sent-request preview.`);
+  const handleDecline = async (user) => {
+    const err = await respond(user.requestId, false);
+    setNotice(err ?? "Request declined.");
+  };
+
+  const handleCancel = async (user) => {
+    const err = await unfriend(user.id);
+    setNotice(err ?? `Request to ${displayName(user)} cancelled.`);
+  };
+
+  const handleRemove = async (user) => {
+    if (!window.confirm(`Remove ${displayName(user)} from your friends?`)) return;
+    const err = await unfriend(user.id);
+    if (!err) {
+      setSelectedUser(null);
+      if (chatId === user.id) setChatId(null);
+    }
+    setNotice(err ?? `${displayName(user)} was removed from your friends.`);
   };
 
   const openChat = (user) => {
-    if (user.isBot) {
-      setShowAlexender(true);
-      return;
-    }
-
-    setChatUser(user);
+    setSelectedUser(null);
+    setChatId(user.id);
+    clearUnread(user.id);
   };
 
-  const handleProfile = (user) => {
-    setSelectedUser(user);
-  };
-
-  
   return (
     <main className="min-h-full bg-[#080808] px-4 py-5 text-white sm:px-6 lg:px-8 lg:py-8">
       <div className="mx-auto max-w-375">
-  
-
         {/* Feature summary */}
         <section className="mb-7 grid gap-3 sm:grid-cols-3">
-          <SummaryCard
-            icon={Users}
-            label="My friends"
-            value={friends.length}
-            detail="In this preview session"
-          />
-          <SummaryCard
-            icon={Clock3}
-            label="Pending requests"
-            value={requests.length}
-            detail="Incoming requests"
-          />
-          <SummaryCard
-            icon={MessageCircle}
-            label="Conversations"
-            value={friends.length + (showAlexender ? 1 : 0)}
-            detail="Friends and assistant"
-          />
+          <SummaryCard icon={Users} label="My friends" value={friends.length} detail="Accepted friends" />
+          <SummaryCard icon={Clock3} label="Pending requests" value={requests.length} detail="Incoming requests" />
+          <SummaryCard icon={MessageCircle} label="Conversations" value={conversations} detail="Friends and assistant" />
         </section>
 
         {/* Main workspace */}
@@ -254,9 +162,7 @@ export default function FriendsPage() {
                       setSearch("");
                     }}
                     className={`rounded-lg px-3 py-2 text-xs font-medium transition sm:px-4 ${
-                      activeTab === tab.id
-                        ? "bg-[#e87524]/15 text-[#f5a36b]"
-                        : "text-zinc-500 hover:text-white"
+                      activeTab === tab.id ? "bg-[#e87524]/15 text-[#f5a36b]" : "text-zinc-500 hover:text-white"
                     }`}
                   >
                     {tab.label}
@@ -265,44 +171,49 @@ export default function FriendsPage() {
                         {requests.length}
                       </span>
                     )}
+                    {tab.id === "friends" && unreadTotal > 0 && (
+                      <span className="ml-2 rounded-full bg-[#e87524] px-1.5 py-0.5 text-[9px] text-black">
+                        {unreadTotal > 99 ? "99+" : unreadTotal}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
                 <label className="relative block min-w-0 sm:min-w-65">
-                  <Search
-                    size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
-                  />
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
                   <input
                     type="search"
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    placeholder={
-                      activeTab === "discover"
-                        ? "Search people..."
-                        : "Search this list..."
-                    }
+                    placeholder={activeTab === "discover" ? "Search people..." : "Search this list..."}
                     className="w-full rounded-lg border border-white/10 bg-black/30 py-2.5 pl-9 pr-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[#e87524]/50"
                   />
                 </label>
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setNotice(
-                      "Online filters will use real account presence after backend integration.",
-                    )
-                  }
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2.5 text-xs text-zinc-400 transition hover:bg-white/4 hover:text-white"
+                  aria-pressed={onlineOnly}
+                  onClick={() => setOnlineOnly((v) => !v)}
+                  className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-xs transition ${
+                    onlineOnly
+                      ? "border-[#e87524]/50 bg-[#e87524]/10 text-[#f5a36b]"
+                      : "border-white/10 text-zinc-400 hover:bg-white/4 hover:text-white"
+                  }`}
                 >
                   <SlidersHorizontal size={15} />
-                  Filters
+                  {onlineOnly ? "Online only" : "Filters"}
                 </button>
               </div>
             </div>
           </div>
+
+          {error && (
+            <p role="alert" className="border-b border-red-500/20 bg-red-500/8 px-4 py-3 text-xs text-red-300 sm:px-5">
+              {error}
+            </p>
+          )}
 
           {notice && (
             <div className="flex items-start justify-between gap-3 border-b border-[#e87524]/20 bg-[#e87524]/6 px-4 py-3 text-xs text-[#f5a36b] sm:px-5">
@@ -327,12 +238,9 @@ export default function FriendsPage() {
                     <Sparkles size={17} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-zinc-200">
-                      Grow your ChartWars circle
-                    </p>
+                    <p className="text-sm font-medium text-zinc-200">Grow your ChartWars circle</p>
                     <p className="mt-1 text-xs leading-5 text-zinc-500">
-                      Discover people, send requests, and open a profile to
-                      learn more about a trader.
+                      Discover people, send requests, and open a profile to learn more about a trader.
                     </p>
                   </div>
                 </div>
@@ -342,17 +250,20 @@ export default function FriendsPage() {
                 <div className="divide-y divide-white/6">
                   {visibleUsers.map((user) => (
                     <UserRow
-                      key={user.id}
+                      key={user.requestId ?? user.id}
                       user={user}
                       tab={activeTab}
-                      onProfile={handleProfile}
-                      onAdd={sendRequest}
-                      onAccept={acceptRequest}
-                      onCancel={cancelRequest}
+                      onProfile={setSelectedUser}
+                      onAdd={handleAdd}
+                      onAccept={handleAccept}
+                      onDecline={handleDecline}
+                      onCancel={handleCancel}
                       onChat={openChat}
                     />
                   ))}
                 </div>
+              ) : listLoading ? (
+                <p className="py-16 text-center text-xs text-zinc-500">Loading...</p>
               ) : (
                 <div className="flex min-h-75 flex-col items-center justify-center px-4 text-center">
                   <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/8 bg-white/2.5 text-zinc-500">
@@ -365,7 +276,7 @@ export default function FriendsPage() {
                     )}
                   </div>
                   <h3 className="text-base font-medium text-zinc-200">
-                    {search
+                    {search || onlineOnly
                       ? "No matching people"
                       : activeTab === "friends"
                         ? "Your circle starts here"
@@ -382,7 +293,7 @@ export default function FriendsPage() {
                         ? "Incoming friend requests will appear here."
                         : activeTab === "sent"
                           ? "Requests you send will appear here."
-                          : "Try another search. Registered-user discovery will connect to the backend later."}
+                          : "Try another search."}
                   </p>
 
                   {activeTab !== "discover" && (
@@ -402,9 +313,7 @@ export default function FriendsPage() {
             <aside className="border-t border-white/[0.07] bg-black/15 p-4 sm:p-5 xl:border-l xl:border-t-0">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-sm font-semibold">Your community</h2>
-                <span className="text-[10px] uppercase tracking-wider text-zinc-600">
-                  Preview
-                </span>
+                <span className="text-[10px] uppercase tracking-wider text-emerald-400">Live</span>
               </div>
 
               <button
@@ -418,34 +327,48 @@ export default function FriendsPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-semibold text-zinc-100">
-                      Alexender
-                    </p>
+                    <p className="text-sm font-semibold text-zinc-100">Alexender</p>
                     <ShieldCheck size={13} className="text-[#e87524]" />
                   </div>
-                  <p className="mt-1 text-[11px] text-zinc-500">
-                    ChartWars help assistant
-                  </p>
+                  <p className="mt-1 text-[11px] text-zinc-500">ChartWars help assistant</p>
                 </div>
-                <MessageCircle
-                  size={16}
-                  className="text-zinc-500 transition group-hover:text-[#f5a36b]"
-                />
+                <MessageCircle size={16} className="text-zinc-500 transition group-hover:text-[#f5a36b]" />
               </button>
+
+              <div className="mb-5">
+                <p className="mb-2 text-[10px] uppercase tracking-wider text-zinc-600">Online now</p>
+                {onlineFriends.length === 0 ? (
+                  <p className="text-xs text-zinc-600">No friends online right now.</p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {onlineFriends.map((friend) => (
+                      <li key={friend.id}>
+                        <button
+                          type="button"
+                          onClick={() => openChat(friend)}
+                          className="flex w-full items-center gap-2.5 rounded-lg border border-white/[0.07] px-2.5 py-2 text-left transition hover:border-[#e87524]/40"
+                        >
+                          <span className="relative">
+                            <Avatar user={friend} size="sm" />
+                            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#0d0d0d] bg-emerald-400" />
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-xs text-zinc-200">{displayName(friend)}</span>
+                          <MessageCircle size={14} className="text-zinc-500" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
 
               <div className="rounded-xl border border-white/[0.07] bg-white/2 p-4">
                 <div className="mb-3 flex items-center gap-2">
                   <CircleHelp size={16} className="text-[#f5a36b]" />
-                  <h3 className="text-xs font-semibold text-zinc-200">
-                    Quick help
-                  </h3>
+                  <h3 className="text-xs font-semibold text-zinc-200">Quick help</h3>
                 </div>
-
                 <p className="text-xs leading-5 text-zinc-500">
-                  Need help finding friends, managing requests or learning
-                  how rooms work?
+                  Need help finding friends, managing requests or learning how rooms work?
                 </p>
-
                 <button
                   type="button"
                   onClick={() => setShowAlexender(true)}
@@ -455,44 +378,37 @@ export default function FriendsPage() {
                   <ArrowUpRight size={14} />
                 </button>
               </div>
-
-              <div className="mt-5 border-t border-white/[0.07] pt-4">
-                <p className="text-[10px] leading-5 text-zinc-600">
-                  Demo profiles are illustrative UI previews. Actual registered
-                  users, requests and messages will come from your secured API.
-                </p>
-              </div>
             </aside>
           </div>
         </section>
       </div>
 
       {/* Profile drawer */}
-      {selectedUser && (
+      {profile && (
         <UserProfileDrawer
-          user={selectedUser}
+          user={profile}
           onClose={() => setSelectedUser(null)}
-          onAddFriend={sendRequest}
+          onAddFriend={handleAdd}
           onMessage={openChat}
+          onRemoveFriend={handleRemove}
         />
       )}
 
-      {/* Chat window */}
+      {/* Chat window. key se friend badalne par chat reset hoti hai */}
       {chatUser && (
         <ChatWindow
+          key={chatUser.id}
           user={chatUser}
-          onClose={() => setChatUser(null)}
+          onClose={() => setChatId(null)}
           onProfile={() => {
             setSelectedUser(chatUser);
-            setChatUser(null);
+            setChatId(null);
           }}
         />
       )}
 
       {/* Alexender help chat */}
-      {showAlexender && (
-        <AlexenderChat onClose={() => setShowAlexender(false)} />
-      )}
+      {showAlexender && <AlexenderChat onClose={() => setShowAlexender(false)} />}
     </main>
   );
 }
@@ -503,9 +419,7 @@ function SummaryCard({ icon: Icon, label, value, detail }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs text-zinc-500">{label}</p>
-          <p className="mt-2 text-2xl font-semibold tracking-tight text-zinc-100">
-            {value}
-          </p>
+          <p className="mt-2 text-2xl font-semibold tracking-tight text-zinc-100">{value}</p>
           <p className="mt-1 text-[10px] text-zinc-600">{detail}</p>
         </div>
         <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.07] bg-white/2.5 text-[#f5a36b]">
@@ -516,11 +430,18 @@ function SummaryCard({ icon: Icon, label, value, detail }) {
   );
 }
 
-function UserRow({ user, tab, onProfile, onAdd, onAccept, onCancel, onChat }) {
-  const isBot = user.isBot;
+function UserRow({ user, tab, onProfile, onAdd, onAccept, onDecline, onCancel, onChat }) {
   const isFriend = tab === "friends";
   const isRequest = tab === "requests";
   const isSent = tab === "sent";
+  const name = displayName(user);
+  const last = user.lastMessage;
+  const unread = user.unread ?? 0;
+
+  const detail =
+    isFriend && last
+      ? `${last.mine ? "You: " : ""}${last.text}`
+      : `${user.online ? "Online" : "Offline"}${user.bio ? ` · ${user.bio}` : ""}`;
 
   return (
     <div className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center">
@@ -531,28 +452,19 @@ function UserRow({ user, tab, onProfile, onAdd, onAccept, onCancel, onChat }) {
       >
         <div className="relative shrink-0">
           <Avatar user={user} />
-          {!isBot && (
-            <span
-              className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#0d0d0d] ${
-                user.online ? "bg-emerald-400" : "bg-zinc-600"
-              }`}
-            />
+          {user.online && (
+            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#0d0d0d] bg-emerald-400" />
           )}
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="truncate text-sm font-medium text-zinc-100">
-              {user.name}
-            </span>
-            {isBot && <ShieldCheck size={13} className="text-[#e87524]" />}
-          </div>
+          <span className="block truncate text-sm font-medium text-zinc-100">{name}</span>
           <p className="mt-1 truncate text-xs text-zinc-500">
-            {user.username}
-            {user.role ? ` · ${user.role}` : ""}
+            {handleOf(user)}
+            {user.elo != null ? ` · ELO ${user.elo}` : ""}
           </p>
-          <p className="mt-1 truncate text-[11px] text-zinc-600">
-            {user.online ? "Online" : "Offline"} · {user.bio}
+          <p className={`mt-1 truncate text-[11px] ${unread > 0 ? "font-medium text-zinc-300" : "text-zinc-600"}`}>
+            {detail}
           </p>
         </div>
       </button>
@@ -562,7 +474,7 @@ function UserRow({ user, tab, onProfile, onAdd, onAccept, onCancel, onChat }) {
           type="button"
           onClick={() => onProfile(user)}
           className="rounded-lg border border-white/9 p-2.5 text-zinc-400 transition hover:bg-white/5 hover:text-white"
-          aria-label={`View ${user.name}'s profile`}
+          aria-label={`View ${name}'s profile`}
           title="View profile"
         >
           <UserRound size={15} />
@@ -576,16 +488,30 @@ function UserRow({ user, tab, onProfile, onAdd, onAccept, onCancel, onChat }) {
           >
             <MessageCircle size={14} />
             Message
+            {unread > 0 && (
+              <span className="rounded-full bg-black px-1.5 py-0.5 text-[10px] text-[#f5a36b]">
+                {unread > 99 ? "99+" : unread}
+              </span>
+            )}
           </button>
         ) : isRequest ? (
-          <button
-            type="button"
-            onClick={() => onAccept(user)}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#e87524] px-3 py-2.5 text-xs font-semibold text-black transition hover:bg-[#f28b3f]"
-          >
-            <Check size={14} />
-            Accept
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => onDecline(user)}
+              className="rounded-lg border border-white/10 px-3 py-2.5 text-xs text-zinc-400 transition hover:border-red-400/30 hover:text-red-300"
+            >
+              Decline
+            </button>
+            <button
+              type="button"
+              onClick={() => onAccept(user)}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#e87524] px-3 py-2.5 text-xs font-semibold text-black transition hover:bg-[#f28b3f]"
+            >
+              <Check size={14} />
+              Accept
+            </button>
+          </>
         ) : isSent ? (
           <button
             type="button"
