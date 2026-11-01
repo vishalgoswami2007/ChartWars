@@ -3,6 +3,9 @@ import * as LWC from "lightweight-charts";
 
 import { emaSeries } from "./friendsData";
 
+const MIN_RANGE = 0.0008; // y-axis kam se kam price ka 0.08% chauda
+const VISIBLE = 60; // shuru me itni candles dikhao
+
 // Works with lightweight-charts v5 (addSeries) and v4 (addCandlestickSeries / addLineSeries).
 function addSeries(chart, kind, options) {
   if (typeof chart.addSeries === "function" && LWC[kind]) return chart.addSeries(LWC[kind], options);
@@ -16,6 +19,8 @@ export default function FriendsChart({ candles, position, showEma, fitKey }) {
   const emaRef = useRef(null);
   const linesRef = useRef([]);
   const initRef = useRef(false);
+  const countRef = useRef(0);
+  const firstRef = useRef(null);
 
   useEffect(() => {
     const el = boxRef.current;
@@ -37,7 +42,13 @@ export default function FriendsChart({ candles, position, showEma, fitKey }) {
         horzLine: { color: "rgba(249,115,22,0.6)", labelBackgroundColor: "#f97316" },
       },
       rightPriceScale: { borderColor: "rgba(255,255,255,0.08)" },
-      timeScale: { borderColor: "rgba(255,255,255,0.08)", timeVisible: true, secondsVisible: true },
+      timeScale: {
+        borderColor: "rgba(255,255,255,0.08)",
+        timeVisible: true,
+        secondsVisible: true,
+        barSpacing: 10,
+        rightOffset: 4,
+      },
     });
 
     seriesRef.current = addSeries(chart, "CandlestickSeries", {
@@ -46,6 +57,17 @@ export default function FriendsChart({ candles, position, showEma, fitKey }) {
       borderVisible: false,
       wickUpColor: "#34d399",
       wickDownColor: "#f87171",
+      autoscaleInfoProvider: (original) => {
+        const res = original();
+        if (!res?.priceRange) return res;
+        const { minValue, maxValue } = res.priceRange;
+        const mid = (minValue + maxValue) / 2;
+        const min = mid * MIN_RANGE;
+        if (maxValue - minValue < min) {
+          return { ...res, priceRange: { minValue: mid - min / 2, maxValue: mid + min / 2 } };
+        }
+        return res;
+      },
     });
     emaRef.current = addSeries(chart, "LineSeries", {
       color: "#fb923c",
@@ -70,6 +92,8 @@ export default function FriendsChart({ candles, position, showEma, fitKey }) {
       emaRef.current = null;
       linesRef.current = [];
       initRef.current = false;
+      countRef.current = 0;
+      firstRef.current = null;
     };
   }, []);
 
@@ -77,15 +101,26 @@ export default function FriendsChart({ candles, position, showEma, fitKey }) {
     const series = seriesRef.current;
     if (!series || candles.length === 0) return;
 
-    if (!initRef.current) {
-      const p = candles[candles.length - 1].close;
-      series.applyOptions({ priceFormat: { type: "price", precision: p < 1 ? 6 : 2, minMove: p < 1 ? 0.000001 : 0.01 } });
-      series.setData(candles);
-      chartRef.current?.timeScale().fitContent();
-      initRef.current = true;
+    const last = candles[candles.length - 1];
+    const appendOnly =
+      initRef.current && candles[0].time === firstRef.current && candles.length - countRef.current <= 1;
+
+    if (appendOnly) {
+      series.update(last);
     } else {
-      series.update(candles[candles.length - 1]);
+      if (!initRef.current) {
+        const p = last.close;
+        series.applyOptions({ priceFormat: { type: "price", precision: p < 1 ? 6 : 2, minMove: p < 1 ? 0.000001 : 0.01 } });
+      }
+      series.setData(candles);
+      chartRef.current?.timeScale().setVisibleLogicalRange({
+        from: Math.max(0, candles.length - VISIBLE),
+        to: candles.length + 3,
+      });
+      initRef.current = true;
     }
+    firstRef.current = candles[0].time;
+    countRef.current = candles.length;
 
     const ema = emaSeries(
       candles.map((c) => c.close),

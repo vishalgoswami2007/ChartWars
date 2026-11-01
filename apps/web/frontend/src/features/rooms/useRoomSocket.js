@@ -4,8 +4,8 @@ import { socket } from "../../lib/socket";
 const BUCKET = 5; // seconds per candle
 const MAX_CANDLES = 600;
 
-function addTick(list, price) {
-  const bucket = Math.floor(Date.now() / 1000 / BUCKET) * BUCKET;
+function addTick(list, price, at = Date.now()) {
+  const bucket = Math.floor(at / 1000 / BUCKET) * BUCKET;
   const last = list[list.length - 1];
   if (!last || bucket > last.time) {
     const open = last ? last.close : price;
@@ -69,6 +69,13 @@ export function useRoomSocket(code) {
       setError(String(e));
       setTimeout(() => setError(""), 4000);
     };
+
+    const onHistory = (ticks) => {
+  const list = [];
+  for (const { t, p } of ticks) addTick(list, p, t);
+  candleRef.current = list;
+  setCandles(list.slice());
+};
 
     socket.on("room:state", onState);
     socket.on("room:join-request", onRequest);
