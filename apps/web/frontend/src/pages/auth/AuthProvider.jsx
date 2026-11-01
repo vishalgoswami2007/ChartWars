@@ -11,7 +11,7 @@ export const useAuth = () => useContext(AuthContext);
 // Only one refresh at a time. Refresh tokens are one-time-use, so two parallel
 // refreshes would look like token theft to the server and log the user out.
 let refreshing = null;
-function refreshSession() {
+export function refreshSession() {
   if (!refreshing) {
     refreshing = fetch(`${AUTH}/refresh`, { method: "POST", credentials: "include" })
       .then(async (res) => (res.ok ? (await res.json()).user : null))

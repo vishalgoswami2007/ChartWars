@@ -20,7 +20,7 @@ function Panel({ index, title, children }) {
   );
 }
 
-export default function FriendsLobby({ onCreate, onJoin, joinError, matchCount, onOpenAnalytics }) {
+export default function FriendsLobby({ onCreate, onJoin,createError, joinError, matchCount, onOpenAnalytics }) {
   const [symbol, setSymbol] = useState("bitcoin");
   const [players, setPlayers] = useState(2);
   const [minutes, setMinutes] = useState(5);
@@ -121,6 +121,9 @@ export default function FriendsLobby({ onCreate, onJoin, joinError, matchCount, 
             >
               Join room
             </button>
+            {createError && (
+            <p role="alert" className="mt-2 text-xs text-red-400">{createError}</p>
+          )}
           </form>
           <p className="mt-3 border-l-2 border-orange-500/60 pl-3 text-[11px] leading-5 text-zinc-400">
             The host has to approve your request before you enter the room.

@@ -13,6 +13,7 @@ const MINUTES_OK = [1, 5, 10, 15]; // backend sirf yahi durations allow karta ha
 export default function FriendsRoom() {
   const navigate = useNavigate();
   const [joinError, setJoinError] = useState("");
+  const [createError, setCreateError] = useState("");
   const [pendingCode, setPendingCode] = useState(null);
   const [matchCount] = useState(() => loadHistory().length);
 
@@ -32,17 +33,18 @@ export default function FriendsRoom() {
     return () => socket.off("room:join-result", onResult);
   }, [pendingCode, navigate]);
 
-  const handleCreate = async (options = {}) => {
-    setJoinError("");
-    const minutes = MINUTES_OK.includes(options.minutes) ? options.minutes : 5;
-    try {
-      const room = await createRoom({ durationSec: minutes * 60, maxPlayers: options.players ?? 2 });
-      navigate(`${ROUTES.waiting}/${room.code}`);
-    } catch (e) {
-      setJoinError(e.message);
-    }
-  };
-
+  const handleCreate = async ({ players = 2, minutes = 5 } = {}) => {
+  setJoinError("");
+  setCreateError("");
+  try {
+    const room = await createRoom({ durationSec: minutes * 60, maxPlayers: players });
+    console.log("room created", room);
+    navigate(`${ROUTES.waiting}/${room.code}`);
+  } catch (e) {
+    console.error("create room failed", e);
+    setCreateError(e.message);
+  }
+};
   const handleJoin = async (raw) => {
     const code = normalizeCode(raw);
     if (!CODE_RE.test(code)) {
