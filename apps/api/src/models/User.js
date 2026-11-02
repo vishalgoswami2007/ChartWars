@@ -54,4 +54,6 @@ userSchema.set("toJSON", {
   },
 });
 
+userSchema.index({ elo: -1, "stats.won": -1, "stats.played": -1, createdAt: 1 });
+
 export const User = mongoose.model("User", userSchema);

@@ -11,6 +11,7 @@ import walletRoutes from "./routes/wallet.routes.js";
 import matchRoutes from "./routes/match.routes.js";
 import roomRoutes from "./routes/room.routes.js";
 import friendsRoutes from "./routes/friends.routes.js";
+import leaderboardRoutes from "./routes/leaderboard.routes.js";
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use("/api/v1/wallet", walletRoutes);
 app.use("/api/v1/matches", matchRoutes);
 app.use("/api/v1/rooms", roomRoutes);
 app.use("/api/v1/friends", friendsRoutes);
+app.use("/api/v1/leaderboard", leaderboardRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
