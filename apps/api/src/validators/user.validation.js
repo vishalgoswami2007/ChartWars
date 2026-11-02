@@ -23,7 +23,7 @@ export const updateProfileSchema = z
   .object({
     name: z.string().trim().min(2).max(60).optional(),
     bio: z.string().trim().max(160).optional(),
-    avatar: z.union([z.literal(""), z.string().url().max(500).startsWith("https://")]).optional(),
+    avatar: z.union([z.literal(""), avatar]).optional(),
     username: username.optional(),
     preferences: z
       .object({ sound: z.boolean().optional(), emailNotifications: z.boolean().optional() })
