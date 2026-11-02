@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { ImagePlus, X } from "lucide-react";
+import { X } from "lucide-react";
 
 import { AVATARS, Avatar } from "./avatars";
 import { btnGhost, btnPrimary, card } from "./ui";
+import PhotoUpload from "./PhotoUpload";
 
 export default function AvatarPicker({ current, name, onSave, onClose }) {
   const [tab, setTab] = useState("trading");
@@ -48,7 +49,7 @@ export default function AvatarPicker({ current, name, onSave, onClose }) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 id="avatar-title" className="text-base font-semibold text-white">Choose your avatar</h2>
-            <p className="mt-1 text-xs text-zinc-500">Pick a trading avatar. Photo upload is coming soon.</p>
+    <p className="mt-1 text-xs text-zinc-500">Pick a trading avatar or upload your own photo.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="rounded-md p-1.5 text-zinc-500 transition hover:bg-white/5 hover:text-white">
             <X size={16} />
@@ -89,9 +90,7 @@ export default function AvatarPicker({ current, name, onSave, onClose }) {
           </div>
         ) : (
           <div className="mt-4 flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 px-4 py-8 text-center">
-            <ImagePlus size={22} className="text-zinc-500" />
-            <span className="text-sm text-zinc-200">Photo upload is coming soon</span>
-            <span className="text-[11px] text-zinc-500">For now, pick one of the trading avatars.</span>
+            <PhotoUpload />
           </div>
         )}
 
