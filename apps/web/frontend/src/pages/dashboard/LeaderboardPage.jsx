@@ -122,7 +122,7 @@ function PlayerRow({ player, isMe }) {
   return (
     <tr
       className={`border-b border-white/5 transition-colors last:border-0 hover:bg-white/[0.035] ${
-        isMe ? "bg-[#e87524]/[0.06]" : ""
+        isMe ? "bg-[#e87524]/6" : ""
       }`}
     >
       <td className="px-5 py-4">
