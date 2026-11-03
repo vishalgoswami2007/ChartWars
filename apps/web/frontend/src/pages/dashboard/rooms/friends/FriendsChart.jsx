@@ -4,7 +4,9 @@ import * as LWC from "lightweight-charts";
 import { emaSeries } from "./friendsData";
 
 const MIN_RANGE = 0.0008; // y-axis kam se kam price ka 0.08% chauda
-const VISIBLE = 60; // shuru me itni candles dikhao
+const BAR_SPACING = 8; // TradingView jaisa fixed candle width
+const RIGHT_OFFSET = 6;
+const EMA_PERIOD = 20;
 
 // Works with lightweight-charts v5 (addSeries) and v4 (addCandlestickSeries / addLineSeries).
 function addSeries(chart, kind, options) {
@@ -35,28 +37,42 @@ export default function FriendsChart({ candles, position, showEma, fitKey }) {
         fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
         fontSize: 11,
       },
-      grid: { vertLines: { color: "rgba(255,255,255,0.04)" }, horzLines: { color: "rgba(255,255,255,0.04)" } },
+      grid: { vertLines: { color: "rgba(255,255,255,0.035)" }, horzLines: { color: "rgba(255,255,255,0.035)" } },
       crosshair: {
         mode: LWC.CrosshairMode.Normal,
-        vertLine: { color: "rgba(249,115,22,0.6)", labelBackgroundColor: "#f97316" },
-        horzLine: { color: "rgba(249,115,22,0.6)", labelBackgroundColor: "#f97316" },
+        vertLine: {
+          color: "rgba(161,161,170,0.6)",
+          style: LWC.LineStyle.Dashed,
+          width: 1,
+          labelBackgroundColor: "#3f3f46",
+        },
+        horzLine: {
+          color: "rgba(161,161,170,0.6)",
+          style: LWC.LineStyle.Dashed,
+          width: 1,
+          labelBackgroundColor: "#3f3f46",
+        },
       },
-      rightPriceScale: { borderColor: "rgba(255,255,255,0.08)" },
+      rightPriceScale: {
+        borderColor: "rgba(255,255,255,0.08)",
+        scaleMargins: { top: 0.12, bottom: 0.12 },
+      },
       timeScale: {
         borderColor: "rgba(255,255,255,0.08)",
         timeVisible: true,
         secondsVisible: true,
-        barSpacing: 10,
-        rightOffset: 4,
+        barSpacing: BAR_SPACING,
+        minBarSpacing: 2,
+        rightOffset: RIGHT_OFFSET,
       },
     });
 
     seriesRef.current = addSeries(chart, "CandlestickSeries", {
-      upColor: "#34d399",
-      downColor: "#f87171",
+      upColor: "#26a69a",
+      downColor: "#ef5350",
       borderVisible: false,
-      wickUpColor: "#34d399",
-      wickDownColor: "#f87171",
+      wickUpColor: "#26a69a",
+      wickDownColor: "#ef5350",
       autoscaleInfoProvider: (original) => {
         const res = original();
         if (!res?.priceRange) return res;
@@ -113,20 +129,23 @@ export default function FriendsChart({ candles, position, showEma, fitKey }) {
         series.applyOptions({ priceFormat: { type: "price", precision: p < 1 ? 6 : 2, minMove: p < 1 ? 0.000001 : 0.01 } });
       }
       series.setData(candles);
-      chartRef.current?.timeScale().setVisibleLogicalRange({
-        from: Math.max(0, candles.length - VISIBLE),
-        to: candles.length + 3,
-      });
+      chartRef.current?.timeScale().applyOptions({ barSpacing: BAR_SPACING });
+      chartRef.current?.timeScale().scrollToRealTime();
       initRef.current = true;
     }
     firstRef.current = candles[0].time;
     countRef.current = candles.length;
 
+    // EMA tabhi dikhao jab itni candles ho jaye (pehle ki values galat hoti hain)
     const ema = emaSeries(
       candles.map((c) => c.close),
-      20
+      EMA_PERIOD
     );
-    emaRef.current?.setData(candles.map((c, i) => ({ time: c.time, value: ema[i] })));
+    const emaData = [];
+    for (let i = EMA_PERIOD - 1; i < candles.length; i += 1) {
+      if (Number.isFinite(ema[i])) emaData.push({ time: candles[i].time, value: ema[i] });
+    }
+    emaRef.current?.setData(emaData);
   }, [candles]);
 
   useEffect(() => {
@@ -155,12 +174,16 @@ export default function FriendsChart({ candles, position, showEma, fitKey }) {
         axisLabelVisible: true,
         title,
       });
-    linesRef.current.push(make(position.entry, "#f97316", "ENTRY", false), make(position.stop, "#f87171", "SL", true));
-    if (position.tp) linesRef.current.push(make(position.tp, "#34d399", "TP", true));
+    linesRef.current.push(make(position.entry, "#f97316", "ENTRY", false), make(position.stop, "#ef5350", "SL", true));
+    if (position.tp) linesRef.current.push(make(position.tp, "#26a69a", "TP", true));
   }, [position]);
 
+  // Fit button: bar width reset + latest candle pe wapas
   useEffect(() => {
-    if (fitKey > 0) chartRef.current?.timeScale().fitContent();
+    if (fitKey > 0) {
+      chartRef.current?.timeScale().applyOptions({ barSpacing: BAR_SPACING });
+      chartRef.current?.timeScale().scrollToRealTime();
+    }
   }, [fitKey]);
 
   return (

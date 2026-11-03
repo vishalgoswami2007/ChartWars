@@ -36,14 +36,14 @@ const MODES = {
 };
 
 const PRESETS = [25, 50, 75, 100];
+const BLACK = { background: "#000" };
 
 // Online mode me opponent ka P&L match khatam hone tak hidden rehta hai.
-// Agar server live P&L bhejta hai aur tu dikhana chahta hai to true kar dena.
 const REVEAL_OPPONENT_PNL = false;
 
-function Panel({ title, children, className = "" }) {
+function Panel({ title, children, className = "", style }) {
   return (
-    <section className={`fr-panel p-3 ${className}`}>
+    <section className={`fr-panel p-3 ${className}`} style={style}>
       {title && <h2 className="mb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-400">{title}</h2>}
       {children}
     </section>
@@ -52,7 +52,7 @@ function Panel({ title, children, className = "" }) {
 
 function Message({ text, onBack }) {
   return (
-    <main className="fr-root fixed inset-0 z-50 grid place-items-center text-zinc-100">
+    <main className="fr-root fixed inset-0 z-50 grid place-items-center text-zinc-100" style={BLACK}>
       <div className="text-center">
         <p className="text-sm text-zinc-400">{text}</p>
         <button
@@ -72,6 +72,15 @@ function Stat({ label, value, valueClass = "text-zinc-200" }) {
     <div>
       <p className="text-[9px] uppercase tracking-[0.18em] text-zinc-500">{label}</p>
       <p className={`text-sm font-semibold tabular-nums ${valueClass}`}>{value}</p>
+    </div>
+  );
+}
+
+function InfoRow({ label, value, valueClass = "text-zinc-200" }) {
+  return (
+    <div className="flex items-center justify-between border-b border-white/5 py-1.5 font-mono text-[11px] last:border-b-0">
+      <span className="text-zinc-500">{label}</span>
+      <span className={`tabular-nums ${valueClass}`}>{value}</span>
     </div>
   );
 }
@@ -233,8 +242,21 @@ export default function MatchArena({ mode, code, opponent }) {
   const myName = user?.username ?? mine?.username ?? "You";
   const oppName = opponent?.username ?? firstOther?.username ?? "Opponent";
 
+  // Market info: match ki candles se nikala hua (session)
+  const lastC = candles[candles.length - 1];
+  const sessionOpen = candles[0]?.open;
+  const sessionHigh = candles.length ? Math.max(...candles.map((c) => c.high)) : undefined;
+  const sessionLow = candles.length ? Math.min(...candles.map((c) => c.low)) : undefined;
+  const hasPrice = Number.isFinite(price) && Number.isFinite(sessionOpen);
+  const change = hasPrice ? price - sessionOpen : 0;
+  const changePct = hasPrice && sessionOpen ? (change / sessionOpen) * 100 : 0;
+  const sign = change > 0 ? "+" : change < 0 ? "-" : "";
+  const range = Number.isFinite(sessionHigh) && Number.isFinite(sessionLow) ? sessionHigh - sessionLow : undefined;
+
+  const cyclePct = () => setPct((p) => PRESETS[(PRESETS.indexOf(p) + 1) % PRESETS.length]);
+
   return (
-    <main className="fr-root fixed inset-0 z-50 flex flex-col overflow-hidden text-zinc-100 max-lg:overflow-y-auto">
+    <main className="fr-root fixed inset-0 z-50 flex flex-col overflow-hidden text-zinc-100 max-lg:overflow-y-auto" style={BLACK}>
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/10 px-3 py-2">
         <button
           type="button"
@@ -261,58 +283,83 @@ export default function MatchArena({ mode, code, opponent }) {
 
       <div className="grid min-h-0 flex-1 gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_360px] lg:overflow-hidden">
         {/* CHART + overlays */}
-        <Panel className="relative flex min-h-0 min-w-0 flex-col max-lg:h-[30rem]">
+        <Panel className="relative flex min-h-0 min-w-0 flex-col max-lg:h-[30rem]" style={BLACK}>
           <div className="relative flex min-h-0 flex-1 flex-col">
             <FriendsChart candles={candles} position={null} showEma={showEma} fitKey={fitKey} />
 
-            {/* Top overlay: symbol, price, EMA, fit */}
-            <div className="pointer-events-none absolute left-2 right-16 top-2 z-10 flex flex-wrap items-center gap-2">
-              <span className="pointer-events-auto border border-orange-500/50 bg-black/70 px-2 py-1 font-mono text-[11px] text-orange-300">BTC/USD</span>
-              <span className="bg-black/70 px-2 py-1 font-mono text-base font-bold tabular-nums text-white">{fmtPrice(price)}</span>
-              <div className="pointer-events-auto ml-auto flex items-center gap-1.5">
+            {/* Top-left: TradingView style SELL | size | BUY + legend */}
+            <div className="pointer-events-none absolute left-2 top-2 z-10 flex flex-col gap-1.5">
+              <div className="flex items-stretch">
                 <button
                   type="button"
-                  aria-pressed={showEma}
-                  onClick={() => setShowEma((v) => !v)}
-                  className={`border px-2 py-1 font-mono text-[10px] ${showEma ? "border-orange-500 bg-orange-500/15 text-orange-300" : "border-white/10 bg-black/70 text-zinc-500"}`}
+                  disabled={!canSell}
+                  onClick={() => sell(sellAmount)}
+                  aria-label="Sell"
+                  className="fr-sell pointer-events-auto flex min-w-24 flex-col items-center rounded-l-sm bg-[#f23645] px-3 py-1 font-mono text-white transition hover:bg-[#ff4a59] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  EMA 20
+                  <span className="text-sm font-bold tabular-nums leading-tight">{fmtPrice(price)}</span>
+                  <span className="text-[10px] font-semibold leading-tight tracking-widest">SELL</span>
                 </button>
-                <button type="button" aria-label="Fit chart" onClick={() => setFitKey((k) => k + 1)} className="border border-white/10 bg-black/70 p-1.5 text-zinc-400 transition hover:text-white">
-                  <Maximize2 size={12} />
+                <button
+                  type="button"
+                  onClick={cyclePct}
+                  aria-label={`Trade size ${pct} percent, click to change`}
+                  title="Trade size (click to change)"
+                  className="pointer-events-auto grid min-w-12 place-items-center border-y border-white/10 bg-[#0b0b0b] px-2 font-mono text-[11px] font-semibold text-zinc-200 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+                >
+                  {pct}%
+                </button>
+                <button
+                  type="button"
+                  disabled={!canBuy}
+                  onClick={() => buy(buyAmount)}
+                  aria-label="Buy"
+                  className="fr-buy pointer-events-auto flex min-w-24 flex-col items-center rounded-r-sm bg-[#2962ff] px-3 py-1 font-mono text-white transition hover:bg-[#4a7cff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <span className="text-sm font-bold tabular-nums leading-tight">{fmtPrice(price)}</span>
+                  <span className="text-[10px] font-semibold leading-tight tracking-widest">BUY</span>
                 </button>
               </div>
+
+              <p className="font-mono text-[11px] text-zinc-400">
+                <span className="font-semibold text-white">BTC/USD</span>
+                <span className="mx-1.5 text-zinc-600">·</span>
+                ChartWars
+                {lastC && (
+                  <span className="ml-2 tabular-nums">
+                    O <span className={tone(lastC.close - lastC.open)}>{fmtPrice(lastC.open)}</span> H{" "}
+                    <span className={tone(lastC.close - lastC.open)}>{fmtPrice(lastC.high)}</span> L{" "}
+                    <span className={tone(lastC.close - lastC.open)}>{fmtPrice(lastC.low)}</span> C{" "}
+                    <span className={tone(lastC.close - lastC.open)}>{fmtPrice(lastC.close)}</span>
+                  </span>
+                )}
+              </p>
             </div>
 
-            {/* Bottom overlay: BUY | TIMER | SELL */}
-            <div className="pointer-events-none absolute inset-x-3 bottom-10 z-10 flex items-end justify-between gap-2">
+            {/* Top-right: EMA + fit */}
+            <div className="pointer-events-auto absolute right-16 top-2 z-10 flex items-center gap-1.5">
               <button
                 type="button"
-                disabled={!canBuy}
-                onClick={() => buy(buyAmount)}
-                className="fr-buy pointer-events-auto h-11 w-28 bg-emerald-500 font-mono text-sm font-bold tracking-widest text-black transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 disabled:cursor-not-allowed disabled:opacity-35 sm:w-36"
+                aria-pressed={showEma}
+                onClick={() => setShowEma((v) => !v)}
+                className={`border px-2 py-1 font-mono text-[10px] ${showEma ? "border-orange-500 bg-orange-500/15 text-orange-300" : "border-white/10 bg-black/70 text-zinc-500"}`}
               >
-                BUY
+                EMA 20
               </button>
+              <button type="button" aria-label="Fit chart" onClick={() => setFitKey((k) => k + 1)} className="border border-white/10 bg-black/70 p-1.5 text-zinc-400 transition hover:text-white">
+                <Maximize2 size={12} />
+              </button>
+            </div>
 
-              <div className="pointer-events-none border border-white/10 bg-black/75 px-4 py-1 text-center backdrop-blur-sm">
-                <span
-                  className={`font-mono text-2xl font-bold tabular-nums ${urgent ? "fr-urgent" : "text-orange-300"}`}
-                  role="timer"
-                  aria-label={`${clock(remaining)} left`}
-                >
-                  {clock(remaining)}
-                </span>
-              </div>
-
-              <button
-                type="button"
-                disabled={!canSell}
-                onClick={() => sell(sellAmount)}
-                className="fr-sell pointer-events-auto h-11 w-28 bg-red-500 font-mono text-sm font-bold tracking-widest text-black transition hover:bg-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300 disabled:cursor-not-allowed disabled:opacity-35 sm:w-36"
+            {/* Bottom-center: timer */}
+            <div className="pointer-events-none absolute bottom-10 left-1/2 z-10 -translate-x-1/2 border border-white/10 bg-black/75 px-4 py-1 text-center backdrop-blur-sm">
+              <span
+                className={`font-mono text-2xl font-bold tabular-nums ${urgent ? "fr-urgent" : "text-orange-300"}`}
+                role="timer"
+                aria-label={`${clock(remaining)} left`}
               >
-                SELL
-              </button>
+                {clock(remaining)}
+              </span>
             </div>
           </div>
           <p className="mt-2 shrink-0 text-center font-mono text-[10px] text-zinc-600">
@@ -322,6 +369,29 @@ export default function MatchArena({ mode, code, opponent }) {
 
         {/* RIGHT SIDE */}
         <aside className="fr-scroll flex min-h-0 flex-col gap-3 lg:overflow-y-auto">
+          {/* Market card: naam, live price, change, market status */}
+          <Panel className="shrink-0" style={BLACK}>
+            <div className="flex items-center gap-2.5">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-orange-500 font-mono text-sm font-bold text-black">₿</span>
+              <div className="min-w-0">
+                <p className="font-mono text-sm font-bold text-white">BTC/USD</p>
+                <p className="truncate font-mono text-[10px] text-zinc-500">Bitcoin / US Dollar · ChartWars server feed</p>
+              </div>
+            </div>
+            <p className="mt-3 font-mono text-3xl font-bold tabular-nums text-white">
+              {fmtPrice(price)} <span className="text-xs font-normal text-zinc-500">USD</span>
+            </p>
+            <p className={`font-mono text-sm tabular-nums ${tone(change)}`}>
+              {sign}
+              {fmtPrice(Math.abs(change))} <span className="ml-1">{sign}{Math.abs(changePct).toFixed(2)}%</span>
+              <span className="ml-2 text-[10px] text-zinc-600">session</span>
+            </p>
+            <p className="mt-2 inline-flex items-center gap-1.5 font-mono text-[11px]">
+              <span className={`h-2 w-2 rounded-full ${live ? "bg-emerald-400" : "bg-zinc-600"}`} />
+              <span className={live ? "text-emerald-400" : "text-zinc-500"}>{live ? "Market open" : "Market closed"}</span>
+            </p>
+          </Panel>
+
           {/* Friends mode: 2 player boxes (mic + video) */}
           {!isOnline && (
             <div className="grid shrink-0 grid-cols-2 gap-3">
@@ -345,8 +415,8 @@ export default function MatchArena({ mode, code, opponent }) {
             </div>
           )}
 
-          {/* Card 1: P&L */}
-          <Panel title="Profit / Loss" className="shrink-0">
+          {/* Card: P&L */}
+          <Panel title="Profit / Loss" className="shrink-0" style={BLACK}>
             <div className="space-y-1.5">
               <PnlRow name={myName} you value={pnl} />
               {isOnline ? (
@@ -368,11 +438,9 @@ export default function MatchArena({ mode, code, opponent }) {
             )}
           </Panel>
 
-          {/* Card 2: Info + quantity + virtual money */}
-          <Panel title="Account &amp; quantity" className="shrink-0">
+          {/* Card: Account + quantity */}
+          <Panel title="Account & quantity" className="shrink-0" style={BLACK}>
             <div className="grid grid-cols-2 gap-x-3 gap-y-2 font-mono">
-              <Stat label="Pair" value="BTC/USD" />
-              <Stat label="Price" value={fmtPrice(price)} valueClass="text-white" />
               <Stat label="Equity" value={fmtMoney(equity)} valueClass="text-white" />
               <Stat label="Cash (virtual)" value={fmtMoney(mine?.cash ?? CFG.capital)} />
               <Stat label="Holding" value={`${fmtSize(mine?.qty ?? 0)} BTC`} />
@@ -398,13 +466,29 @@ export default function MatchArena({ mode, code, opponent }) {
               </div>
               <div className="mt-2 grid grid-cols-2 gap-2 font-mono text-[11px]">
                 <p className="text-zinc-500">
-                  Buy <span className="text-emerald-400">{fmtMoney(buyAmount)}</span>
+                  Buy <span className="text-blue-400">{fmtMoney(buyAmount)}</span>
                 </p>
                 <p className="text-right text-zinc-500">
                   Sell <span className="text-red-400">{fmtMoney(sellShown)}</span>
                 </p>
               </div>
             </div>
+          </Panel>
+
+          {/* Card: Market information (scroll karke dikhega) */}
+          <Panel title="Market information" className="shrink-0" style={BLACK}>
+            <InfoRow label="Symbol" value="BTC/USD" valueClass="text-white" />
+            <InfoRow label="Type" value="Crypto · Spot (simulated)" />
+            <InfoRow label="Session open" value={fmtPrice(sessionOpen)} />
+            <InfoRow label="Session high" value={fmtPrice(sessionHigh)} valueClass="text-emerald-400" />
+            <InfoRow label="Session low" value={fmtPrice(sessionLow)} valueClass="text-red-400" />
+            <InfoRow label="Range" value={range === undefined ? "—" : fmtPrice(range)} />
+            <InfoRow label="Candles" value={String(candles.length)} />
+            <InfoRow label="Time left" value={clock(remaining)} valueClass={urgent ? "text-red-400" : "text-orange-300"} />
+            <InfoRow label="Start capital" value={fmtMoney(CFG.capital)} />
+            <p className="mt-2 font-mono text-[10px] leading-4 text-zinc-600">
+              Prices come from the match server and are the same for every player. Session stats cover this match only.
+            </p>
           </Panel>
         </aside>
       </div>
