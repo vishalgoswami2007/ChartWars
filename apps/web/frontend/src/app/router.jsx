@@ -1,6 +1,6 @@
 
 import { createBrowserRouter } from "react-router-dom";
-import { GuestRoute, ProtectedRoute } from "../pages/auth/AuthProvider";
+import { GuestRoute, ProtectedRoute ,  LandingGate  } from "../pages/auth/AuthProvider";
 // Landing
 import LandingPage from "../pages/landing/LandingPage";
 import NotFoundPage from "../app/NotFoundPage";
@@ -75,6 +75,7 @@ import HistoryPage from "../pages/dashboard/HistoryPage";
 import NotificationsPage from "../pages/dashboard/NotificationsPage";
 import SettingsPage from "../pages/dashboard/SettingsPage";
 
+
 const friendsElement = (
   <FriendsPage
     eyebrow="YOUR NETWORK"
@@ -86,9 +87,9 @@ const friendsElement = (
 export const router = createBrowserRouter([
   // Main website
     // Authentication
-   {
+     {
     path: "/",
-    element: <LandingPage />,
+    element: <LandingGate><LandingPage /></LandingGate>,
   },
   {
     path: "/signup",

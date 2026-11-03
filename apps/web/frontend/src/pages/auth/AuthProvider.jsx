@@ -5,6 +5,17 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 const AUTH = `${API_URL}/api/v1/auth`;
 
+const HINT_KEY = "cw.signedIn";
+
+// Pichli baar login tha ya nahi. Isse returning user ko landing ka flash nahi dikhta.
+function readHint() {
+  try {
+    return localStorage.getItem(HINT_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
 
@@ -71,6 +82,16 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+    useEffect(() => {
+    if (loading) return;
+    try {
+      if (user) localStorage.setItem(HINT_KEY, "1");
+      else localStorage.removeItem(HINT_KEY);
+    } catch {
+      // storage band hai, koi baat nahi
+    }
+  }, [user, loading]);
+
   const value = useMemo(() => ({ user, setUser, loading, logout }), [user, loading, logout]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
@@ -92,4 +113,12 @@ export function GuestRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return <Splash />;
   return user ? <Navigate to="/dashboard" replace /> : (children ?? <Outlet />);
+}
+
+// "/" par: logged-in user seedha dashboard. Guest ko landing turant dikhti hai (Render sleep me ho tab bhi).
+export function LandingGate({ children }) {
+  const { user, loading } = useAuth();
+  if (user) return <Navigate to="/dashboard" replace />;
+  if (loading && readHint()) return <Splash />;
+  return children;
 }
