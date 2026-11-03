@@ -280,8 +280,9 @@ function applyUser(user) {
   commit({ ...local, profile, status: "ready", userId: id, error: "" });
 }
 
-/** Dashboard khulte hi ek baar chalao. Server se profile laata hai. */
-export async function loadAccount() {
+const RETRY_MS = [2000, 5000, 10000];
+
+async function attemptLoad(attempt) {
   if (state.status !== "ready") setMeta("loading");
   try {
     const { user } = await api.get("/users/me");
@@ -292,11 +293,16 @@ export async function loadAccount() {
         state = emptyState("signedOut");
         notify();
       }
-    } else {
-      setMeta(state.status === "ready" ? "ready" : "error", err.message);
+      return;
     }
+    setMeta(state.status === "ready" ? "ready" : "error", err.message);
+    // Render so raha ho ya network ruka ho, to khud kuch der baad dobara
+    if (attempt < RETRY_MS.length) setTimeout(() => attemptLoad(attempt + 1), RETRY_MS[attempt]);
   }
 }
+
+/** Dashboard khulte hi ek baar chalao. Server se profile laata hai. */
+export const loadAccount = () => attemptLoad(0);
 
 export async function signOut() {
   try {

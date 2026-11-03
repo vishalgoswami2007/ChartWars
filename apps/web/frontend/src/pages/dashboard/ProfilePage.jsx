@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Camera, Pencil } from "lucide-react";
 
-import { MODE_LABEL, RESULT_LABEL, checkUsername, displayName, formatCW, formatPnl, pnlTone, setAvatar, tierFor, timeAgo, updateProfile, useAccount } from "../../features/account/accountStore";
+import { MODE_LABEL, RESULT_LABEL, checkUsername, displayName, formatCW, formatPnl, loadAccount, pnlTone, setAvatar, tierFor, timeAgo, updateProfile, useAccount } from "../../features/account/accountStore";
 import { Avatar } from "../../features/account/avatars";
 import AvatarPicker from "../../features/account/AvatarPicker";
 import { EmptyState, PageShell, SectionCard, btnGhost, btnPrimary, card, inputClass, useNow } from "../../features/account/ui";
@@ -20,7 +20,7 @@ function Stat({ label, value, className = "text-white" }) {
 }
 
 export default function ProfilePage() {
-  const { profile, stats, wallet, history } = useAccount();
+  const { profile, stats, wallet, history , error  } = useAccount();
   const now = useNow();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ username: "", fullName: "", bio: "" });
@@ -115,6 +115,27 @@ export default function ProfilePage() {
   return (
     <PageShell eyebrow="Your account" title="Profile" description="How you appear in the header, in rooms and to friends.">
       <p role="status" aria-live="polite" className="min-h-4 text-xs text-emerald-400">{status}</p>
+             {(status === "error" || status === "loading") && (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/8 px-4 py-3 text-xs text-amber-200"
+        >
+          <p>
+            {status === "loading"
+              ? "Loading your profile..."
+              : `Could not load your profile${error ? ` (${error})` : ""}. Your data is safe on the server.`}
+          </p>
+          {status === "error" && (
+            <button
+              type="button"
+              onClick={loadAccount}
+              className="shrink-0 rounded-lg border border-amber-400/40 px-3 py-1.5 transition hover:bg-amber-500/10"
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
         <SectionCard>
