@@ -5,6 +5,15 @@ export const HISTORY_DAYS = 10;
 export const START_BALANCE = 10000;
 export const RATING = 1200; // provisional until the backend ranks players
 export const TIER = "Unranked";
+// ELO se tier. 100 se shuru, 2000 tak.
+export function tierFor(elo) {
+  if (elo >= 1500) return "Master";
+  if (elo >= 1200) return "Diamond";
+  if (elo >= 900) return "Platinum";
+  if (elo >= 600) return "Gold";
+  if (elo >= 300) return "Silver";
+  return "Bronze";
+}
 export const MODE_LABEL = { online: "Online", friends: "Friends", blind: "Blind Room", coach: "Vs Coach" };
 export const RESULT_LABEL = { win: "Win", loss: "Loss", draw: "Draw", pass: "Passed", fail: "Not yet" };
 
@@ -154,16 +163,21 @@ const blankProfile = () => ({
   email: "",
   userCode: "",
   hasPassword: true,
+    elo: 100,
+  played: 0,
+  won: 0,
 });
 
 // Server me avatar "preset:twin" string hai, UI me { kind, id } object
-const parseAvatar = (value) =>
-  typeof value === "string" && value.startsWith("preset:")
-    ? { kind: "preset", id: value.slice(7) }
-    : { kind: "preset", id: "twin" };
+// Server me avatar string hai: "preset:twin" ya photo ka https URL. UI me { kind, ... } object.
+const parseAvatar = (value) => {
+  if (typeof value === "string" && value.startsWith("preset:")) return { kind: "preset", id: value.slice(7) };
+  if (typeof value === "string" && /^https?:\/\//.test(value)) return { kind: "upload", src: value };
+  return { kind: "preset", id: "twin" };
+};
 
-const avatarToServer = (avatar) => (avatar?.kind === "preset" ? `preset:${avatar.id}` : "");
-
+const avatarToServer = (avatar) =>
+  avatar?.kind === "preset" ? `preset:${avatar.id}` : avatar?.kind === "upload" ? avatar.src : "";
 function toProfile(u, prev) {
   return {
     username: u.username ?? prev.username,
@@ -174,6 +188,9 @@ function toProfile(u, prev) {
     email: u.email ?? prev.email,
     userCode: u.userCode ?? prev.userCode,
     hasPassword: typeof u.hasPassword === "boolean" ? u.hasPassword : prev.hasPassword,
+    elo: Number.isFinite(u.elo) ? u.elo : prev.elo,
+    played: Number.isFinite(u.stats?.played) ? u.stats.played : prev.played,
+    won: Number.isFinite(u.stats?.won) ? u.stats.won : prev.won,
   };
 }
 

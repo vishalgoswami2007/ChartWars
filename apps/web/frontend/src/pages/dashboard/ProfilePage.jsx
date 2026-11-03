@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Camera, Pencil } from "lucide-react";
 
-import { MODE_LABEL, RATING, RESULT_LABEL, TIER, checkUsername, displayName, formatCW, formatPnl, pnlTone, setAvatar, timeAgo, updateProfile, useAccount } from "../../features/account/accountStore";
+import { MODE_LABEL, RESULT_LABEL, checkUsername, displayName, formatCW, formatPnl, pnlTone, setAvatar, tierFor, timeAgo, updateProfile, useAccount } from "../../features/account/accountStore";
 import { Avatar } from "../../features/account/avatars";
 import AvatarPicker from "../../features/account/AvatarPicker";
 import { EmptyState, PageShell, SectionCard, btnGhost, btnPrimary, card, inputClass, useNow } from "../../features/account/ui";
@@ -31,8 +31,11 @@ export default function ProfilePage() {
   const [status, setStatus] = useState("");
 
   const name = displayName(profile);
-  const games = stats.wins + stats.losses + stats.draws;
-  const winRate = games > 0 ? `${Math.round((stats.wins / games) * 100)}%` : "—";
+  const played = profile.played;
+  const wins = profile.won;
+  const losses = Math.max(0, played - wins);
+  const winRate = played > 0 ? `${Math.round((wins / played) * 100)}%` : "—";
+  const tier = played > 0 ? tierFor(profile.elo) : "Unranked";
   const recent = history.slice(0, 5);
 
   const startEdit = () => {
@@ -157,10 +160,10 @@ export default function ProfilePage() {
                 <p className="text-sm text-zinc-500">@{profile.username}</p>
                 {profile.bio && <p className="mt-3 max-w-xs text-xs leading-5 text-zinc-400">{profile.bio}</p>}
                 <div className="mt-4 flex items-center gap-2 text-xs">
-                  <span className="rounded-md border border-[#e87524]/40 bg-[#e87524]/10 px-2 py-1 font-medium text-[#f59a55]">{TIER}</span>
-                  <span className="text-zinc-400">CW Rating {formatCW(RATING)}</span>
+                  <span className="rounded-md border border-[#e87524]/40 bg-[#e87524]/10 px-2 py-1 font-medium text-[#f59a55]">{tier}</span>
+<span className="text-zinc-400">CW Rating {formatCW(profile.elo)}</span>
                 </div>
-                <p className="mt-1 text-[11px] text-zinc-600">Provisional until ranked matches are available.</p>
+                {played === 0 && <p className="mt-1 text-[11px] text-zinc-600">Provisional until you play your first match.</p>}
                 <p className="mt-3 text-[11px] text-zinc-600">Member since {new Date(profile.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
                 <button type="button" onClick={startEdit} className={`${btnGhost} mt-4`}>
                   <Pencil size={13} />
@@ -173,9 +176,9 @@ export default function ProfilePage() {
 
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-            <Stat label="Matches played" value={stats.matches} />
+            <Stat label="Matches played" value={played} />
             <Stat label="Win rate" value={winRate} />
-            <Stat label="Wins / losses" value={`${stats.wins} / ${stats.losses}`} />
+            <Stat label="Wins / losses" value={`${wins} / ${losses}`} />
             <Stat label="Net match P&L" value={formatPnl(stats.netPnl)} className={pnlTone(stats.netPnl)} />
             <Stat label="Wallet" value={`${formatCW(wallet.balance)} CW`} />
             <Stat label="Blind levels passed" value={stats.blindPassed} />

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { LogOut, Maximize2, RefreshCw } from "lucide-react";
 
-import { recordMatch } from "../account/accountStore";
+import {   loadAccount, recordMatch } from "../account/accountStore";
 import { apiFetch, useAuth } from "../../pages/auth/AuthProvider";
 import FriendsChart from "../../pages/dashboard/rooms/friends/FriendsChart";
 import {
@@ -83,6 +83,11 @@ export default function MatchArena({ mode, code, opponent }) {
     if (phase !== "live") return undefined;
     const id = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(id);
+  }, [phase]);
+
+    // Match khatam: server se naya ELO aur stats (header aur profile ke liye)
+  useEffect(() => {
+    if (phase === "ended") loadAccount();
   }, [phase]);
 
   // Match khatam hone par apne account me ek baar record
