@@ -1083,16 +1083,6 @@ export default function RoomPage({ onLaunch }) {
 
       {/* TOP TERMINAL HEADER */}
       <header className="arena-header">
-        <div className="arena-brand">
-          <div className="arena-logo">CW</div>
-
-          <div>
-            <div className="arena-brand-name">CHARTWARS</div>
-            <div className="arena-node-address">
-              NODE://LIVE_ROOMS_HUB
-            </div>
-          </div>
-        </div>
 
         <div className="arena-header-center">
           <span className="arena-live-dot" />
