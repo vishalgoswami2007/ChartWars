@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const INITIAL_TRADERS = 1482;
 
@@ -62,7 +63,7 @@ const MODES = [
     meta: "EXPERT CHALLENGE",
   },
   {
-    id: "bot",
+    id: "coaches",
     number: "04",
     title: "VS Bot / Coaches",
     subtitle: "AI TRAINING LAB",
@@ -89,10 +90,10 @@ const formatNumber = (number) =>
   Math.round(number).toLocaleString("en-US");
 
 export default function RoomPage({ onLaunch }) {
+  const navigate = useNavigate();
   const [traders, setTraders] = useState(INITIAL_TRADERS);
   const [hoveredRegion, setHoveredRegion] = useState(null);
   const [selectedMode, setSelectedMode] = useState(null);
-  const [activityIndex, setActivityIndex] = useState(0);
   const [clock, setClock] = useState(new Date());
 
   // Simulated global live trader activity.
@@ -112,15 +113,6 @@ export default function RoomPage({ onLaunch }) {
     const interval = setInterval(() => {
       setClock(new Date());
     }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Activity ticker.
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActivityIndex((previous) => previous + 1);
-    }, 4000);
 
     return () => clearInterval(interval);
   }, []);
@@ -147,8 +139,16 @@ export default function RoomPage({ onLaunch }) {
   const handleLaunch = (mode) => {
     setSelectedMode(mode.id);
 
-    if (onLaunch) {
+    // Let a parent-provided handler take control when one is supplied.
+    if (typeof onLaunch === "function") {
       onLaunch(mode.id);
+      return;
+    }
+
+    // This is the existing, confirmed Online Mode route.
+    // Other mode routes are intentionally not guessed here.
+    if (mode.id === "online") {
+      navigate("/dashboard/rooms/online");
     }
   };
 
@@ -1083,6 +1083,16 @@ export default function RoomPage({ onLaunch }) {
 
       {/* TOP TERMINAL HEADER */}
       <header className="arena-header">
+        <div className="arena-brand">
+          <div className="arena-logo">CW</div>
+
+          <div>
+            <div className="arena-brand-name">CHARTWARS</div>
+            <div className="arena-node-address">
+              NODE://LIVE_ROOMS_HUB
+            </div>
+          </div>
+        </div>
 
         <div className="arena-header-center">
           <span className="arena-live-dot" />
