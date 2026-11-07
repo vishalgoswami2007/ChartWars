@@ -1,69 +1,52 @@
-// Server se baat karne ka ek hi jagah. Cookies bhejta hai aur 401 pe ek baar refresh try karta hai.
-const ROOT = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/+$/, "");
-const BASE = /\/api\/v1$/.test(ROOT) ? ROOT : `${ROOT}/api/v1`;
+import { refreshSession } from "../pages/auth/AuthProvider";
 
-const REFRESH_PATH = "/auth/refresh";
+const ORIGIN = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+const BASE = `${ORIGIN}/api/v1`;
 
 export class ApiError extends Error {
-  constructor(message, status = 0, code = "", errors = []) {
+  constructor(message, status, code, details) {
     super(message);
-    this.name = "ApiError";
     this.status = status;
     this.code = code;
-    this.errors = errors;
+    this.details = details;
   }
 }
 
-let refreshing = null;
-
-// Ek saath kai 401 aayein to refresh sirf ek baar chalega
-function refreshSession() {
-  if (!refreshing) {
-    refreshing = fetch(`${BASE}${REFRESH_PATH}`, { method: "POST", credentials: "include" })
-      .then((res) => res.ok)
-      .catch(() => false)
-      .finally(() => {
-        refreshing = null;
-      });
-  }
-  return refreshing;
+function send(method, path, body) {
+  const hasBody = body !== undefined;
+  return fetch(`${BASE}${path}`, {
+    method,
+    credentials: "include",
+     cache: "no-store",
+    headers: hasBody ? { "Content-Type": "application/json" } : undefined,
+    body: hasBody ? JSON.stringify(body) : undefined,
+  });
 }
 
-async function request(method, path, body, retry = true) {
-  const options = { method, credentials: "include" };
-  if (body !== undefined) {
-    options.headers = { "Content-Type": "application/json" };
-    options.body = JSON.stringify(body);
+async function request(method, path, body) {
+  let res = await send(method, path, body);
+
+  // Access token expire ho gaya ho to ek baar refresh karke dobara try.
+  // /auth/ wale calls (login, logout) ko chhod ke.
+  if (res.status === 401 && !path.startsWith("/auth/")) {
+    if (await refreshSession()) {
+      res = await send(method, path, body);
+    } else {
+      window.dispatchEvent(new Event("cw:auth-expired")); // accountStore isi ka intezar karta hai
+    }
   }
 
-  let res;
-  try {
-    res = await fetch(`${BASE}${path}`, options);
-  } catch {
-    throw new ApiError("Cannot reach the server. Check your internet and try again.", 0, "NETWORK");
-  }
-
-  if (res.status === 401 && retry && !path.startsWith("/auth/")) {
-    if (await refreshSession()) return request(method, path, body, false);
-    window.dispatchEvent(new Event("cw:auth-expired"));
-  }
-
-  let data = null;
-  try {
-    data = await res.json();
-  } catch {
-    data = null;
-  }
-
+  const data = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new ApiError(data?.message || "Something went wrong. Try again.", res.status, data?.code, data?.errors);
+    throw new ApiError(data?.message || "Request failed", res.status, data?.code, data?.errors);
   }
   return data;
 }
 
 export const api = {
   get: (path) => request("GET", path),
-  post: (path, body) => request("POST", path, body ?? {}),
-  put: (path, body) => request("PUT", path, body ?? {}),
+  post: (path, body = {}) => request("POST", path, body),
+  put: (path, body = {}) => request("PUT", path, body),
+  patch: (path, body = {}) => request("PATCH", path, body),
   delete: (path, body) => request("DELETE", path, body),
 };

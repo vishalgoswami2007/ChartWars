@@ -13,6 +13,7 @@ import roomRoutes from "./routes/room.routes.js";
 import friendsRoutes from "./routes/friends.routes.js";
 import leaderboardRoutes from "./routes/leaderboard.routes.js";
 import avatarRoutes from "./routes/avatar.routes.js";
+import { redisHealth } from "./config/redis.js";
 
 const app = express();
 
@@ -23,8 +24,8 @@ app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
 app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
 
-app.get("/api/v1/health", (_req, res) =>
-  res.json({ ok: true, db: mongoose.connection.readyState === 1 })
+app.get("/api/v1/health", async (_req, res) =>
+  res.json({ ok: true, db: mongoose.connection.readyState === 1, redis: await redisHealth() })
 );
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
